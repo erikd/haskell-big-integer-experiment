@@ -1,8 +1,11 @@
 TARGETS = test-integer-simple test-integer-gmp
 
-GHC = ghc -Wall $(PACKAGES) $(PRAGMAS)
+GHC = ghc
+GHCVER = $(shell $(GHC) --version | sed "s/.* //")
+GHCFLAGS = -Wall $(PACKAGES) $(PRAGMAS)
 
-PRAGMAS = -XUnliftedFFITypes
+PRAGMAS = -XCPP -XMagicHash -XUnboxedTuples -XUnliftedFFITypes
+
 
 SIMPLE = -i:integer-simple
 GMP = -i:integer-gmp
@@ -12,16 +15,16 @@ all : $(TARGETS)
 
 
 test-integer-simple : test-integer.hs Support.hs
-	$(GHC) --make $(SIMPLE) $< -o $@
+	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
 
 
 test-integer-gmp : test-integer.hs Support.hs
-	$(GHC) --make $(GMP) $< -o $@
+	$(GHC) $(GHCFLAGS) --make $(GMP) $< -o $@
 
 
 update :
-	(cd integer-gmp && git pull --rebase)
-	(cd integer-simple && git pull --rebase)
+	(cd integer-gmp && git checkout master && git pull --rebase && git checkout ghc-$(GHCVER)-release)
+	(cd integer-simple && git checkout master && git pull --rebase && git checkout ghc-$(GHCVER)-release)
 
 
 clean :
