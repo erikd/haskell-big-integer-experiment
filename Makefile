@@ -13,8 +13,8 @@ SIMPLE = -i:integer-simple
 GMP = -i:integer-gmp
 
 
-all : $(TARGETS)
-
+check : $(TARGETS)
+	./test-integer
 
 test-integer : test-integer.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
