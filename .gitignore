@@ -1,5 +1,6 @@
 .geany
+bench-integer
+check-integer
 integer-gmp
 integer-simple
-test-integer
 Stamp

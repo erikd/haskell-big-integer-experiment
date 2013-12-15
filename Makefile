@@ -1,4 +1,4 @@
-TARGETS = test-integer
+TARGETS = check-integer bench-integer
 
 GHC = ghc
 GHCVER = $(shell $(GHC) --version | sed "s/.* //")
@@ -13,10 +13,20 @@ SIMPLE = -i:integer-simple
 GMP = -i:integer-gmp
 
 
-check : $(TARGETS)
-	./test-integer
+all : $(TARGETS)
+	./check-integer
+	./bench-integer -o bench-integer.html
 
-test-integer : test-integer.hs Stamp/copy $(hsfiles)
+bench : bench-integer
+	./bench-integer -o bench-integer.html
+
+check : check-integer
+	./check-integer
+
+check-integer : check-integer.hs Stamp/copy $(hsfiles)
+	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
+
+bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
 
 Stamp/update :
