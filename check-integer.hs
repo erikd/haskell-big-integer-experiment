@@ -1,10 +1,12 @@
-{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE FlexibleInstances, MagicHash #-}
 
 import Prelude hiding (Integer)
 
+import Control.Applicative ((<$>))
 import GHC.Base
 import Test.Hspec
 import Test.Hspec.QuickCheck
+import Test.QuickCheck.Arbitrary
 
 import qualified GMP.Integer as G
 import qualified Simple.Integer as S
@@ -16,42 +18,35 @@ main = hspec $
 
 testInteger :: Spec
 testInteger = do
-    prop "Can create Integers." $ \ lst ->
-        let pos = concat . replicate 8 $ map abs lst
-        in show (G.mkInteger True pos) == show (S.mkInteger True pos)
-    prop "Can add Integers." $ \ a b ->
-        let (ga, gb, sa, sb) = mkFourIntegers 6 a b
-        in show (ga + gb) == show (sa + sb)
-    prop "Can subtract Integers." $ \ a b ->
-        let (ga, gb, sa, sb) = mkFourIntegers 6 a b
-        in show (ga - gb) == show (sa - sb)
-    prop "Can multiply Integers." $ \ a b ->
-        let (ga, gb, sa, sb) = mkFourIntegers 4 a b
-        in show (ga * gb) == show (sa * sb)
-    prop "Can negate Integers." $ \ lst ->
-        let pos = concat . replicate 8 $ map abs lst
-            gi = G.mkInteger True pos
-            si = S.mkInteger True pos
-        in show (G.negateInteger gi) == show (S.negateInteger si)
-            && show (gi + G.negateInteger gi) == "0"
-            && show (si + S.negateInteger si) == "0"
-    prop "Can convert to Int." $ \ lst ->
-        let pos = concat . replicate 8 $ map abs lst
-            gi = G.mkInteger True pos
-            si = S.mkInteger True pos
-        in show (boxIntHash (G.integerToInt gi)) == show (boxIntHash (S.integerToInt si))
-    prop "Can hash an Integer." $ \ lst ->
-        let pos = concat . replicate 8 $ map abs lst
-            gi = G.mkInteger True pos
-            si = S.mkInteger True pos
-        in show (boxIntHash (G.hashInteger gi)) == show (boxIntHash (S.hashInteger si))
+    prop "Can create Integers." $ \ (GSP g s) ->
+        show g == show s
+    prop "Can add Integers." $ \ (GSP ga sa, GSP gb sb) ->
+        show (ga + gb) == show (sa + sb)
+    prop "Can subtract Integers." $ \ (GSP ga sa, GSP gb sb) ->
+        show (ga - gb) == show (sa - sb)
+    prop "Can multiply Integers." $ \ (GSP ga sa, GSP gb sb) ->
+        show (ga * gb) == show (sa * sb)
+    prop "Can negate Integers." $ \ (GSP g s) ->
+        show (G.negateInteger g) == show (S.negateInteger s)
+            && show (g + G.negateInteger g) == "0"
+            && show (s + S.negateInteger s) == "0"
+    prop "Can convert to Int." $ \ (GSP g s) ->
+        show (boxIntHash (G.integerToInt g)) == show (boxIntHash (S.integerToInt s))
+    prop "Can hash an Integer." $ \ (GSP g s) ->
+        show (boxIntHash (G.hashInteger g)) == show (boxIntHash (S.hashInteger s))
 
-
-mkFourIntegers :: Int -> [Int] -> [Int] -> (G.Integer, G.Integer, S.Integer, S.Integer)
-mkFourIntegers rep a b =
-    let ap = concat . replicate rep $ map abs a
-        bp = concat . replicate rep $ map abs b
-    in (G.mkInteger True ap, G.mkInteger True bp, S.mkInteger True ap, S.mkInteger True bp)
+--------------------------------------------------------------------------------
 
 boxIntHash :: Int# -> Int
 boxIntHash i = I# i
+
+data GmpSimplePair
+    = GSP G.Integer S.Integer
+    deriving Show
+
+instance Arbitrary GmpSimplePair where
+    arbitrary = do
+        sign <- arbitrary
+        pos <- map abs <$> arbitrary
+        return $! GSP (G.mkInteger sign pos) (S.mkInteger sign pos)
+
