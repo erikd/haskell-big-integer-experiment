@@ -34,7 +34,7 @@ module New.GHC.Integer (
     andInteger, orInteger, xorInteger, complementInteger,
     shiftLInteger, shiftRInteger,
     hashInteger,
- ) where
+    ) where
 
 import New.GHC.Integer.Type
 
