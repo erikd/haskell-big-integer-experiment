@@ -45,8 +45,11 @@ main = do
             [ C.bench "GMP"     $ C.whnf (G.timesInteger glhs) grhs
             , C.bench "Simple"  $ C.whnf (S.timesInteger slhs) srhs
             ]
+        , C.bgroup "quotInteger"
+            [ C.bench "GMP"     $ C.whnf (G.quotInteger glhs) grhs
+            , C.bench "Simple"  $ C.whnf (S.quotInteger slhs) srhs
+            ]
         ]
-
 
 gmpToInt :: [Int] -> Int
 gmpToInt x = boxIntHash (G.integerToInt (G.mkInteger True x))
@@ -62,4 +65,4 @@ makeInput = do
 
 
 boxIntHash :: Int# -> Int
-boxIntHash i = I# i
+boxIntHash = I#
