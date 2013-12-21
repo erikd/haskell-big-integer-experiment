@@ -4,7 +4,9 @@
 
 module New.GHC.Integer.Prim
     ( FullWord, HalfWord
-    , plusHalfWord, minusHalfWord, timesHalfWord, timesHalfWordC
+    , plusHalfWord, plusHalfWordC
+    , minusHalfWord, minusHalfWordC
+    , timesHalfWord, timesHalfWordC
     , promoteHalfWord
     , splitFullWord, makeFullWord
     ) where
@@ -51,15 +53,31 @@ plusHalfWord :: HalfWord -> HalfWord -> (HalfWord, HalfWord)
 plusHalfWord !a !b =
     let !(FC# fa) = promoteHalfWord a
         !(FC# fb) = promoteHalfWord b
-        !prod = plusWord# fa fb
-    in splitFullWord (FC# prod)
+        !sum = plusWord# fa fb
+    in splitFullWord (FC# sum)
+
+plusHalfWordC :: HalfWord -> HalfWord -> HalfWord -> (HalfWord, HalfWord)
+plusHalfWordC !a !b !c =
+    let !(FC# fa) = promoteHalfWord a
+        !(FC# fb) = promoteHalfWord b
+        !(FC# fc) = promoteHalfWord c
+        !sum = plusWord# (plusWord# fa fc) fb
+    in splitFullWord (FC# sum)
 
 minusHalfWord :: HalfWord -> HalfWord -> (HalfWord, HalfWord)
 minusHalfWord !a !b =
     let !(FC# fa) = promoteHalfWord a
         !(FC# fb) = promoteHalfWord b
-        !prod = minusWord# fa fb
-    in splitFullWord (FC# prod)
+        !diff = minusWord# fa fb
+    in splitFullWord (FC# diff)
+
+minusHalfWordC :: HalfWord -> HalfWord -> HalfWord -> (HalfWord, HalfWord)
+minusHalfWordC !a !b !c =
+    let !(FC# fa) = promoteHalfWord a
+        !(FC# fb) = promoteHalfWord b
+        !(FC# fc) = promoteHalfWord c
+        !diff = minusWord# fa (plusWord# fb fc)
+    in splitFullWord (FC# diff)
 
 {-# INLINE timesHalfWord #-}
 timesHalfWord :: HalfWord -> HalfWord -> (HalfWord, HalfWord)
@@ -68,7 +86,6 @@ timesHalfWord !a !b =
         !(FC# fb) = promoteHalfWord b
         !prod = timesWord# fa fb
     in splitFullWord (FC# prod)
-
 
 {-# INLINE timesHalfWordC #-}
 timesHalfWordC :: HalfWord -> HalfWord -> HalfWord -> (HalfWord, HalfWord)
