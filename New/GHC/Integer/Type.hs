@@ -337,7 +337,7 @@ plusArrayW s n arr w = do
 
 
 plusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
-plusArray s n1 arr1 n2 arr2
+plusArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray s n2 arr2 n1 arr1
     | otherwise = do --
         !marr <- newHalfWordArray (2 * succ n1)
@@ -363,13 +363,13 @@ plusArray s n1 arr1 n2 arr2
         | otherwise = do
             writeHalfWordArray marr i carry
             loop4 marr (i + 1)
-    loop3 marr i
+    loop3 !marr !i
         | i < 2 * n1 = do
             x <- indexHalfWordArrayM arr1 i
             writeHalfWordArray marr i x
             loop3 marr (i + 1)
         | otherwise = loop4 marr i
-    loop4 marr i
+    loop4 !marr !i
         | i < 2 * (n1 + 1) = do
             writeHalfWordArray marr i 0
             loop4 marr (i + 1)
