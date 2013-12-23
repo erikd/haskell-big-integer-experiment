@@ -292,7 +292,9 @@ plusInteger :: Integer -> Integer -> Integer
 plusInteger a (Small 0) = a
 plusInteger (Small 0) b = b
 plusInteger (Small a) (Small b) = Small (a + b)
-plusInteger a@(Small _) (Large Neg n arr) = minusInteger (Large Pos n arr) a
+plusInteger (Small (I# i)) (Large Neg n arr)
+    | i <# 0# = unsafeInlinePrim $ plusArrayW Neg n arr (W# (int2Word# (negateInt# i)))
+    | otherwise = unsafeInlinePrim $ plusArrayW Neg n arr (W# (int2Word# i))
 plusInteger a@(Large Neg _ _) b@(Small _) = minusInteger b a
 
 plusInteger (Small (I# i)) (Large Pos n arr)
@@ -394,17 +396,24 @@ minusInteger a (Small 0) = a
 minusInteger (Small 0) b = negateInteger b
 minusInteger (Small a) (Small b) = Small (a - b)
 minusInteger a@(Small _) (Large Neg n arr) = plusInteger (Large Pos n arr) a
+minusInteger (Small (I# i)) (Large Pos n arr)
+    | i <# 0# = unsafeInlinePrim $ plusArrayW Neg n arr (W# (int2Word# (negateInt# i)))
+    | otherwise = unsafeInlinePrim $ minusArrayW Neg n arr (W# (int2Word# i))
 minusInteger a@(Large Neg _ _) b@(Small _) = plusInteger b a
-
-
-minusInteger a@(Small _) (Large Pos n arr) = plusInteger (Large Neg n arr) a
-
 minusInteger (Large Pos n arr) (Small (I# i))
-    | i <# 0# = unsafeInlinePrim (plusArrayW Pos n arr (W# (int2Word# (negateInt# i))))
+    | i <# 0# = unsafeInlinePrim $ plusArrayW Pos n arr (W# (int2Word# (negateInt# i)))
     | otherwise = unsafeInlinePrim $ minusArrayW Pos n arr (W# (int2Word# i))
 
+minusInteger a@(Large s1 n1 arr1) (Large s2 n2 arr2) =
+    case (s1, s2) of
+        (Pos, Neg) -> plusInteger a (Large Neg n2 arr2)
+        (Neg, Pos) -> unsafeInlinePrim $plusArray Neg n1 arr1 n2 arr2
+        (Pos, Pos) -> unsafeInlinePrim $ minusArray Pos n1 arr1 n2 arr2
+        (Neg, Neg) -> unsafeInlinePrim $
+                        if n1 > n2
+                            then minusArray Neg n1 arr1 n2 arr2
+                            else minusArray Pos n2 arr2 n1 arr1
 
-minusInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 minusArrayW :: Sign -> Int -> ByteArray -> Word -> IO Integer
 minusArrayW  s n arr w = do
@@ -436,28 +445,44 @@ minusArrayW  s n arr w = do
         | otherwise = return n
 
 
-{-
-minusArrayW s n arr w = do
-    !marr <- newHalfWordArray (2 * succ n)
-    writeHalfWordArray marr (2 * succ n - 1) 0
-    nlen <- loop marr 0 w
-    narr <- unsafeFreezeHalfWordArray marr
-    return $ Large s nlen narr
+minusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
+minusArray !s !n1 !arr1 !n2 !arr2
+    | n1 < n2 = plusArray s n2 arr2 n1 arr1
+    | otherwise = do --
+        !marr <- newHalfWordArray (2 * succ n1)
+        loop1 marr 0 0
+        !narr <- unsafeFreezeHalfWordArray marr
+        finalizeLarge s (succ n1) narr
   where
-    loop !marr !i !carry
-        | carry == 0 = return n
-        | i < 2 * n =  do
-            x <- indexHalfWordArrayM arr i
-            let (c, s) = minusHalfWord x carry
-            writeHalfWordArray marr i s
-            loop marr (i + 1) c
+    loop1 !marr !i !carry
+        | i < 2 * n2 = do
+            !x <- indexHalfWordArrayM arr1 i
+            !y <- indexHalfWordArrayM arr2 i
+            let (!hc, !hs) = minusHalfWordC x y carry
+            writeHalfWordArray marr i hs
+            loop1 marr (i + 1) hc
+        | otherwise = loop2 marr i carry
+    loop2 !marr !i !carry
+        | carry == 0 = loop3 marr i
+        | i < 2 * n1 = do
+            !x <- indexHalfWordArrayM arr1 i
+            let (!hc, !hs) = minusHalfWord x carry
+            writeHalfWordArray marr i hs
+            loop2 marr (i + 1) hc
         | otherwise = do
             writeHalfWordArray marr i carry
-            return $ n + 1
--}
-
-minusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
-minusArray = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+            loop4 marr (i + 1)
+    loop3 !marr !i
+        | i < 2 * n1 = do
+            !x <- indexHalfWordArrayM arr1 i
+            writeHalfWordArray marr i x
+            loop3 marr (i + 1)
+        | otherwise = loop4 marr i
+    loop4 !marr !i
+        | i < 2 * (n1 + 1) = do
+            writeHalfWordArray marr i 0
+            loop4 marr (i + 1)
+        | otherwise = return ()
 
 
 {-# NOINLINE timesInteger #-}
