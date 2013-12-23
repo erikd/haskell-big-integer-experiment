@@ -295,8 +295,9 @@ plusInteger (Small a) (Small b) = Small (a + b)
 plusInteger (Small (I# i)) (Large Neg n arr)
     | i <# 0# = unsafeInlinePrim $ plusArrayW Neg n arr (W# (int2Word# (negateInt# i)))
     | otherwise = unsafeInlinePrim $ plusArrayW Neg n arr (W# (int2Word# i))
-plusInteger a@(Large Neg _ _) b@(Small _) = minusInteger b a
-
+plusInteger (Large Neg n arr) (Small (I# i))
+    | i <# 0# = unsafeInlinePrim (minusArrayW Neg n arr (W# (int2Word# (negateInt# i))))
+    |otherwise = unsafeInlinePrim (minusArrayW Neg n arr (W# (int2Word# i)))
 plusInteger (Small (I# i)) (Large Pos n arr)
     | i <# 0# = unsafeInlinePrim $ minusArrayW Pos n arr (W# (int2Word# (negateInt# i)))
     | otherwise = unsafeInlinePrim $ plusArrayW Pos n arr (W# (int2Word# i))
