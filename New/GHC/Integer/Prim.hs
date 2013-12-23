@@ -69,7 +69,8 @@ minusHalfWord !a !b =
     let !(FC# fa) = promoteHalfWord a
         !(FC# fb) = promoteHalfWord b
         !diff = minusWord# fa fb
-    in splitFullWord (FC# diff)
+        !((HC# hc), hd) = splitFullWord (FC# diff)
+    in (HC# (and# hc (unsafeCoerce# 1#)), hd)
 
 minusHalfWordC :: HalfWord -> HalfWord -> HalfWord -> (HalfWord, HalfWord)
 minusHalfWordC !a !b !c =
@@ -77,7 +78,8 @@ minusHalfWordC !a !b !c =
         !(FC# fb) = promoteHalfWord b
         !(FC# fc) = promoteHalfWord c
         !diff = minusWord# fa (plusWord# fb fc)
-    in splitFullWord (FC# diff)
+        !((HC# hc), hd) = splitFullWord (FC# diff)
+    in (HC# (and# hc (unsafeCoerce# 1#)), hd)
 
 {-# INLINE timesHalfWord #-}
 timesHalfWord :: HalfWord -> HalfWord -> (HalfWord, HalfWord)
