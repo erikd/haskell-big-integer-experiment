@@ -5,6 +5,7 @@
 #include "MachDeps.h"
 
 module New.GHC.Integer.Type
+{-
     ( Integer (..)
     , mkInteger, smallInteger, wordToInteger, integerToWord, integerToInt
 #if WORD_SIZE_IN_BITS < 64
@@ -26,6 +27,8 @@ module New.GHC.Integer.Type
     , toList, mkLarge
 
     ) where
+-}
+    where
 
 import Prelude hiding (Integer, abs) -- (all, error, otherwise, return, show, succ, (++))
 
@@ -311,18 +314,18 @@ plusArrayW s n arr w = do
     !marr <- newHalfWordArray (2 * succ n)
     writeHalfWordArray marr (2 * succ n - 1) 0
     let (!uw, !lw) = splitFullWord w
-    x <- indexHalfWordArrayM arr 0
+    !x <- indexHalfWordArrayM arr 0
     let (!hc, !hs) = plusHalfWord x lw
     writeHalfWordArray marr 0 hs
-    nlen <- loop1 marr 1 (hc + uw)
-    narr <- unsafeFreezeHalfWordArray marr
+    !nlen <- loop1 marr 1 (hc + uw)
+    !narr <- unsafeFreezeHalfWordArray marr
     finalizeLarge s nlen narr
   where
     loop1 !marr !i !carry
         | carry == 0 = loop2 marr i
         | i < 2 * n =  do
-            x <- indexHalfWordArrayM arr i
-            let (hc, hs) = plusHalfWord x carry
+            !x <- indexHalfWordArrayM arr i
+            let (!hc, !hs) = plusHalfWord x carry
             writeHalfWordArray marr i hs
             loop1 marr (i + 1) hc
         | otherwise = do
@@ -330,7 +333,7 @@ plusArrayW s n arr w = do
             return $ n + 1
     loop2 !marr !i
         |i < 2 * n =  do
-            x <- indexHalfWordArrayM arr i
+            !x <- indexHalfWordArrayM arr i
             writeHalfWordArray marr i x
             loop2 marr (i + 1)
         | otherwise = return n
@@ -347,17 +350,17 @@ plusArray !s !n1 !arr1 !n2 !arr2
   where
     loop1 !marr !i !carry
         | i < 2 * n2 = do
-            x <- indexHalfWordArrayM arr1 i
-            y <- indexHalfWordArrayM arr2 i
-            let (hc, hs) = plusHalfWordC x y carry
+            !x <- indexHalfWordArrayM arr1 i
+            !y <- indexHalfWordArrayM arr2 i
+            let (!hc, !hs) = plusHalfWordC x y carry
             writeHalfWordArray marr i hs
             loop1 marr (i + 1) hc
         | otherwise = loop2 marr i carry
     loop2 !marr !i !carry
         | carry == 0 = loop3 marr i
         | i < 2 * n1 = do
-            x <- indexHalfWordArrayM arr1 i
-            let (hc, hs) = plusHalfWord x carry
+            !x <- indexHalfWordArrayM arr1 i
+            let (!hc, !hs) = plusHalfWord x carry
             writeHalfWordArray marr i hs
             loop2 marr (i + 1) hc
         | otherwise = do
@@ -365,7 +368,7 @@ plusArray !s !n1 !arr1 !n2 !arr2
             loop4 marr (i + 1)
     loop3 !marr !i
         | i < 2 * n1 = do
-            x <- indexHalfWordArrayM arr1 i
+            !x <- indexHalfWordArrayM arr1 i
             writeHalfWordArray marr i x
             loop3 marr (i + 1)
         | otherwise = loop4 marr i
@@ -380,6 +383,11 @@ isPos (Small a) = a >= 0
 isPos (Large Pos _ _) = True
 isPos _ = False
 
+isNeg :: Integer -> Bool
+isNeg (Small a) = a < 0
+isNeg (Large Neg _ _) = True
+isNeg _ = False
+
 {-# NOINLINE minusInteger #-}
 minusInteger :: Integer -> Integer -> Integer
 minusInteger a (Small 0) = a
@@ -389,33 +397,40 @@ minusInteger a@(Small _) (Large Neg n arr) = plusInteger (Large Pos n arr) a
 minusInteger a@(Large Neg _ _) b@(Small _) = plusInteger b a
 
 
+minusInteger a@(Small _) (Large Pos n arr) = plusInteger (Large Neg n arr) a
+
+minusInteger (Large Pos n arr) (Small (I# i))
+    | i <# 0# = unsafeInlinePrim (plusArrayW Pos n arr (W# (int2Word# (negateInt# i))))
+    | otherwise = unsafeInlinePrim $ minusArrayW Pos n arr (W# (int2Word# i))
+
+
 minusInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 minusArrayW :: Sign -> Int -> ByteArray -> Word -> IO Integer
 minusArrayW  s n arr w = do
     !marr <- newHalfWordArray (2 * succ n)
     writeHalfWordArray marr (2 * succ n - 1) 0
-    let (uw, lw) = splitFullWord w
+    let (!uw, !lw) = splitFullWord w
     x <- indexHalfWordArrayM arr 0
-    let (hc, hs) = minusHalfWord x lw
-    writeHalfWordArray marr 0 hs
-    nlen <- loop1 marr 1 (hc + uw)
-    narr <- unsafeFreezeHalfWordArray marr
+    let (!hc, !hd) = minusHalfWord x lw
+    writeHalfWordArray marr 0 hd
+    !nlen <- loop1 marr 1 (hc + uw)
+    !narr <- unsafeFreezeHalfWordArray marr
     finalizeLarge s nlen narr
   where
     loop1 !marr !i !carry
         | carry == 0 = loop2 marr i
         | i < 2 * n =  do
-            x <- indexHalfWordArrayM arr i
-            let (hc, hs) = minusHalfWord x carry
-            writeHalfWordArray marr i hs
+            !x <- indexHalfWordArrayM arr i
+            let (!hc, !hd) = minusHalfWord x carry
+            writeHalfWordArray marr i hd
             loop1 marr (i + 1) hc
         | otherwise = do
             writeHalfWordArray marr i carry
             return $ n + 1
     loop2 !marr !i
-        |i < 2 * n =  do
-            x <- indexHalfWordArrayM arr i
+        | i < 2 * n =  do
+            !x <- indexHalfWordArrayM arr i
             writeHalfWordArray marr i x
             loop2 marr (i + 1)
         | otherwise = return n
