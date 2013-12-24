@@ -189,15 +189,22 @@ orInteger (Small Pos a) (Small Neg b) = Small Neg (1 + (complement a .&. (b - 1)
 orInteger (Small Neg a) (Small Pos b) = Small Neg (1 + ((a - 1) .&. complement b))
 orInteger (Small Neg a) (Small Neg b) = Small Neg (1 + ((a - 1) .&. (b - 1)))
 
+orInteger a@(Large _ _ _) b@(Small _ _) = orInteger a (mkLarge b)
+orInteger a@(Small _ _) b@(Large _ _ _) = orInteger (mkLarge a) b
+
+orInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = orArray Pos n1 arr1 n2 arr2
+
 orInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
 orArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
-orArray !s !n1 !arr1 !n2 !arr2 = unsafeInlinePrim $ do
-    !marr <- newWordArray n1
-    nlen <- loop1 marr 0
-    narr <- unsafeFreezeWordArray marr
-    finalizeLarge s nlen narr
+orArray !s !n1 !arr1 !n2 !arr2
+    | n1 < n2 = orArray s n2 arr2 n1 arr1
+    | otherwise = unsafeInlinePrim $ do
+        !marr <- newWordArray n1
+        nlen <- loop1 marr 0
+        narr <- unsafeFreezeWordArray marr
+        finalizeLarge s nlen narr
   where
     loop1 !marr !i
         | i < n2 = do
