@@ -155,10 +155,13 @@ floatFromInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: 
 
 {-# NOINLINE andInteger #-}
 andInteger :: Integer -> Integer -> Integer
-andInteger _ (Small _ 0) = smallInteger 0#
-andInteger (Small _ 0) _ = smallInteger 0#
-andInteger (Small !Pos !a) (Small !Pos !b) = Small Pos (a .&. b)
-andInteger (Large _ n1 arr1) (Large _ n2 arr2) = andArray Pos (min n1 n2) arr1 arr2
+andInteger _ (Small _ 0) = Small Pos 0
+andInteger (Small _ 0) _ = Small Pos 0
+andInteger (Small Pos a) (Small Pos b) = Small Pos (a .&. b)
+andInteger (Small Pos a) (Small Neg b) = Small Pos (a .&. complement (b - 1))
+andInteger (Small Neg a) (Small Pos b) = Small Pos (complement (a - 1) .&. b)
+andInteger (Small Neg a) (Small Neg b) = Small Neg (1 + ((a - 1) .|. (b - 1)))
+
 andInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 andArray :: Sign -> Int -> ByteArray -> ByteArray -> Integer
@@ -185,27 +188,6 @@ orInteger (Small Pos a) (Small Pos b) = Small Pos (a .|. b)
 orInteger (Small Pos a) (Small Neg b) = Small Neg (1 + (complement a .&. (b - 1)))
 orInteger (Small Neg a) (Small Pos b) = Small Neg (1 + ((a - 1) .&. complement b))
 orInteger (Small Neg a) (Small Neg b) = Small Neg (1 + ((a - 1) .&. (b - 1)))
-
-
-{-
-Positive x `orInteger` Negative y = let x' = flipBits x
-                                        y' = y `minusPositive` onePositive
-                                        z = x' `andDigitsOnes` y'
-                                        z' = succPositive z
-                                    in digitsToNegativeInteger z'
-
-Negative x `orInteger` Positive y = Positive y `orInteger` Negative x
-
-
-Negative x `orInteger` Negative y = let x' = x `minusPositive` onePositive
-                                        y' = y `minusPositive` onePositive
-                                        z = x' `andDigits` y'
-                                        z' = succPositive z
-                                    in digitsToNegativeInteger z'
--}
-
--- orInteger (Small Neg a) (Small Neg b) = Small Pos (a .|. b)
-
 
 orInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
