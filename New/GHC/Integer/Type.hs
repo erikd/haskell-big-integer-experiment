@@ -181,6 +181,10 @@ andArray s n arr1 arr2 = unsafeInlinePrim $ do
 orInteger :: Integer -> Integer -> Integer
 orInteger (Small _ 0) b = b
 orInteger a (Small _ 0) = a
+orInteger (Small Pos a) (Small Pos b) = Small Pos (a .|. b)
+orInteger (Small Pos a) (Small Neg b) = Small Neg (1 + (complement a .&. (b - 1)))
+orInteger (Small Neg a) (Small Pos b) = Small Neg (1 + ((a - 1) .&. complement b))
+orInteger (Small Neg a) (Small Neg b) = Small Neg (1 + ((a - 1) .&. (b - 1)))
 
 
 {-
@@ -189,7 +193,19 @@ Positive x `orInteger` Negative y = let x' = flipBits x
                                         z = x' `andDigitsOnes` y'
                                         z' = succPositive z
                                     in digitsToNegativeInteger z'
+
+Negative x `orInteger` Positive y = Positive y `orInteger` Negative x
+
+
+Negative x `orInteger` Negative y = let x' = x `minusPositive` onePositive
+                                        y' = y `minusPositive` onePositive
+                                        z = x' `andDigits` y'
+                                        z' = succPositive z
+                                    in digitsToNegativeInteger z'
 -}
+
+-- orInteger (Small Neg a) (Small Neg b) = Small Pos (a .|. b)
+
 
 orInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
@@ -259,7 +275,9 @@ complementInteger _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ 
 shiftLInteger :: Integer -> Int# -> Integer
 shiftLInteger a 0# = a
 shiftLInteger (Small _ 0) _ = (Small Pos 0)
-shiftLInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+shiftLInteger a@(Small {}) b = shiftLInteger (mkLarge a) b
+shiftLInteger (Large !s !n !arr) b = shiftLArray s n arr (I# b)
+
 
 {-# NOINLINE shiftRInteger #-}
 shiftRInteger :: Integer -> Int# -> Integer
@@ -630,10 +648,10 @@ mkSingletonArray !s !x = do
     narr <- unsafeFreezeWordArray marr
     return $ Large s 1 narr
 
-shiftLArray :: Sign -> Int -> ByteArray -> Int -> IO Integer
+shiftLArray :: Sign -> Int -> ByteArray -> Int -> Integer
 shiftLArray !s !n !arr !i
     | i < WORD_SIZE_IN_BITS =
-                smallShiftLArray s n arr (# i, WORD_SIZE_IN_BITS - i #)
+                unsafeInlinePrim $ smallShiftLArray s n arr (# i, WORD_SIZE_IN_BITS - i #)
     | True = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 smallShiftLArray :: Sign -> Int -> ByteArray -> (# Int, Int #) -> IO Integer
