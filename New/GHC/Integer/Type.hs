@@ -404,17 +404,17 @@ isLarge _ = False
 minusInteger :: Integer -> Integer -> Integer
 minusInteger a (Small _ 0) = a
 minusInteger (Small _ 0) b = negateInteger b
-minusInteger (Small Pos a) (Small Pos b) = Small Pos (a - b)
-minusInteger (Small Neg a) (Small Neg b) = Small (a - b)
+minusInteger a@(Small _ _) (Large Neg n arr) = plusInteger (Large Pos n arr) a
 
-minusInteger a@(Small _) (Large Neg n arr) = plusInteger (Large Pos n arr) a
-minusInteger (Small (I# i)) (Large Pos n arr)
-    | i <# 0# = unsafeInlinePrim $ plusArrayW Neg n arr (W# (int2Word# (negateInt# i)))
-    | otherwise = unsafeInlinePrim $ minusArrayW Neg n arr (W# (int2Word# i))
-minusInteger a@(Large Neg _ _) b@(Small _) = plusInteger b a
-minusInteger (Large Pos n arr) (Small (I# i))
-    | i <# 0# = unsafeInlinePrim $ plusArrayW Pos n arr (W# (int2Word# (negateInt# i)))
-    | otherwise = unsafeInlinePrim $ minusArrayW Pos n arr (W# (int2Word# i))
+minusInteger (Small Neg w) (Large Pos n arr) = unsafeInlinePrim $ plusArrayW Neg n arr w)
+minusInteger (Small Pos w) (Large Pos n arr) = unsafeInlinePrim $ minusArrayW Neg n arr w)
+
+minusInteger (Large Pos n arr) (Small Neg w) = unsafeInlinePrim $ plusArrayW Pos n arr w)
+minusInteger (Large Pos n arr) (Small Pos w) = unsafeInlinePrim $ minusArrayW Pos n arr w)
+
+minusInteger (Large Neg n arr) (Small Pos w) = unsafeInlinePrim $ plusArrayW Neg arr w)
+minusInteger (Large Neg n arr) (Small Neg w) = unsafeInlinePrim $ minusArrayW Neg arr w)
+
 
 minusInteger a@(Large s1 n1 arr1) (Large s2 n2 arr2) =
     case (s1, s2) of
@@ -426,6 +426,7 @@ minusInteger a@(Large s1 n1 arr1) (Large s2 n2 arr2) =
                             then minusArray Neg n1 arr1 n2 arr2
                             else minusArray Pos n2 arr2 n1 arr1
 
+minusInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 minusArrayW :: Sign -> Int -> ByteArray -> Word -> IO Integer
 minusArrayW  s n arr w = do
