@@ -83,6 +83,11 @@ testNewInteger = do
     prop "Can negate an Integer." $ \ (GNP g s) ->
         show (N.negateInteger s) `shouldBe` show (G.negateInteger g)
 
+    it "Can add two Small Integers." $ do
+        show (N.plusInteger (N.smallInteger 0x7fffffffffffffff#) (N.smallInteger 1#)) `shouldBe` "+0xfffffffffffffffe"
+        show (N.plusInteger (N.smallInteger 0x7fffffffffffffff#) (N.smallInteger 0x7fffffffffffffff#)) `shouldBe` "+0xfffffffffffffffe"
+
+
     it "Can add a Small Integer to a Large." $ do
         show (N.plusInteger (N.mkInteger True [0x7fffff]) (N.smallInteger 1#)) `shouldBe` "+0x800000"
         show (N.plusInteger (N.mkInteger True [0x7fffffff, 0x7fffffff]) (N.smallInteger 1#)) `shouldBe` "+0x4000000000000000"
