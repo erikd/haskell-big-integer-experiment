@@ -74,12 +74,33 @@ testNewInternal = do
 
 testNewInteger :: Spec
 testNewInteger = do
-    prop "Can create Integers." $ \ (GNP g s) ->
-        show g == show s
     prop "Can convert from Int." $ \ i ->
         show (N.smallInteger (unboxInt i)) `shouldBe` show (G.smallInteger (unboxInt i))
-    prop "Can convert to Int." $ \ (GNP g s) ->
-        show (boxIntHash (N.integerToInt s)) `shouldBe` show (boxIntHash (G.integerToInt g))
+    prop "Can convert to Int." $ \ i ->
+        boxIntHash (N.integerToInt (N.smallInteger (unboxInt i))) `shouldBe` i
+    prop "Can create Integers." $ \ (GNP g s) ->
+        show g == show s
+    prop "Can complement an Integer." $ \ (GNP g s) ->
+        show (N.complementInteger s) `shouldBe` show (G.complementInteger g)
+
+
+    prop "Can AND two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.andInteger (N.absInteger sa) (N.absInteger sb)) `shouldBe` show (G.andInteger (G.absInteger ga) (G.absInteger gb))
+
+
+    prop "Can OR two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.orInteger (N.absInteger sa) (N.absInteger sb)) `shouldBe` show (G.orInteger (G.absInteger ga) (G.absInteger gb))
+
+    prop "Can AND two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.andInteger sa sb) `shouldBe` show (G.andInteger ga gb)
+
+    prop "Can OR two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.orInteger sa sb) `shouldBe` show (G.orInteger ga gb)
+
+
+
+
+{-
     prop "Can negate an Integer." $ \ (GNP g s) ->
         show (N.negateInteger s) `shouldBe` show (G.negateInteger g)
 
@@ -131,12 +152,9 @@ testNewInteger = do
 
 
 
-    prop "Can OR two Integers." $
-        pendingWith "Known broken"
-        {-
-        \ (GNP ga na, GNP gb nb) ->
+    prop "Can OR two Integers." $ \ (GNP ga na, GNP gb nb) ->
         show (N.orInteger na nb) `shouldBe` show (G.orInteger ga gb)
-        -}
+-}
 
 {-
     it "Can complement an Integer." $ do
@@ -179,6 +197,7 @@ testNewInteger = do
                 show (G.shiftLInteger (G.mkInteger False [0x7fffffff00000001]) 2#)
 
 -}
+
 
 --------------------------------------------------------------------------------
 
