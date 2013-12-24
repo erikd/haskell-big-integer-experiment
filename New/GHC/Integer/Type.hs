@@ -249,9 +249,11 @@ xorArray !s !n1 !arr1 !n2 !arr2 = unsafeInlinePrim $ do
 
 {-# NOINLINE complementInteger #-}
 complementInteger :: Integer -> Integer
+complementInteger (Small Pos a) = Small Neg (a + 1)
+complementInteger (Small Neg a) = Small Pos (a - 1)
 complementInteger (Large Pos n arr) = plusArrayW Neg n arr 1
 complementInteger (Large Neg n arr) = minusArrayW Pos n arr 1
-complementInteger _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+
 
 {-# NOINLINE shiftLInteger #-}
 shiftLInteger :: Integer -> Int# -> Integer
