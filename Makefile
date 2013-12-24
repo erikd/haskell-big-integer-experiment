@@ -20,6 +20,9 @@ all : $(TARGETS)
 bench : bench-integer
 	./bench-integer -o bench-integer.html
 
+new-bench : new-bench-integer
+	./new-bench-integer -o new-bench-integer.html
+
 check : check-integer
 	./check-integer
 
@@ -27,6 +30,9 @@ check-integer : check-integer.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
 
 bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
+	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
+
+new-bench-integer : new-bench-integer.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
 
 Stamp/update :

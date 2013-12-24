@@ -64,7 +64,7 @@ testNewInternal = do
         in f1 `shouldBe` f2
     prop "Can subtract HalfWords." $ \ (h1, h2) ->
         let f1 = makeFullWord (minusHalfWord h1 h2)
-            f2 = (promoteHalfWord h1) - (promoteHalfWord h2)
+            f2 = ((promoteHalfWord h1) - (promoteHalfWord h2)) .&. 0x1ffffffff
         in f1 `shouldBe` f2
     prop "Can multiply HalfWords." $ \ (h1, h2) ->
         let f1 = makeFullWord (timesHalfWord h1 h2)
@@ -88,6 +88,11 @@ testNewInteger = do
         show (N.plusInteger (N.mkInteger True [0x7fffffff, 0x7fffffff]) (N.smallInteger 1#)) `shouldBe` "+0x4000000000000000"
         show (N.plusInteger (N.mkInteger True [0, 0x80000000]) (N.smallInteger 1#)) `shouldBe` "+0x4000000000000001"
 
+        show (N.plusInteger (N.smallInteger (-1#)) (N.mkInteger False [0, 1]) ) `shouldBe` "-0x80000001"
+
+        show (N.plusInteger (N.mkInteger False [0, 0x7f]) (N.smallInteger 1#)) `shouldBe` "-0x3f7fffffff"
+
+
     prop "Can complement an Integer." $ \ (GNP g s) ->
         show (N.complementInteger s) `shouldBe` show (G.complementInteger g)
 
@@ -95,17 +100,29 @@ testNewInteger = do
         show (N.plusInteger (N.absInteger na) (N.absInteger nb)) `shouldBe` show (G.plusInteger (G.absInteger ga) (G.absInteger gb))
 
 
+    it "Can add two Integers." $ do
+        show (N.minusInteger (N.mkInteger False [11, 0x2]) (N.smallInteger (-7#))) `shouldBe` "-0x100000004"
+
+
     it "Can subtract a Small Integer from a Large." $ do
         show (N.minusInteger (N.mkInteger True [0x080000]) (N.smallInteger 1#)) `shouldBe` "+0x7ffff"
+        show (N.minusInteger (N.mkInteger True [0, 1]) (N.smallInteger 1#)) `shouldBe` "+0x7fffffff"
         show (N.minusInteger (N.mkInteger True [0x7fffffff, 0x7fffffff]) (N.smallInteger 1#)) `shouldBe` "+0x3ffffffffffffffe"
-        show (N.minusInteger (N.mkInteger True [0, 0x80000000]) (N.smallInteger 1#)) `shouldBe` "+0x3ffffffffffffffe"
+        show (N.minusInteger (N.mkInteger True [0, 0x80000000]) (N.smallInteger 2#)) `shouldBe` "+0x3ffffffffffffffe"
+
+    it "Can subtract two positive Large Integers." $ do
+        show (N.minusInteger (N.mkInteger True [0,2]) (N.mkInteger True [0,1])) `shouldBe` "+0x80000000"
+        show (N.minusInteger (N.mkInteger True [0,3]) (N.mkInteger True [0,1])) `shouldBe` "+0x100000000"
+        show (N.minusInteger (N.mkInteger True [0,0,1]) (N.mkInteger True [0,1])) `shouldBe` "+0x3fffffff80000000"
+        show (N.minusInteger (N.mkInteger False [1]) (N.mkInteger False [2])) `shouldBe` "+0x0"
+        show (N.minusInteger (N.mkInteger False [0,11]) (N.mkInteger True [0,0,2])) `shouldBe` "-0x8000000580000000"
 
 
+    prop "Can subtract two positive Large Integers." $ \ (GNP ga na, GNP gb nb) ->
+        show (N.minusInteger (N.absInteger na) (N.absInteger nb)) `shouldBe` show (G.minusInteger (G.absInteger ga) (G.absInteger gb))
 
-    {-
-    prop "Can add two positive Large Integers." $ \ (GNP ga na, GNP gb nb) ->
+    prop "Can add two Large Integers." $ \ (GNP ga na, GNP gb nb) ->
         show (N.plusInteger na nb) `shouldBe` show (G.plusInteger ga gb)
-    -}
 
 
 
