@@ -76,7 +76,7 @@ mkInteger nonNegative is =
   where
     f [] = smallInteger 0#
     f [I# x] = smallInteger x
-    f (x : xs) = mkLarge x `orInteger` shiftLInteger (f xs) 31#
+    f (I# x : xs) = smallInteger x `orInteger` shiftLInteger (f xs) 31#
 
 {-# NOINLINE smallInteger #-}
 smallInteger :: Int# -> Integer
@@ -157,15 +157,12 @@ floatFromInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: 
 andInteger :: Integer -> Integer -> Integer
 andInteger _ (Small _ 0) = smallInteger 0#
 andInteger (Small _ 0) _ = smallInteger 0#
-andInteger (Small Pos a) (Small Pos b) = Small (a .&. b)
-andInteger (Small a) b = andInteger (mkLarge a) b
-andInteger a (Small b) = andInteger a (mkLarge b)
-andInteger (Large _ n1 arr1) (Large _ n2 arr2) =
-    unsafeInlinePrim $ andArray Pos (min n1 n2) arr1 arr2
+andInteger (Small !Pos !a) (Small !Pos !b) = Small Pos (a .&. b)
+andInteger (Large _ n1 arr1) (Large _ n2 arr2) = andArray Pos (min n1 n2) arr1 arr2
+andInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
-
-andArray :: Sign -> Int -> ByteArray -> ByteArray -> IO Integer
-andArray s n arr1 arr2 = do
+andArray :: Sign -> Int -> ByteArray -> ByteArray -> Integer
+andArray s n arr1 arr2 = unsafeInlinePrim $ do
     !marr <- newWordArray n
     loop marr 0
     narr <- unsafeFreezeWordArray marr
@@ -182,9 +179,9 @@ andArray s n arr1 arr2 = do
 
 {-# NOINLINE orInteger #-}
 orInteger :: Integer -> Integer -> Integer
-orInteger (Small 0) b = b
-orInteger a (Small 0) = a
-orInteger (Small a) (Small b) = Small (a .|. b)
+orInteger (Small _ 0) b = b
+orInteger a (Small _ 0) = a
+
 
 {-
 Positive x `orInteger` Negative y = let x' = flipBits x
@@ -194,21 +191,11 @@ Positive x `orInteger` Negative y = let x' = flipBits x
                                     in digitsToNegativeInteger z'
 -}
 
-orInteger (Small a) b = orInteger (mkLarge a) b
-orInteger a (Small b) = orInteger a (mkLarge b)
-
-orInteger a@(Large s1 n1 arr1) b@(Large s2 n2 arr2)
-    | s1 == Neg && s2 == Neg = plusInteger (andInteger (plusInteger a minusOneInteger) (plusInteger b minusOneInteger)) oneInteger
-    | s1 == Neg = plusInteger (andInteger (plusInteger a minusOneInteger) (complementInteger b)) oneInteger
-    | s2 == Neg = plusInteger (andInteger (complementInteger a) (plusInteger b minusOneInteger)) oneInteger
-    | otherwise =
-        unsafeInlinePrim $ if n1 >= n2
-                            then orArray Pos n1 arr1 n2 arr2
-                            else orArray Pos n2 arr2 n1 arr1
+orInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
-orArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
-orArray !s !n1 !arr1 !n2 !arr2 = do
+orArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
+orArray !s !n1 !arr1 !n2 !arr2 = unsafeInlinePrim $ do
     !marr <- newWordArray n1
     nlen <- loop1 marr 0
     narr <- unsafeFreezeWordArray marr
@@ -231,18 +218,17 @@ orArray !s !n1 !arr1 !n2 !arr2 = do
 
 {-# NOINLINE xorInteger #-}
 xorInteger :: Integer -> Integer -> Integer
-xorInteger a (Small 0) = a
-xorInteger (Small 0) b = b
-xorInteger (Small a) (Small b) = Small (xor a b)
-xorInteger (Small a) b = xorInteger (mkLarge a) b
-xorInteger a (Small b) = xorInteger a (mkLarge b)
+xorInteger a (Small _ 0) = a
+xorInteger (Small _ 0) b = b
 xorInteger (Large _ n1 arr1) (Large _ n2 arr2) =
-    unsafeInlinePrim $ if n1 >= n2
-                            then xorArray Pos n1 arr1 n2 arr2
-                            else xorArray Pos n2 arr2 n1 arr1
+    if n1 >= n2
+        then xorArray Pos n1 arr1 n2 arr2
+        else xorArray Pos n2 arr2 n1 arr1
+xorInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
-xorArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
-xorArray !s !n1 !arr1 !n2 !arr2 = do
+
+xorArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
+xorArray !s !n1 !arr1 !n2 !arr2 = unsafeInlinePrim $ do
     !marr <- newWordArray n1
     loop1 marr 0
     narr <- unsafeFreezeWordArray marr
@@ -265,16 +251,15 @@ xorArray !s !n1 !arr1 !n2 !arr2 = do
 
 {-# NOINLINE complementInteger #-}
 complementInteger :: Integer -> Integer
-complementInteger (Small a) = Small (complement a)
-complementInteger (Large Pos n arr) = unsafeInlinePrim (plusArrayW Neg n arr 1)
-complementInteger (Large Neg n arr) = unsafeInlinePrim (minusArrayW Pos n arr 1)
+complementInteger (Large Pos n arr) = plusArrayW Neg n arr 1
+complementInteger (Large Neg n arr) = minusArrayW Pos n arr 1
+complementInteger _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE shiftLInteger #-}
 shiftLInteger :: Integer -> Int# -> Integer
 shiftLInteger a 0# = a
-shiftLInteger (Small 0) _ = (Small 0)
-shiftLInteger (Small a) b = shiftLInteger (mkLarge a) b
-shiftLInteger (Large !s !n !arr) b = unsafeInlinePrim (shiftLArray s n arr (I# b))
+shiftLInteger (Small _ 0) _ = (Small Pos 0)
+shiftLInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE shiftRInteger #-}
 shiftRInteger :: Integer -> Int# -> Integer
@@ -283,37 +268,19 @@ shiftRInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ ::
 
 {-# NOINLINE negateInteger #-}
 negateInteger :: Integer -> Integer
-negateInteger (Small a) = Small (-a)
+negateInteger (Small !s !a) = Small (negateSign s) a
 negateInteger (Large !s !n !arr) = Large (negateSign s) n arr
 
 -- Note [Avoid patError]
 {-# NOINLINE plusInteger #-}
 plusInteger :: Integer -> Integer -> Integer
-plusInteger a (Small 0) = a
-plusInteger (Small 0) b = b
-plusInteger (Small a) (Small b) = Small (a + b)
-plusInteger (Small (I# i)) (Large Neg n arr)
-    | i <# 0# = unsafeInlinePrim $ plusArrayW Neg n arr (W# (int2Word# (negateInt# i)))
-    | otherwise = unsafeInlinePrim $ plusArrayW Neg n arr (W# (int2Word# i))
-plusInteger (Large Neg n arr) (Small (I# i))
-    | i <# 0# = unsafeInlinePrim (minusArrayW Neg n arr (W# (int2Word# (negateInt# i))))
-    |otherwise = unsafeInlinePrim (minusArrayW Neg n arr (W# (int2Word# i)))
-plusInteger (Small (I# i)) (Large Pos n arr)
-    | i <# 0# = unsafeInlinePrim $ minusArrayW Pos n arr (W# (int2Word# (negateInt# i)))
-    | otherwise = unsafeInlinePrim $ plusArrayW Pos n arr (W# (int2Word# i))
-plusInteger (Large Pos n arr) (Small (I# i))
-    | i <# 0# = unsafeInlinePrim (minusArrayW Pos n arr (W# (int2Word# (negateInt# i))))
-    | otherwise = unsafeInlinePrim $ plusArrayW Pos n arr (W# (int2Word# i))
+plusInteger a (Small _ 0) = a
+plusInteger (Small _ 0) b = b
 
-plusInteger a@(Large s1 n1 arr1) b@(Large s2 n2 arr2) =
-    case (s1, s2) of
-        (Pos, Neg) -> minusInteger a (Large Pos n2 arr2)
-        (Neg, Pos) -> minusInteger b (Large Pos n1 arr1)
-        (Neg, Neg) -> unsafeInlinePrim $ plusArray Neg n1 arr1 n2 arr2
-        (Pos, Pos) -> unsafeInlinePrim $ plusArray Pos n1 arr1 n2 arr2
+plusInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
-plusArrayW :: Sign -> Int -> ByteArray -> Word -> IO Integer
-plusArrayW s n arr w = do
+plusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
+plusArrayW s n arr w = unsafeInlinePrim $ do
     !marr <- newHalfWordArray (2 * succ n)
     writeHalfWordArray marr (2 * succ n - 1) 0
     let (!uw, !lw) = splitFullWord w
@@ -342,10 +309,10 @@ plusArrayW s n arr w = do
         | otherwise = return n
 
 
-plusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
+plusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 plusArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray s n2 arr2 n1 arr1
-    | otherwise = do --
+    | otherwise = unsafeInlinePrim $ do --
         !marr <- newHalfWordArray (2 * succ n1)
         loop1 marr 0 0
         !narr <- unsafeFreezeHalfWordArray marr
@@ -388,7 +355,7 @@ isPos (Large Pos _ _) = True
 isPos _ = False
 
 isNeg :: Integer -> Bool
-isNeg (Small Neg) = True
+isNeg (Small Neg _) = True
 isNeg (Large Neg _ _) = True
 isNeg _ = False
 
@@ -406,30 +373,29 @@ minusInteger a (Small _ 0) = a
 minusInteger (Small _ 0) b = negateInteger b
 minusInteger a@(Small _ _) (Large Neg n arr) = plusInteger (Large Pos n arr) a
 
-minusInteger (Small Neg w) (Large Pos n arr) = unsafeInlinePrim $ plusArrayW Neg n arr w)
-minusInteger (Small Pos w) (Large Pos n arr) = unsafeInlinePrim $ minusArrayW Neg n arr w)
+minusInteger (Small Neg w) (Large Pos n arr) = plusArrayW Neg n arr w
+minusInteger (Small Pos w) (Large Pos n arr) = minusArrayW Neg n arr w
 
-minusInteger (Large Pos n arr) (Small Neg w) = unsafeInlinePrim $ plusArrayW Pos n arr w)
-minusInteger (Large Pos n arr) (Small Pos w) = unsafeInlinePrim $ minusArrayW Pos n arr w)
+minusInteger (Large Pos n arr) (Small Neg w) = plusArrayW Pos n arr w
+minusInteger (Large Pos n arr) (Small Pos w) = minusArrayW Pos n arr w
 
-minusInteger (Large Neg n arr) (Small Pos w) = unsafeInlinePrim $ plusArrayW Neg arr w)
-minusInteger (Large Neg n arr) (Small Neg w) = unsafeInlinePrim $ minusArrayW Neg arr w)
+minusInteger (Large Neg n arr) (Small Pos w) = plusArrayW Neg n arr w
+minusInteger (Large Neg n arr) (Small Neg w) = minusArrayW Neg n arr w
 
 
 minusInteger a@(Large s1 n1 arr1) (Large s2 n2 arr2) =
     case (s1, s2) of
         (Pos, Neg) -> plusInteger a (Large Neg n2 arr2)
-        (Neg, Pos) -> unsafeInlinePrim $plusArray Neg n1 arr1 n2 arr2
-        (Pos, Pos) -> unsafeInlinePrim $ minusArray Pos n1 arr1 n2 arr2
-        (Neg, Neg) -> unsafeInlinePrim $
-                        if n1 > n2
-                            then minusArray Neg n1 arr1 n2 arr2
-                            else minusArray Pos n2 arr2 n1 arr1
+        (Neg, Pos) -> plusArray Neg n1 arr1 n2 arr2
+        (Pos, Pos) -> minusArray Pos n1 arr1 n2 arr2
+        (Neg, Neg) -> if n1 > n2
+                        then minusArray Neg n1 arr1 n2 arr2
+                        else minusArray Pos n2 arr2 n1 arr1
 
 minusInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
-minusArrayW :: Sign -> Int -> ByteArray -> Word -> IO Integer
-minusArrayW  s n arr w = do
+minusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
+minusArrayW  s n arr w = unsafeInlinePrim $ do
     !marr <- newHalfWordArray (2 * succ n)
     writeHalfWordArray marr (2 * succ n - 1) 0
     let (!uw, !lw) = splitFullWord w
@@ -458,10 +424,10 @@ minusArrayW  s n arr w = do
         | otherwise = return n
 
 
-minusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
+minusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 minusArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray s n2 arr2 n1 arr1
-    | otherwise = do --
+    | otherwise = unsafeInlinePrim $ do --
         !marr <- newHalfWordArray (2 * succ n1)
         loop1 marr 0 0
         !narr <- unsafeFreezeHalfWordArray marr
@@ -527,9 +493,9 @@ compareInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: In
 {-# NOINLINE eqInteger #-}
 eqInteger :: Integer -> Integer -> Bool
 eqInteger (Small Pos a) (Small Pos b) = a == b
-eqInteger (Small Pos _) (Small Neg _) = False
 eqInteger (Small Neg a) (Small Neg b) = a == b
 eqInteger (Small Pos _) (Small Neg _) = False
+eqInteger (Small Neg _) (Small Pos _) = False
 
 eqInteger (Small Pos _) (Large Pos _ _) = False
 eqInteger (Small Pos _) (Large Neg _ _) = False
@@ -544,22 +510,7 @@ eqInteger (Large Neg _ _) (Small Neg _) = False
 eqInteger (Large Pos _ _) (Large Neg _ _) = False
 eqInteger (Large Neg _ _) (Large Pos _ _) = False
 
-eqInteger (Large Pos _ _) (Large Pos _ _) = False
-eqInteger (Large Neg _ _) (Large Neg _ _) = False
 
-
-eqInteger (Small Pos _) (Small Neg b) = False
-eqInteger (Small Pos a) (Small Neg b) = False
-
-
-eqInteger a b
-    | isPos a == isPos b = False
-    | isPos a /= isPos b = False
-
-    | isSmall a /= isSmall b = False
-
-eqInteger a@(Small {}) b = eqInteger (mkLarge a) b
-eqInteger a b@(Small {}) = eqInteger a (mkLarge b)
 eqInteger (Large s1 n1 arr1) (Large s2 n2 arr2)
     | s1 /= s2 = False
     | otherwise = eqArray 0 0
@@ -582,8 +533,8 @@ instance  Eq Integer  where
 {-# NOINLINE ltInteger #-}
 ltInteger :: Integer -> Integer -> Bool
 ltInteger (Small Pos a) (Small Pos b) = a < b
-ltInteger (Small Pos a) (Small Neg b) = False
-ltInteger (Small Neg a) (Small Pos b) = True
+ltInteger (Small Pos _) (Small Neg _) = False
+ltInteger (Small Neg _) (Small Pos _) = True
 ltInteger (Small Neg a) (Small Neg b) = a >= b
 ltInteger a@(Small {}) b = geInteger b (mkLarge a)
 ltInteger a b@(Small {}) = ltInteger a (mkLarge b)
@@ -603,8 +554,8 @@ ltArray !n1 !arr1 !n2 !arr2
 {-# NOINLINE gtInteger #-}
 gtInteger :: Integer -> Integer -> Bool
 gtInteger (Small Pos a) (Small Pos b) = a > b
-gtInteger (Small Pos a) (Small Neg b) = True
-gtInteger (Small Neg a) (Small Pos b) = False
+gtInteger (Small Pos _) (Small Neg _) = True
+gtInteger (Small Neg _) (Small Pos _) = False
 gtInteger (Small Neg a) (Small Neg b) = a <= b
 gtInteger a@(Small {}) b = leInteger b (mkLarge a)
 gtInteger a b@(Small {}) = gtInteger a (mkLarge b)

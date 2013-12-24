@@ -32,9 +32,9 @@ instance Show Integer where
 
 
 hexShow :: Integer -> String
-hexShow (Small 0) = "0x0"
-hexShow (Small a) =
-    let sign = if a < 0 then '-' else '+'
+hexShow (Small _ 0) = "0x0"
+hexShow (Small s a) =
+    let sign = if s == Neg then '-' else '+'
     in sign : "0x" ++ showHex (abs a) ""
 
 hexShow i@(Large s n arr)
