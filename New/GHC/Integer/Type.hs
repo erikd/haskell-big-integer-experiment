@@ -560,7 +560,7 @@ ltInteger :: Integer -> Integer -> Bool
 ltInteger (Small Pos a) (Small Pos b) = a < b
 ltInteger (Small Pos _) (Small Neg _) = False
 ltInteger (Small Neg _) (Small Pos _) = True
-ltInteger (Small Neg a) (Small Neg b) = a >= b
+ltInteger (Small Neg a) (Small Neg b) = a > b
 ltInteger a@(Small {}) b = geInteger b (mkLarge a)
 ltInteger a b@(Small {}) = ltInteger a (mkLarge b)
 ltInteger (Large s1 n1 arr1) (Large s2 n2 arr2)
@@ -571,8 +571,8 @@ ltInteger (Large s1 n1 arr1) (Large s2 n2 arr2)
 ltArray :: Int -> ByteArray -> Int -> ByteArray -> Bool
 ltArray !n1 !arr1 !n2 !arr2
     | n1 == n2 = indexWordArray arr1 (n1 - 1) < indexWordArray arr2 (n2 - 1)
-    | n1 > n2 && indexWordArray arr1 (n1 - 1) > 0 = True
-    | n1 < n2 && indexWordArray arr2 (n2 - 1) > 0 = True
+    | n1 > n2 = False
+    | n1 < n2 = True
     | otherwise = False
 
 
