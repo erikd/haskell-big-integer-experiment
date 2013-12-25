@@ -294,16 +294,35 @@ plusInteger a (Small _ 0) = a
 plusInteger (Small _ 0) b = b
 
 plusInteger (Small Pos a) (Small Pos b) = Small Pos (a + b)
-plusInteger (Small Pos a) (Small Neg b) = Small Pos (a - b)
-plusInteger (Small Neg a) (Small Pos b) = Small Pos (b - a)
-plusInteger (Small Neg a) (Small Neg b) = Small Pos (a - b)
-
+plusInteger (Small Pos a) (Small Neg b)
+    | a >= b = Small Pos (a - b)
+    | otherwise = Small Neg (b - a)
+plusInteger (Small Neg a) (Small Pos b)
+    | a >= b = Small Neg (a - b)
+    | otherwise = Small Pos (b - a)
+plusInteger (Small Neg a) (Small Neg b) = Small Neg (a + b)
 
 plusInteger (Large Pos n arr) (Small Pos w) = plusArrayW Pos n arr w
 plusInteger (Small Pos w) (Large Pos n arr) = plusArrayW Pos n arr w
-plusInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = plusArray Pos n1 arr1 n2 arr2
 
-plusInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+plusInteger (Large Neg n arr) (Small Neg w) = plusArrayW Neg n arr w
+plusInteger (Small Neg w) (Large Neg n arr) = plusArrayW Neg n arr w
+
+plusInteger (Large Pos n arr) (Small Neg w) = minusArrayW Pos n arr w
+plusInteger (Small Neg w) (Large Pos n arr) = minusArrayW Pos n arr w
+
+plusInteger (Small Pos w) (Large Neg n arr) = minusArrayW Neg n arr w
+plusInteger (Large Neg n arr) (Small Pos w) = minusArrayW Neg n arr w
+
+plusInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = plusArray Pos n1 arr1 n2 arr2
+plusInteger (Large Pos n1 arr1) (Large Neg n2 arr2)
+    | gtArray n1 arr1 n2 arr2 = minusArray Pos n1 arr1 n2 arr2
+    | otherwise = minusArray Neg n2 arr2 n1 arr1
+plusInteger (Large Neg n1 arr1) (Large Pos n2 arr2)
+    | gtArray n1 arr1 n2 arr2 = minusArray Neg n1 arr1 n2 arr2
+    | otherwise = minusArray Pos n2 arr2 n1 arr1
+plusInteger (Large Neg n1 arr1) (Large Neg n2 arr2) = plusArray Neg n1 arr1 n2 arr2
+
 
 plusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
 plusArrayW s n arr w = unsafeInlinePrim $ do
