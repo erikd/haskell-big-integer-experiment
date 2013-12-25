@@ -80,23 +80,40 @@ testNewInteger = do
         boxIntHash (N.integerToInt (N.smallInteger (unboxInt i))) `shouldBe` i
     prop "Can create Integers." $ \ (GNP g s) ->
         show g == show s
+
     prop "Can complement an Integer." $ \ (GNP g s) ->
         show (N.complementInteger s) `shouldBe` show (G.complementInteger g)
 
-
     prop "Can AND two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (N.andInteger (N.absInteger sa) (N.absInteger sb)) `shouldBe` show (G.andInteger (G.absInteger ga) (G.absInteger gb))
-
-
     prop "Can OR two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (N.orInteger (N.absInteger sa) (N.absInteger sb)) `shouldBe` show (G.orInteger (G.absInteger ga) (G.absInteger gb))
 
-    prop "Can AND two Integers." $ \ (GNP ga sa, GNP gb sb) ->
-        show (N.andInteger sa sb) `shouldBe` show (G.andInteger ga gb)
 
+    prop "Can compare > two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        N.gtInteger sa sb `shouldBe` G.gtInteger ga gb
+    prop "Can compare < two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        N.ltInteger sa sb `shouldBe` G.ltInteger ga gb
+    prop "Can compare >= two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        N.geInteger sa sb `shouldBe` G.geInteger ga gb
+    prop "Can compare <= two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        N.leInteger sa sb `shouldBe` G.leInteger ga gb
+
+    prop "Can add two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.plusInteger (N.absInteger sa) (N.absInteger sb)) `shouldBe` show (G.plusInteger (G.absInteger ga) (G.absInteger gb))
+    prop "Can subtract two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.minusInteger (N.absInteger sa) (N.absInteger sb)) `shouldBe` show (G.minusInteger (G.absInteger ga) (G.absInteger gb))
+
+    prop "Can add two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.plusInteger sa sb) `shouldBe` show (G.plusInteger ga gb)
+    prop "Can subtract two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.minusInteger sa sb) `shouldBe` show (G.minusInteger ga gb)
+
+
+{-
     prop "Can OR two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (N.orInteger sa sb) `shouldBe` show (G.orInteger ga gb)
-
+-}
 
 
 
