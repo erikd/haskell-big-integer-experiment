@@ -300,6 +300,8 @@ plusInteger (Small Neg a) (Small Neg b) = Small Pos (a - b)
 
 
 plusInteger (Large Pos n arr) (Small Pos w) = plusArrayW Pos n arr w
+plusInteger (Small Pos w) (Large Pos n arr) = plusArrayW Pos n arr w
+plusInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = plusArray Pos n1 arr1 n2 arr2
 
 plusInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
@@ -395,26 +397,25 @@ isLarge _ = False
 minusInteger :: Integer -> Integer -> Integer
 minusInteger a (Small _ 0) = a
 minusInteger (Small _ 0) b = negateInteger b
-minusInteger a@(Small _ _) (Large Neg n arr) = plusInteger (Large Pos n arr) a
+
+minusInteger (Small Pos a) (Small Pos b)
+    | a >= b = Small Pos (a - b)
+    | otherwise = Small Neg (b - a)
+minusInteger (Small Pos a) (Small Neg b) = Small Pos (a + b)
+minusInteger (Small Neg a) (Small Pos b) = Small Neg (a + b)
+minusInteger (Small Neg a) (Small Neg b) = Small Pos (b - a)
 
 minusInteger (Small Neg w) (Large Pos n arr) = plusArrayW Neg n arr w
 minusInteger (Small Pos w) (Large Pos n arr) = minusArrayW Neg n arr w
-
 minusInteger (Large Pos n arr) (Small Neg w) = plusArrayW Pos n arr w
 minusInteger (Large Pos n arr) (Small Pos w) = minusArrayW Pos n arr w
-
 minusInteger (Large Neg n arr) (Small Pos w) = plusArrayW Neg n arr w
 minusInteger (Large Neg n arr) (Small Neg w) = minusArrayW Neg n arr w
 
 
-minusInteger a@(Large s1 n1 arr1) (Large s2 n2 arr2) =
-    case (s1, s2) of
-        (Pos, Neg) -> plusInteger a (Large Neg n2 arr2)
-        (Neg, Pos) -> plusArray Neg n1 arr1 n2 arr2
-        (Pos, Pos) -> minusArray Pos n1 arr1 n2 arr2
-        (Neg, Neg) -> if n1 > n2
-                        then minusArray Neg n1 arr1 n2 arr2
-                        else minusArray Pos n2 arr2 n1 arr1
+minusInteger a@(Large Pos n1 arr1) b@(Large Pos n2 arr2)
+    | gtInteger a b = minusArray Pos n1 arr1 n2 arr2
+    | otherwise = minusArray Neg n2 arr2 n1 arr1
 
 minusInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
@@ -580,20 +581,20 @@ gtInteger :: Integer -> Integer -> Bool
 gtInteger (Small Pos a) (Small Pos b) = a > b
 gtInteger (Small Pos _) (Small Neg _) = True
 gtInteger (Small Neg _) (Small Pos _) = False
-gtInteger (Small Neg a) (Small Neg b) = a <= b
+gtInteger (Small Neg a) (Small Neg b) = a < b
 gtInteger a@(Small {}) b = leInteger b (mkLarge a)
 gtInteger a b@(Small {}) = gtInteger a (mkLarge b)
 gtInteger (Large s1 n1 arr1) (Large s2 n2 arr2)
     | s1 /= s2 = s1 > s2
     | s1 == Pos = gtArray n1 arr1 n2 arr2
-    | otherwise = not $ gtArray n1 arr1 n2 arr2
+    | otherwise = gtArray n2 arr2 n1 arr1
 
 
 gtArray :: Int -> ByteArray -> Int -> ByteArray -> Bool
 gtArray !n1 !arr1 !n2 !arr2
     | n1 == n2 = indexWordArray arr1 (n1 - 1) > indexWordArray arr2 (n2 - 1)
-    | n1 > n2 && indexWordArray arr1 (n1 - 1) < 0 = True
-    | n1 < n2 && indexWordArray arr2 (n2 - 1) < 0 = True
+    | n1 > n2 = True
+    | n1 < n2 = False
     | otherwise = False
 
 {-# NOINLINE leInteger #-}
