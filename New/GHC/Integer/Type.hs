@@ -167,9 +167,7 @@ andInteger a@(Small _ _) b@(Large _ _ _) = andInteger (mkLarge a) b
 
 andInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = andArray Pos (min n1 n2) arr1 arr2
 
-andInteger (Large Pos n1 arr1) (Large Neg n2 arr2) = andArrayF Pos (min n1 n2) arr1 arr2 (\ x y -> x .&. complement (y - 1))
-andInteger (Large Neg n1 arr1) (Large Pos n2 arr2) = andArrayF Pos (min n1 n2) arr1 arr2 (\ x y -> complement (y - 1) .&. x)
-andInteger (Large Neg n1 arr1) (Large Neg n2 arr2) = andArrayF Neg (min n1 n2) arr1 arr2 (\ x y -> ((x - 1) .|. (y - 1)) + 1)
+andInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
 andArray :: Sign -> Int -> ByteArray -> ByteArray -> Integer
@@ -187,20 +185,6 @@ andArray s n arr1 arr2 = unsafeInlinePrim $ do
                 loop marr (i + 1)
         | otherwise = return ()
 
-andArrayF :: Sign -> Int -> ByteArray -> ByteArray -> (Word -> Word -> Word) -> Integer
-andArrayF s n arr1 arr2 func = unsafeInlinePrim $ do
-    !marr <- newWordArray n
-    loop marr 0
-    narr <- unsafeFreezeWordArray marr
-    finalizeLarge s n narr
-  where
-    loop !marr !i
-        | i < n = do
-                x <- indexWordArrayM arr1 i
-                y <- indexWordArrayM arr2 i
-                writeWordArray marr i (func x y)
-                loop marr (i + 1)
-        | otherwise = return ()
 
 {-# NOINLINE orInteger #-}
 orInteger :: Integer -> Integer -> Integer
@@ -216,9 +200,7 @@ orInteger a@(Small _ _) b@(Large _ _ _) = orInteger (mkLarge a) b
 
 orInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = orArray Pos n1 arr1 n2 arr2
 
-orInteger a@(Large Pos _ _) b@(Large Neg _ _) = negateInteger (plusInteger (andInteger (complementInteger (absInteger a)) (minusInteger (absInteger b) oneInteger)) oneInteger)
-orInteger a@(Large Neg _ _) b@(Large Pos _ _) = negateInteger (plusInteger (andInteger (minusInteger (absInteger a) oneInteger) (complementInteger (absInteger b))) oneInteger)
-orInteger a@(Large Neg _ _) b@(Large Neg _ _) = negateInteger (plusInteger (andInteger (minusInteger (absInteger a) oneInteger) (minusInteger (absInteger b) oneInteger)) oneInteger)
+orInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
 
