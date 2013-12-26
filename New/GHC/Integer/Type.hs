@@ -422,21 +422,36 @@ minusInteger (Small Pos a) (Small Pos b)
     | otherwise = Small Neg (b - a)
 minusInteger (Small Pos a) (Small Neg b) = Small Pos (a + b)
 minusInteger (Small Neg a) (Small Pos b) = Small Neg (a + b)
-minusInteger (Small Neg a) (Small Neg b) = Small Pos (b - a)
-
+minusInteger (Small Neg a) (Small Neg b)
+    | a > b = Small Neg (a - b)
+    | otherwise = Small Pos (b - a)
 minusInteger (Small Neg w) (Large Pos n arr) = plusArrayW Neg n arr w
 minusInteger (Small Pos w) (Large Pos n arr) = minusArrayW Neg n arr w
+
 minusInteger (Large Pos n arr) (Small Neg w) = plusArrayW Pos n arr w
+
+
 minusInteger (Large Pos n arr) (Small Pos w) = minusArrayW Pos n arr w
+
+
 minusInteger (Large Neg n arr) (Small Pos w) = plusArrayW Neg n arr w
+minusInteger (Small Pos w) (Large Neg n arr) = plusArrayW Pos n arr w
+
 minusInteger (Large Neg n arr) (Small Neg w) = minusArrayW Neg n arr w
+minusInteger (Small Neg w) (Large Neg n arr) = minusArrayW Pos n arr w
 
 
-minusInteger a@(Large Pos n1 arr1) b@(Large Pos n2 arr2)
-    | gtInteger a b = minusArray Pos n1 arr1 n2 arr2
+minusInteger (Large Pos n1 arr1) (Large Pos n2 arr2)
+    | gtArray n1 arr1 n2 arr2 = minusArray Pos n1 arr1 n2 arr2
     | otherwise = minusArray Neg n2 arr2 n1 arr1
 
-minusInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+minusInteger (Large Neg n1 arr1) (Large Neg n2 arr2)
+    | gtArray n1 arr1 n2 arr2 = minusArray Neg n1 arr1 n2 arr2
+    | otherwise = minusArray Pos n2 arr2 n1 arr1
+
+minusInteger (Large Neg n1 arr1) (Large Pos n2 arr2) = plusArray Neg n1 arr1 n2 arr2
+minusInteger (Large Pos n1 arr1) (Large Neg n2 arr2) = plusArray Pos n1 arr1 n2 arr2
+
 
 minusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
 minusArrayW  s n arr w = unsafeInlinePrim $ do
