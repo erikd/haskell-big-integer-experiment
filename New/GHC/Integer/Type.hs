@@ -600,7 +600,7 @@ ltInteger a b@(Small {}) = ltInteger a (mkLarge b)
 ltInteger (Large s1 n1 arr1) (Large s2 n2 arr2)
     | s1 /= s2 = s1 < s2
     | s1 == Pos = ltArray n1 arr1 n2 arr2
-    | otherwise = not $ ltArray n1 arr1 n2 arr2
+    | otherwise = ltArray n2 arr2 n1 arr1
 
 ltArray :: Int -> ByteArray -> Int -> ByteArray -> Bool
 ltArray !n1 !arr1 !n2 !arr2
