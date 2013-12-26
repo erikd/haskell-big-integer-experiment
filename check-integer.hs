@@ -83,6 +83,8 @@ testNewInteger = do
 
     prop "Can complement an Integer." $ \ (GNP g s) ->
         show (N.complementInteger s) `shouldBe` show (G.complementInteger g)
+    prop "Can negate an Integer." $ \ (GNP g s) ->
+        show (N.negateInteger s) `shouldBe` show (G.negateInteger g)
 
     prop "Can AND two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (N.andInteger (N.absInteger sa) (N.absInteger sb)) `shouldBe` show (G.andInteger (G.absInteger ga) (G.absInteger gb))
@@ -109,111 +111,21 @@ testNewInteger = do
     prop "Can subtract two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (N.minusInteger sa sb) `shouldBe` show (G.minusInteger ga gb)
 
+    prop "Can shiftL Integers." $ \ (GNP g s, int) -> do
+        let bits = unboxInt (int .&. 31)
+        show (N.shiftLInteger s bits) `shouldBe` show (G.shiftLInteger g bits)
+
 
 {-
     prop "Can OR two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (N.orInteger sa sb) `shouldBe` show (G.orInteger ga gb)
--}
-
-
-
-{-
-    prop "Can negate an Integer." $ \ (GNP g s) ->
-        show (N.negateInteger s) `shouldBe` show (G.negateInteger g)
-
-    it "Can add two Small Integers." $ do
-        show (N.plusInteger (N.smallInteger 0x7fffffffffffffff#) (N.smallInteger 1#)) `shouldBe` "+0xfffffffffffffffe"
-        show (N.plusInteger (N.smallInteger 0x7fffffffffffffff#) (N.smallInteger 0x7fffffffffffffff#)) `shouldBe` "+0xfffffffffffffffe"
-
-
-    it "Can add a Small Integer to a Large." $ do
-        show (N.plusInteger (N.mkInteger True [0x7fffff]) (N.smallInteger 1#)) `shouldBe` "+0x800000"
-        show (N.plusInteger (N.mkInteger True [0x7fffffff, 0x7fffffff]) (N.smallInteger 1#)) `shouldBe` "+0x4000000000000000"
-        show (N.plusInteger (N.mkInteger True [0, 0x80000000]) (N.smallInteger 1#)) `shouldBe` "+0x4000000000000001"
-
-        show (N.plusInteger (N.smallInteger (-1#)) (N.mkInteger False [0, 1]) ) `shouldBe` "-0x80000001"
-
-        show (N.plusInteger (N.mkInteger False [0, 0x7f]) (N.smallInteger 1#)) `shouldBe` "-0x3f7fffffff"
-
-
-    prop "Can complement an Integer." $ \ (GNP g s) ->
-        show (N.complementInteger s) `shouldBe` show (G.complementInteger g)
-
-    prop "Can add two positive Large Integers." $ \ (GNP ga na, GNP gb nb) ->
-        show (N.plusInteger (N.absInteger na) (N.absInteger nb)) `shouldBe` show (G.plusInteger (G.absInteger ga) (G.absInteger gb))
-
-
-    it "Can add two Integers." $ do
-        show (N.minusInteger (N.mkInteger False [11, 0x2]) (N.smallInteger (-7#))) `shouldBe` "-0x100000004"
-
-
-    it "Can subtract a Small Integer from a Large." $ do
-        show (N.minusInteger (N.mkInteger True [0x080000]) (N.smallInteger 1#)) `shouldBe` "+0x7ffff"
-        show (N.minusInteger (N.mkInteger True [0, 1]) (N.smallInteger 1#)) `shouldBe` "+0x7fffffff"
-        show (N.minusInteger (N.mkInteger True [0x7fffffff, 0x7fffffff]) (N.smallInteger 1#)) `shouldBe` "+0x3ffffffffffffffe"
-        show (N.minusInteger (N.mkInteger True [0, 0x80000000]) (N.smallInteger 2#)) `shouldBe` "+0x3ffffffffffffffe"
-
-    it "Can subtract two positive Large Integers." $ do
-        show (N.minusInteger (N.mkInteger True [0,2]) (N.mkInteger True [0,1])) `shouldBe` "+0x80000000"
-        show (N.minusInteger (N.mkInteger True [0,3]) (N.mkInteger True [0,1])) `shouldBe` "+0x100000000"
-        show (N.minusInteger (N.mkInteger True [0,0,1]) (N.mkInteger True [0,1])) `shouldBe` "+0x3fffffff80000000"
-        show (N.minusInteger (N.mkInteger False [1]) (N.mkInteger False [2])) `shouldBe` "+0x0"
-        show (N.minusInteger (N.mkInteger False [0,11]) (N.mkInteger True [0,0,2])) `shouldBe` "-0x8000000580000000"
-
-
-    prop "Can subtract two positive Large Integers." $ \ (GNP ga na, GNP gb nb) ->
-        show (N.minusInteger (N.absInteger na) (N.absInteger nb)) `shouldBe` show (G.minusInteger (G.absInteger ga) (G.absInteger gb))
-
-    prop "Can add two Large Integers." $ \ (GNP ga na, GNP gb nb) ->
-        show (N.plusInteger na nb) `shouldBe` show (G.plusInteger ga gb)
-
-
-
-    prop "Can OR two Integers." $ \ (GNP ga na, GNP gb nb) ->
-        show (N.orInteger na nb) `shouldBe` show (G.orInteger ga gb)
--}
-
-{-
-    it "Can complement an Integer." $ do
-        property $ 2 `shouldBe` (1 :: Int)
-        property $ 1 `shouldBe` (1 :: Int)
--}
-
-{-
     prop "Can AND two Integers." $ \ (GNP ga na, GNP gb nb) ->
-        show (G.andInteger ga gb) `shouldBe` show (N.andInteger na nb)
+        show (N.andInteger na nb) `shouldBe` show (G.andInteger ga gb)
     prop "Can XOR two Integers." $ \ (GNP ga na, GNP gb nb) ->
-        show (G.xorInteger ga gb) `shouldBe` show (N.xorInteger na nb)
-
-    it "Can shiftL -2 0" $ do
-        show (N.shiftLInteger (N.mkInteger False [2]) 0#) `shouldBe`
-                show (G.shiftLInteger (G.mkInteger False [2]) 0#)
-
-    it "Can shiftL -0xffffffff 0" $
-        show (N.shiftLInteger (N.mkInteger True [0xffffffff]) 0#) `shouldBe`
-                show (G.shiftLInteger (G.mkInteger True [0xffffffff]) 0#)
-
-    it "Can shiftL 0 1" $ do
-        show (N.shiftLInteger (N.mkInteger True [0]) 1#) `shouldBe`
-                show (G.shiftLInteger (G.mkInteger True [0]) 1#)
-
-    prop "Can shiftL Integers." $ \ (GNP g s, int) -> do
-        let bits = unboxInt (int .&. 31)
-        show (G.shiftLInteger g bits) == show (N.shiftLInteger s bits)
-
-    it "Can shiftL 0x7fffffff00000001 2" $ do
-        show (N.shiftLInteger (N.mkInteger True [0x7fffffff00000001]) 2#) `shouldBe`
-                show (G.shiftLInteger (G.mkInteger True [0x7fffffff00000001]) 2#)
-
-    it "Can shiftL 0x7fffffff00000001 1" $ do
-        show (N.shiftLInteger (N.mkInteger False [0x7fffffff00000001]) 1#) `shouldBe`
-                show (G.shiftLInteger (G.mkInteger False [0x7fffffff00000001]) 1#)
-
-    it "Can shiftL 0x7fffffff00000001 2" $ do
-        show (N.shiftLInteger (N.mkInteger False [0x7fffffff00000001]) 2#) `shouldBe`
-                show (G.shiftLInteger (G.mkInteger False [0x7fffffff00000001]) 2#)
-
+        show (N.xorInteger na nb) `shouldBe` show (G.xorInteger ga gb)
 -}
+
+
 
 
 --------------------------------------------------------------------------------
