@@ -692,11 +692,15 @@ mkSingletonArray !s !x = do
 shiftLArray :: Sign -> Int -> ByteArray -> Int -> Integer
 shiftLArray !s !n !arr !i
     | i < WORD_SIZE_IN_BITS =
-                unsafeInlinePrim $ smallShiftLArray s n arr (# i, WORD_SIZE_IN_BITS - i #)
-    | True = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+            smallShiftLArray s n arr (# i, WORD_SIZE_IN_BITS - i #)
+    | otherwise = do
+            let (!q, !r) = quotRem i WORD_SIZE_IN_BITS
+            if r == 0
+                then wordShiftArray s n arr q
+                else largeShiftLArray s n arr (# q, i, WORD_SIZE_IN_BITS - i #)
 
-smallShiftLArray :: Sign -> Int -> ByteArray -> (# Int, Int #) -> IO Integer
-smallShiftLArray !s !n !arr (# !si, !sj #) = do
+smallShiftLArray :: Sign -> Int -> ByteArray -> (# Int, Int #) -> Integer
+smallShiftLArray !s !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
     !marr <- newWordArray (succ n)
     nlen <- loop marr 0 0
     narr <- unsafeFreezeWordArray marr
@@ -707,10 +711,50 @@ smallShiftLArray !s !n !arr (# !si, !sj #) = do
             x <- indexWordArrayM arr i
             writeWordArray marr i ((unsafeShiftL x si) .|. mem)
             loop marr (i + 1) (unsafeShiftR x sj)
-        | mem == 0 = return n
-        | otherwise = do
+        | mem /= 0 = do
             writeWordArray marr i mem
             return $ i + 1
+        | otherwise = return n
+
+wordShiftArray :: Sign -> Int -> ByteArray -> Int -> Integer
+wordShiftArray s n arr q = unsafeInlinePrim $ do
+    !marr <- newWordArray (n + q)
+    loop1 marr 0
+    !narr <- unsafeFreezeWordArray marr
+    finalizeLarge s (n + q) narr
+  where
+    loop1 !marr !i
+        | i < q = do
+            writeWordArray marr i 0
+            loop1 marr (i + 1)
+        | otherwise = loop2 marr 0
+    loop2 !marr !i
+        | i < n =  do
+            x <- indexWordArrayM arr i
+            writeWordArray marr (q + i) x
+            loop2 marr (i + 1)
+        | otherwise = return ()
+
+
+largeShiftLArray :: Sign -> Int -> ByteArray-> (# Int, Int, Int #) -> Integer
+largeShiftLArray !s !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
+    !marr <- newWordArray (n + q + 1)
+    loop1 marr 0
+    !narr <- unsafeFreezeWordArray marr
+    finalizeLarge s (n + q) narr
+  where
+    loop1 !marr !i
+        | i < q = do
+            writeWordArray marr i 0
+            loop1 marr (i + 1)
+        | otherwise = loop2 marr 0 0
+    loop2 !marr !i !mem
+        | i < n =  do
+            x <- indexWordArrayM arr i
+            writeWordArray marr (q + i) ((unsafeShiftL x si) .|. mem)
+            loop2 marr (i + 1) (unsafeShiftR x sj)
+        | mem /= 0 = writeWordArray marr i mem
+        | otherwise = return ()
 
 
 timesArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
