@@ -20,9 +20,9 @@ main = do
     smpSmallList <- mkSmallIntegerList 1000 (\x -> S.smallInteger (unboxInt x))
     newSmallList <- mkSmallIntegerList 1000 (\x -> N.smallInteger (unboxInt x))
 
-    gmpLargeList <- mkLargeIntegerList 100 G.mkInteger
-    smpLargeList <- mkLargeIntegerList 100 S.mkInteger
-    newLargeList <- mkLargeIntegerList 100 N.mkInteger
+    gmpLargeList <- mkLargeIntegerList 200 G.mkInteger
+    smpLargeList <- mkLargeIntegerList 200 S.mkInteger
+    newLargeList <- mkLargeIntegerList 200 N.mkInteger
 
     let (gmpSmallPosList, smpSmallPosList, newSmallPosList) =
                 ( map G.absInteger gmpSmallList
@@ -38,17 +38,25 @@ main = do
 
     -- Run the benchmarks.
     C.defaultMain
-        [ C.bgroup "Sum 1000 small Integers"
+        [ C.bgroup
+                ( "Sum " ++ show (length gmpSmallList)
+                    ++ " small Integers (positive and negative, so sum likely to stay small)"
+                )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.plusInteger) gmpSmallList
             , C.bench "Simple"  $ C.whnf (foldl1 S.plusInteger) smpSmallList
             , C.bench "New"     $ C.whnf (foldl1 N.plusInteger) newSmallList
             ]
-        , C.bgroup "Sum 1000 small positive Integers"
+        , C.bgroup
+                ( "Sum " ++ show (length gmpSmallPosList)
+                    ++ " small positive Integers (only positive, so sum likely to grow to large Integer)"
+                )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.plusInteger) gmpSmallPosList
             , C.bench "Simple"  $ C.whnf (foldl1 S.plusInteger) smpSmallPosList
             , C.bench "New"     $ C.whnf (foldl1 N.plusInteger) newSmallPosList
             ]
-        , C.bgroup "Sum 100 large positive Integers"
+        , C.bgroup
+                ( "Sum " ++ show (length gmpLargeList) ++ " large positive Integers"
+                )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.plusInteger) gmpLargePosList
             , C.bench "Simple"  $ C.whnf (foldl1 S.plusInteger) smpLargePosList
             , C.bench "New"     $ C.whnf (foldl1 N.plusInteger) newLargePosList
@@ -66,7 +74,7 @@ mkSmallIntegerList count constructor =
 mkLargeIntegerList :: Int -> (Bool -> [Int] -> a) -> IO [a]
 mkLargeIntegerList count constructor = do
     signs <- (take count . R.randoms) <$> R.newStdGen
-    lengths <- (take count . R.randomRs (2, 100)) <$> R.newStdGen
+    lengths <- (take count . R.randomRs (4, 100)) <$> R.newStdGen
     let mkIntList len =
             (take len . R.randomRs (0, 0x7fffffff)) <$> R.newStdGen
     ints <- mapM mkIntList lengths

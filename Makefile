@@ -21,7 +21,7 @@ bench : bench-integer
 	./bench-integer -o bench-integer.html
 
 new-bench : new-bench-integer
-	./new-bench-integer -o new-bench-integer.html
+	./new-bench-integer -o new-bench-integer.html --template=Criterion/report.tpl
 
 check : check-integer
 	./check-integer
