@@ -2,7 +2,7 @@ TARGETS = check-integer bench-integer
 
 GHC = ghc
 GHCVER = $(shell $(GHC) --version | sed "s/.* //")
-GHCFLAGS = -Wall -O3 $(PACKAGES) $(PRAGMAS)
+GHCFLAGS = -Wall -fwarn-tabs -O3 $(PACKAGES) $(PRAGMAS)
 
 hsfiles = $(shell find GMP/ New/ Simple/ -name \*.hs -o -name \*.lhs)
 
@@ -24,7 +24,7 @@ new-bench : new-bench-integer
 	./new-bench-integer -o new-bench-integer.html --template=Criterion/report.tpl
 
 check : check-integer
-	./check-integer
+	./check-integer # | tee check.log
 
 check-integer : check-integer.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@

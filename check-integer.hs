@@ -9,6 +9,7 @@ import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Arbitrary
 
+
 import qualified GMP.Integer as G
 import qualified New.Integer as N
 import qualified Simple.Integer as S
@@ -78,13 +79,25 @@ testNewInteger = do
         show (N.smallInteger (unboxInt i)) `shouldBe` show (G.smallInteger (unboxInt i))
     prop "Can convert to Int." $ \ i ->
         boxIntHash (N.integerToInt (N.smallInteger (unboxInt i))) `shouldBe` i
+
+    it "Can create Integers." $ do
+        show (N.mkInteger True [0x7fffffff, 0x7fffffff, 0x3f]) `shouldBe` "+0xfffffffffffffffff"
+
     prop "Can create Integers." $ \ (GNP g s) ->
         show g == show s
 
+    it "Can complement an Integer." $
+        show (N.complementInteger (N.smallInteger 0#)) `shouldBe` "-0x1"
+
     prop "Can complement an Integer." $ \ (GNP g s) ->
         show (N.complementInteger s) `shouldBe` show (G.complementInteger g)
+
     prop "Can negate an Integer." $ \ (GNP g s) ->
         show (N.negateInteger s) `shouldBe` show (G.negateInteger g)
+
+    prop "Can shiftL Integers by up to 128 bits." $ \ (GNP g s, int) -> do
+        let bits = unboxInt (int .&. 128)
+        show (N.shiftLInteger s bits) `shouldBe` show (G.shiftLInteger g bits)
 
     prop "Can compare > two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         N.gtInteger sa sb `shouldBe` G.gtInteger ga gb
@@ -94,10 +107,6 @@ testNewInteger = do
         N.geInteger sa sb `shouldBe` G.geInteger ga gb
     prop "Can compare <= two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         N.leInteger sa sb `shouldBe` G.leInteger ga gb
-
-    prop "Can shiftL Integers." $ \ (GNP g s, int) -> do
-        let bits = unboxInt (int .&. 31)
-        show (N.shiftLInteger s bits) `shouldBe` show (G.shiftLInteger g bits)
 
     prop "Can add two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (N.plusInteger sa sb) `shouldBe` show (G.plusInteger ga gb)
@@ -110,18 +119,65 @@ testNewInteger = do
         show (N.orInteger (N.absInteger sa) (N.absInteger sb)) `shouldBe` show (G.orInteger (G.absInteger ga) (G.absInteger gb))
 
 
-    prop "Can OR two Integers." $ \ (GNP ga sa, GNP gb sb) ->
-        show (N.orInteger sa sb) `shouldBe` show (G.orInteger ga gb)
+    it "Can multiply two small Integers." $ do
+        show (N.timesInteger (N.smallInteger 0x100#) (N.smallInteger 0x22#)) `shouldBe` "+0x2200"
+        show (N.timesInteger (N.smallInteger -0x100#) (N.smallInteger 0x22#)) `shouldBe` "-0x2200"
+        show (N.timesInteger (N.smallInteger 0x100#) (N.smallInteger -0x22#)) `shouldBe` "-0x2200"
+        show (N.timesInteger (N.smallInteger -0x100#) (N.smallInteger -0x22#)) `shouldBe` "+0x2200"
+
+    it "Can multiply large Integer by small." $ do
+        show (N.timesInteger (N.mkInteger True [0,2]) (N.smallInteger 0x22#)) `shouldBe` "+0x2200000000"
+        show (N.timesInteger (N.mkInteger False [0,2]) (N.smallInteger 0x22#)) `shouldBe` "-0x2200000000"
+        show (N.timesInteger (N.mkInteger True [0,2]) (N.smallInteger -0x22#)) `shouldBe` "-0x2200000000"
+        show (N.timesInteger (N.mkInteger False [0,2]) (N.smallInteger -0x22#)) `shouldBe` "+0x2200000000"
+
+
+    it "Can multiply two Integers A." $ do
+        show (G.timesInteger (G.mkInteger True [1, 2, 4]) (G.mkInteger True [1, 2])) `shouldBe` "+0x1000000020000000200000001"
+        show (N.timesInteger (N.mkInteger True [1, 2, 4]) (N.mkInteger True [1, 2])) `shouldBe` "+0x1000000020000000200000001"
+    it "Can multiply two Integers B." $ do
+        show (G.timesInteger (G.mkInteger True [1, 2, 4, 8]) (G.mkInteger True [1, 2, 4, 8])) `shouldBe` "+0x1000000020000000300000004000000030000000200000001"
+        show (N.timesInteger (N.mkInteger True [1, 2, 4, 8]) (N.mkInteger True [1, 2, 4, 8])) `shouldBe` "+0x1000000020000000300000004000000030000000200000001"
+    it "Can multiply two Integers C." $ do
+        show (G.timesInteger (G.mkInteger True [0x7ffffffe, 0x7ffffffe, 4]) (G.mkInteger True [0x7ffffffe, 0x7ffffffe, 4])) `shouldBe` "+0x18ffffffebffffffb4000000200000004"
+        show (N.timesInteger (N.mkInteger True [0x7ffffffe, 0x7ffffffe, 4]) (N.mkInteger True [0x7ffffffe, 0x7ffffffe, 4])) `shouldBe` "+0x18ffffffebffffffb4000000200000004"
+    it "Can multiply two Integers D." $ do
+        show (G.timesInteger (G.mkInteger False [0, 0x7fffffff]) (G.mkInteger False [0, 0xfffffffe])) `shouldBe` "+0x1fffffff800000008000000000000000"
+        show (N.timesInteger (N.mkInteger False [0, 0x7fffffff]) (N.mkInteger False [0, 0xfffffffe])) `shouldBe` "+0x1fffffff800000008000000000000000"
+    it "Can multiply two Integers E." $ do
+        show (G.timesInteger (G.mkInteger False [1, 0x7fffffff]) (G.mkInteger False [1, 0xfffffffe])) `shouldBe` "+0x1fffffff800000013ffffffe80000001"
+        show (N.timesInteger (N.mkInteger False [1, 0x7fffffff]) (N.mkInteger False [1, 0xfffffffe])) `shouldBe` "+0x1fffffff800000013ffffffe80000001"
+    it "Can multiply two Integers F." $ do
+        show (G.timesInteger (G.mkInteger False [0x3b129743, 0x6b866650]) (G.mkInteger False [0x18865e53,0x6295e0a])) `shouldBe` "+0xa5a19af9c4da2c1eaac6f46fa3a4b9"
+        show (N.timesInteger (N.mkInteger False [0x3b129743, 0x6b866650]) (N.mkInteger False [0x18865e53,0x6295e0a])) `shouldBe` "+0xa5a19af9c4da2c1eaac6f46fa3a4b9"
+
+    it "Can multiply two Integers G." $ do
+        let a = [0x1,0x40000001,0xf]
+        show (N.timesInteger (N.mkInteger True a) (N.mkInteger True a)) `shouldBe` show (G.timesInteger (G.mkInteger True a) (G.mkInteger True a))
+
+
 
 
 {-
+    prop "Can multiply two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.timesInteger sa sb) `shouldBe` show (G.timesInteger ga gb)
+
+    prop "Can multiply two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.timesInteger sa sb) `shouldBe` show (G.timesInteger ga gb)
+
+    it "can make two" $ do
+        show (G.mkInteger False [0x3b129743, 0x6b866650]) `shouldBe` "-0x35c333283b129743"
+        show (G.mkInteger False [0x18865e53,0x6295e0a]) `shouldBe` "-0x314af0518865e53"
+
+
+
+    prop "Can OR two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+        show (N.orInteger sa sb) `shouldBe` show (G.orInteger ga gb)
     prop "Can AND two Integers." $ \ (GNP ga na, GNP gb nb) ->
         show (N.andInteger na nb) `shouldBe` show (G.andInteger ga gb)
     prop "Can XOR two Integers." $ \ (GNP ga na, GNP gb nb) ->
         show (N.xorInteger na nb) `shouldBe` show (G.xorInteger ga gb)
 -}
-
-
 
 
 --------------------------------------------------------------------------------
@@ -161,7 +217,7 @@ instance Arbitrary GmpNewPair where
                 return $! GNP (G.smallInteger (unboxInt i)) (N.smallInteger (unboxInt i))
             else do
                 sign <- arbitrary
-                pos <- pos32bits <$> arbitrary
+                pos <- (take 3 . pos32bits) <$> arbitrary
                 return $! GNP (G.mkInteger sign pos) (N.mkInteger sign pos)
 
 -- The mkInteger functions expect values in range [0, 0x7fffffff].

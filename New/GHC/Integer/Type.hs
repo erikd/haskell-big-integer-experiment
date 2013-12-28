@@ -557,8 +557,7 @@ timesArrayHack !s !n1 !arr1 !n2 !arr2
         !psum <- unsafeFreezeHalfWordArray tmarr
         let !psumLen = nonZeroLen (succ n1) psum
         putStrLn $ "initLoop   psum " ++ arrayShow psumLen psum
-        !narr <- outerLoop psumLen psum 1
-        finalizeLarge s (n1 + n2) narr
+        outerLoop psumLen psum 1
   where
     initLoop !marr !s1 !carry !hw
         | s1 < 2 * n1 = do
@@ -568,13 +567,14 @@ timesArrayHack !s !n1 !arr1 !n2 !arr2
             initLoop marr (s1 + 1) hc hw
         | otherwise =
             writeHalfWordArray marr s1 carry
+
     outerLoop !psumLen !psum !s2
         | s2 < 2 * n2 = do
             hw <- indexHalfWordArrayM arr2 s2
             if hw == 0
                 then do
-                    putStrLn $ "\nouterLoop  psum " ++ arrayShow psumLen psum ++ " with zero hw  ***********************************"
-                    outerLoop psumLen psum (s2 + 1)
+                    putStrLn $ "\nouterLoop1 psum " ++ arrayShow psumLen psum ++ " with zero hw  ***********************************"
+                    outerLoop psumLen psum (succ s2)
                 else do
                     putStrLn $ "\nouterLoop  psum " ++ arrayShow psumLen psum
                     !marr <- cloneHalfWordArrayExtend (2 * s2) psum (2 * succ psumLen)
@@ -583,7 +583,9 @@ timesArrayHack !s !n1 !arr1 !n2 !arr2
                     let !narrLen = nonZeroLen (succ psumLen) narr
                     putStrLn $ "outerLoop  narr " ++ arrayShow narrLen narr
                     outerLoop narrLen narr (succ s2)
-        | otherwise = return psum
+        | otherwise = do
+            putStrLn $ "\nouterLoop2 psum " ++ arrayShow psumLen psum
+            finalizeLarge s psumLen psum
 
     innerLoop !marr !pn !psum !s1 !s2 !hw !carry
         | s1 + s2 < 2 * pn && s1 < 2 * n1 = do
@@ -593,7 +595,7 @@ timesArrayHack !s !n1 !arr1 !n2 !arr2
             putStrLn $ "innerLoop1 : indexHalfWordArrayM psum " ++ show s1 ++ " -> 0x" ++ showHex ps ""
             putStrLn $ "innerLoop1 : " ++ show x ++ " * " ++ show hw ++ " + " ++ showHex ps "" ++ " +  " ++ show carry
             let (!hc, !hp) = timesHalfWordC x hw (snd $ plusHalfWord carry ps)
-            putStrLn $ "innerLoop1 writing 0x" ++ showHex hp "" ++ " at " ++ show (s1 + s2)
+            putStrLn $ "innerLoop1 writing 0x" ++ showHex hp "" ++ " at " ++ show (s1 + s2) ++ " " ++ show hc
             writeHalfWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
 
@@ -604,6 +606,10 @@ timesArrayHack !s !n1 !arr1 !n2 !arr2
             putStrLn $ "innerLoop2 writing 0x" ++ showHex hp "" ++ " at " ++ show (s1 + s2)
             writeHalfWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
+
+        | carry /= 0 = do
+            putStrLn $ "write carry 0x" ++ showHex carry ""
+            writeHalfWordArray marr (s1 + s2) carry
 
         | otherwise = return ()
 
