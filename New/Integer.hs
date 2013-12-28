@@ -41,6 +41,8 @@ hexShow (Large s n arr)
     | n == 1 && indexWordArray arr 0 == 0 = "0x0"
     | otherwise =
         let sign = if s == Neg then '-' else '+'
-        in sign : arrayShow n arr
-
+            number = arrayShow n arr
+        in if number == "0x0"
+            then number
+            else sign : number
 
