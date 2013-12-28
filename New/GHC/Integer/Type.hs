@@ -30,7 +30,7 @@ module New.GHC.Integer.Type
 -}
     where
 
-import Prelude hiding (Integer, abs) -- (all, error, otherwise, return, show, succ, (++))
+import Prelude hiding (Integer, abs, pi) -- (all, error, otherwise, return, show, succ, (++))
 
 import Control.Monad.Primitive
 import Data.Bits
@@ -42,6 +42,8 @@ import GHC.Tuple ()
 #if WORD_SIZE_IN_BITS < 64
 import GHC.IntWord64
 #endif
+
+import Numeric (showHex) -- TODO: Remove when its working.
 
 import New.GHC.Integer.Array
 import New.GHC.Integer.Prim
@@ -544,17 +546,56 @@ timesArrayHW !s !n !arr !w = unsafeInlinePrim $ do
 
 
 timesArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
-timesArray s n1 arr1 n2 arr2 = unsafeInlinePrim $ do
-    -- putStrLn $ "timesArray marr " ++ show (n1, n2)
-    !marr1 <- newHalfWordArrayCleared (2 * (n1 + n2))
-    !marr2 <- newHalfWordArrayCleared (2 * (n1 + n2))
-    loop marr1 marr2 0 0 0 0
-    narr <- unsafeFreezeHalfWordArray marr1
-    _ <- unsafeFreezeHalfWordArray marr2
-    finalizeLarge s (n1 + n2) narr
+timesArray s n1 arr1 n2 arr2 = unsafeInlinePrim $ timesArrayHack s n1 arr1 n2 arr2
+
+timesArrayHack :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
+timesArrayHack !s !n1 !arr1 !n2 !arr2
+    | n1 < n2 = timesArrayHack s n2 arr2 n1 arr1
+    | otherwise = do
+        !tmarr <- newHalfWordArrayCleared (2 * succ n1)
+        initLoop tmarr 0 0 (indexHalfWordArray arr2 0)
+        !psum <- unsafeFreezeHalfWordArray tmarr
+        !narr <- outerLoop psum 1
+        finalizeLarge s (n1 + n2) narr
   where
-    loop !marr !res !d !s1 !s2 !carry
+    initLoop !marr !s1 !carry !hw
         | s1 < 2 * n1 = do
+            !x <- indexHalfWordArrayM arr1 s1
+            let (!hc, !hp) = timesHalfWordC x hw carry
+            writeHalfWordArray marr s1 hp
+            initLoop marr (s1 + 1) hc hw
+        | otherwise =
+            writeHalfWordArray marr s1 carry
+    outerLoop !psum !s2
+        | s2 < n2 = do
+            hw <- indexHalfWordArrayM arr2 s2
+            if hw == 0
+                then outerLoop psum (s2 + 1)
+                else do
+                    !marr <- cloneHalfWordArrayExtend s2 psum (2 * (n1 + s2 + 1))
+                    innerLoop marr psum 0 s2 0 hw 0
+                    narr <- unsafeFreezeHalfWordArray marr
+                    outerLoop narr (s2 + 1)
+        | otherwise = return psum
+
+    innerLoop !marr !psum !s2 !s1 !pi !hw !carry
+        | s1 < n1 = do
+            !ps <- indexHalfWordArrayM psum pi
+            !x <- indexHalfWordArrayM arr1 s1
+            let (!tc, !tp) = timesHalfWord x hw
+            let (!thc, !hp) = plusHalfWordC tp ps carry
+            let (_, !hc) = plusHalfWord tc thc
+            writeHalfWordArray marr s2 hp
+            innerLoop marr psum (s2 + 1) (s1 + 1) (pi + 1) hw hc
+
+        | otherwise = return ()
+
+{-
+    outerLoop !marr !temp !di !si
+        | si < 2 * n2 = do
+            setByteArray temp 0 (2 * (n1 + n2)) (0 :: HalfWord)
+            y2 <- indexHalfWordArrayM arr2 s2
+            innerLoop temp
             -- putStrLn $ "arrFill marr " ++ show (d, s1, n1, s2, n2)
             x1 <- indexHalfWordArrayM arr1 s1
             x2 <- indexHalfWordArrayM arr2 s2
@@ -562,6 +603,7 @@ timesArray s n1 arr1 n2 arr2 = unsafeInlinePrim $ do
             writeHalfWordArray marr d y
             loop marr res (d + 1) (s1 + 1) s2 nc
         | otherwise = return ()
+-}
 
 
 {-# NOINLINE divModInteger #-}
@@ -753,6 +795,7 @@ smallShiftLArray !s !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
             return $ i + 1
         | otherwise = return n
 
+-- | TODO : Use copy here
 wordShiftArray :: Sign -> Int -> ByteArray -> Int -> Integer
 wordShiftArray s n arr q = unsafeInlinePrim $ do
     !marr <- newWordArray (n + q)
@@ -837,6 +880,23 @@ toList (Large _ n arr) =
                     x = indexWordArray arr i
                 x : xs
         | otherwise = []
+
+arrayShow :: Int -> ByteArray -> String
+arrayShow !len !arr =
+    let hexify w =
+            let x = showHex w ""
+            in replicate (16 - length x) '0' ++ x
+        digits = dropWhile (== '0') . concatMap hexify . reverse $ unpackArray 0
+    in if null digits then "0x0" else "0x" ++ digits
+  where
+    unpackArray i
+        | i < len = do
+                let xs = unpackArray (i + 1)
+                    x = indexWordArray arr i
+                x : xs
+        | otherwise = []
+
+
 
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x

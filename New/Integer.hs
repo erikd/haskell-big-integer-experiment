@@ -35,14 +35,12 @@ hexShow :: Integer -> String
 hexShow (Small _ 0) = "0x0"
 hexShow (Small s a) =
     let sign = if s == Neg then '-' else '+'
-    in sign : "0x" ++ showHex (abs a) ""
+    in sign : "0x" ++ showHex a ""
 
-hexShow i@(Large s n arr)
+hexShow (Large s n arr)
     | n == 1 && indexWordArray arr 0 == 0 = "0x0"
     | otherwise =
         let sign = if s == Neg then '-' else '+'
-            hexify w =
-                let x = showHex w ""
-                in replicate (16 - length x) '0' ++ x
-            digits = dropWhile (== '0') . concatMap hexify . reverse $ toList i
-        in sign : "0x" ++ if null digits then "0" else digits
+        in sign : arrayShow n arr
+
+
