@@ -555,7 +555,9 @@ timesArrayHack !s !n1 !arr1 !n2 !arr2
         !tmarr <- newHalfWordArrayCleared (2 * succ n1)
         initLoop tmarr 0 0 (indexHalfWordArray arr2 0)
         !psum <- unsafeFreezeHalfWordArray tmarr
-        !narr <- outerLoop psum 1
+        let !psumLen = nonZeroLen (succ n1) psum
+        putStrLn $ "initLoop   psum " ++ arrayShow psumLen psum
+        !narr <- outerLoop psumLen psum 1
         finalizeLarge s (n1 + n2) narr
   where
     initLoop !marr !s1 !carry !hw
@@ -566,44 +568,44 @@ timesArrayHack !s !n1 !arr1 !n2 !arr2
             initLoop marr (s1 + 1) hc hw
         | otherwise =
             writeHalfWordArray marr s1 carry
-    outerLoop !psum !s2
-        | s2 < n2 = do
+    outerLoop !psumLen !psum !s2
+        | s2 < 2 * n2 = do
             hw <- indexHalfWordArrayM arr2 s2
             if hw == 0
-                then outerLoop psum (s2 + 1)
+                then do
+                    putStrLn $ "\nouterLoop  psum " ++ arrayShow psumLen psum ++ " with zero hw  ***********************************"
+                    outerLoop psumLen psum (s2 + 1)
                 else do
-                    !marr <- cloneHalfWordArrayExtend s2 psum (2 * (n1 + s2 + 1))
-                    innerLoop marr psum 0 s2 0 hw 0
+                    putStrLn $ "\nouterLoop  psum " ++ arrayShow psumLen psum
+                    !marr <- cloneHalfWordArrayExtend (2 * s2) psum (2 * succ psumLen)
+                    innerLoop marr psumLen psum 0 s2 hw 0
                     narr <- unsafeFreezeHalfWordArray marr
-                    outerLoop narr (s2 + 1)
+                    let !narrLen = nonZeroLen (succ psumLen) narr
+                    putStrLn $ "outerLoop  narr " ++ arrayShow narrLen narr
+                    outerLoop narrLen narr (succ s2)
         | otherwise = return psum
 
-    innerLoop !marr !psum !s2 !s1 !pi !hw !carry
-        | s1 < n1 = do
-            !ps <- indexHalfWordArrayM psum pi
+    innerLoop !marr !pn !psum !s1 !s2 !hw !carry
+        | s1 + s2 < 2 * pn && s1 < 2 * n1 = do
+            putStrLn $ "innerLoop1 " ++ show s1 ++ " " ++ show s2 ++ " " ++ show (2 * pn)
+            !ps <- indexHalfWordArrayM psum (s1 + s2)
             !x <- indexHalfWordArrayM arr1 s1
-            let (!tc, !tp) = timesHalfWord x hw
-            let (!thc, !hp) = plusHalfWordC tp ps carry
-            let (_, !hc) = plusHalfWord tc thc
-            writeHalfWordArray marr s2 hp
-            innerLoop marr psum (s2 + 1) (s1 + 1) (pi + 1) hw hc
+            putStrLn $ "innerLoop1 : indexHalfWordArrayM psum " ++ show s1 ++ " -> 0x" ++ showHex ps ""
+            putStrLn $ "innerLoop1 : " ++ show x ++ " * " ++ show hw ++ " + " ++ showHex ps "" ++ " +  " ++ show carry
+            let (!hc, !hp) = timesHalfWordC x hw (snd $ plusHalfWord carry ps)
+            putStrLn $ "innerLoop1 writing 0x" ++ showHex hp "" ++ " at " ++ show (s1 + s2)
+            writeHalfWordArray marr (s1 + s2) hp
+            innerLoop marr pn psum (s1 + 1) s2 hw hc
+
+        | s1 < 2 * n1 = do
+            putStrLn $ "innerLoop2 " ++ show s1 ++ " " ++ show s2 ++ " " ++ show (2 * pn)
+            !x <- indexHalfWordArrayM arr1 s1
+            let (!hc, !hp) = timesHalfWordC x hw carry
+            putStrLn $ "innerLoop2 writing 0x" ++ showHex hp "" ++ " at " ++ show (s1 + s2)
+            writeHalfWordArray marr (s1 + s2) hp
+            innerLoop marr pn psum (s1 + 1) s2 hw hc
 
         | otherwise = return ()
-
-{-
-    outerLoop !marr !temp !di !si
-        | si < 2 * n2 = do
-            setByteArray temp 0 (2 * (n1 + n2)) (0 :: HalfWord)
-            y2 <- indexHalfWordArrayM arr2 s2
-            innerLoop temp
-            -- putStrLn $ "arrFill marr " ++ show (d, s1, n1, s2, n2)
-            x1 <- indexHalfWordArrayM arr1 s1
-            x2 <- indexHalfWordArrayM arr2 s2
-            let (nc, y) = timesHalfWordC x1 x2 carry
-            writeHalfWordArray marr d y
-            loop marr res (d + 1) (s1 + 1) s2 nc
-        | otherwise = return ()
--}
 
 
 {-# NOINLINE divModInteger #-}
@@ -841,15 +843,18 @@ largeShiftLArray !s !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
 
 finalizeLarge :: Sign -> Int -> ByteArray -> IO Integer
 finalizeLarge !s !nin !arr = do
-    let !len = trimLeadingZeroes nin
+    let !len = nonZeroLen nin arr
     x <-indexWordArrayM arr 0
     return $
         if len == 0 || (len == 1 && x == 0)
             then Small Pos 0
             else Large s len arr
   where
-    trimLeadingZeroes 1 = 1
-    trimLeadingZeroes !len =
+
+nonZeroLen :: Int -> ByteArray -> Int
+nonZeroLen !len !arr
+    | len <= 1 = 1
+    | otherwise =
         let trim n
                 | n <= 1 = 1
                 | indexWordArray arr n == 0 = trim (n - 1)
