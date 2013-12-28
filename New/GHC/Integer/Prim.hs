@@ -14,12 +14,12 @@ module New.GHC.Integer.Prim
 import GHC.Prim
 import GHC.Word (
 #if WORD_SIZE_IN_BITS == 64
-	Word32 (..), Word (..)
+    Word32 (..), Word (..)
 #endif
 #if WORD_SIZE_IN_BITS == 32
-	Word16 (..), Word (..)
+    Word16 (..), Word (..)
 #endif
-	)
+    )
 
 
 #if WORD_SIZE_IN_BITS == 64
@@ -107,10 +107,10 @@ promoteHalfWord !(HC# x) = FC# (and# x halfMask#)
 {-# INLINE splitFullWord #-}
 splitFullWord :: FullWord -> (HalfWord, HalfWord)
 splitFullWord !(FC# x) =
-	(HC# (unsafeCoerce# (uncheckedShiftRL# x halfShift)), HC# (unsafeCoerce# x))
+    (HC# (unsafeCoerce# (uncheckedShiftRL# x halfShift)), HC# (unsafeCoerce# (and# x halfMask#)))
 
 
 {-# INLINE makeFullWord #-}
 makeFullWord :: (HalfWord, HalfWord) -> FullWord
 makeFullWord (!(HC# a), !(HC# b)) =
-	FC# (plusWord# (uncheckedShiftL# a halfShift) (and# b halfMask#))
+    FC# (plusWord# (uncheckedShiftL# a halfShift) (and# b halfMask#))
