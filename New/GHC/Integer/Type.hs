@@ -347,7 +347,7 @@ plusArrayW s n arr w = unsafeInlinePrim $ do
             writeHalfWordArray marr i carry
             return $ n + 1
     loop2 !marr !i
-        |i < 2 * n =  do
+        | i < 2 * n =  do
             !x <- indexHalfWordArrayM arr i
             writeHalfWordArray marr i x
             loop2 marr (i + 1)
@@ -393,24 +393,6 @@ plusArray !s !n1 !arr1 !n2 !arr2
             loop4 marr (i + 1)
         | otherwise = return ()
 
-
-isPos :: Integer -> Bool
-isPos (Small Pos _) = True
-isPos (Large Pos _ _) = True
-isPos _ = False
-
-isNeg :: Integer -> Bool
-isNeg (Small Neg _) = True
-isNeg (Large Neg _ _) = True
-isNeg _ = False
-
-isSmall :: Integer -> Bool
-isSmall (Small _ _) = True
-isSmall _ = False
-
-isLarge :: Integer -> Bool
-isLarge (Large _ _ _) = True
-isLarge _ = False
 
 {-# NOINLINE minusInteger #-}
 minusInteger :: Integer -> Integer -> Integer
@@ -525,7 +507,62 @@ minusArray !s !n1 !arr1 !n2 !arr2
 
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
-timesInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+timesInteger (Small _ _) (Small _ 0) = Small Pos 0
+timesInteger (Small _ 0) (Small _ _) = Small Pos 0
+timesInteger a@(Small _ _) (Small Pos 1) = a
+timesInteger (Small Pos 1) b@(Small _ _) = b
+
+timesInteger a@(Small s1 w1) b@(Small s2 w2)
+    | w1 > halfWordMax || w2 > halfWordMax = timesInteger (mkLarge a) (mkLarge b)
+    | otherwise = Small (timesSign s1 s2) (w1 * w2)
+
+timesInteger a@(Small s1 w1) b@(Large s2 n2 arr2)
+    | w1 < halfWordMax = timesArrayHW (timesSign s1 s2) n2 arr2 (snd $ splitFullWord w1)
+    | otherwise = timesInteger (mkLarge a) b
+timesInteger a@(Large s1 n1 arr1) b@(Small s2 w2)
+    | w2 < halfWordMax = timesArrayHW (timesSign s1 s2) n1 arr1 (snd $ splitFullWord w2)
+    | otherwise = timesInteger a (mkLarge b)
+
+timesInteger (Large s1 n1 arr1) (Large s2 n2 arr2) = timesArray (timesSign s1 s2) n1 arr1 n2 arr2
+
+timesArrayHW :: Sign -> Int -> ByteArray -> HalfWord -> Integer
+timesArrayHW !s !n !arr !w = unsafeInlinePrim $ do
+    !marr <- newHalfWordArrayCleared (2 * succ n)
+    writeHalfWordArray marr (2 * succ n - 1) 0
+    loop marr 0 0
+    narr <- unsafeFreezeHalfWordArray marr
+    finalizeLarge s (n + 1) narr
+  where
+    loop !marr !i !carry
+        | i < 2 * n = do
+            x <- indexHalfWordArrayM arr i
+            let (!hc, !hp) = timesHalfWordC x w carry
+            writeHalfWordArray marr i hp
+            loop marr (i + 1) hc
+        | otherwise =
+            writeHalfWordArray marr i carry
+
+
+timesArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
+timesArray s n1 arr1 n2 arr2 = unsafeInlinePrim $ do
+    -- putStrLn $ "timesArray marr " ++ show (n1, n2)
+    !marr1 <- newHalfWordArrayCleared (2 * (n1 + n2))
+    !marr2 <- newHalfWordArrayCleared (2 * (n1 + n2))
+    loop marr1 marr2 0 0 0 0
+    narr <- unsafeFreezeHalfWordArray marr1
+    _ <- unsafeFreezeHalfWordArray marr2
+    finalizeLarge s (n1 + n2) narr
+  where
+    loop !marr !res !d !s1 !s2 !carry
+        | s1 < 2 * n1 = do
+            -- putStrLn $ "arrFill marr " ++ show (d, s1, n1, s2, n2)
+            x1 <- indexHalfWordArrayM arr1 s1
+            x2 <- indexHalfWordArrayM arr2 s2
+            let (nc, y) = timesHalfWordC x1 x2 carry
+            writeHalfWordArray marr d y
+            loop marr res (d + 1) (s1 + 1) s2 nc
+        | otherwise = return ()
+
 
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
@@ -663,13 +700,13 @@ hashInteger = integerToInt
 --------------------------------------------------------------------------------
 -- Helpers (not part of the API).
 
-maxHalfInt :: Int
+halfWordMax :: Word
 maxPositiveInt :: Word
 #if WORD_SIZE_IN_BITS == 64
-maxHalfInt = 0xffffffff
+halfWordMax = 0xffffffff
 maxPositiveInt = 0x7fffffffffffffff
 #elif WORD_SIZE_IN_BITS == 32
-maxHalfInt = 0xffff
+halfWordMax = 0xffff
 maxPositiveInt = 0x7fffffff
 #endif
 
@@ -756,26 +793,6 @@ largeShiftLArray !s !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
         | mem /= 0 = writeWordArray marr i mem
         | otherwise = return ()
 
-
-timesArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
-timesArray s n1 arr1 n2 arr2 = do
-    -- putStrLn $ "timesArray marr " ++ show (n1, n2)
-    !marr1 <- newHalfWordArrayCleared (2 * (n1 + n2))
-    !marr2 <- newHalfWordArrayCleared (2 * (n1 + n2))
-    compute (marr1, marr2) 0 0 0 0
-    narr <- unsafeFreezeHalfWordArray marr1
-    _ <- unsafeFreezeHalfWordArray marr2
-    finalizeLarge s (n1 + n2) narr
-  where
-    compute (!marr, !res) !d !s1 !s2 !carry
-        | s1 < 2 * n1 = do
-            -- putStrLn $ "arrFill marr " ++ show (d, s1, n1, s2, n2)
-            x1 <- indexHalfWordArrayM arr1 s1
-            x2 <- indexHalfWordArrayM arr2 s2
-            let (nc, y) = timesHalfWordC x1 x2 carry
-            writeHalfWordArray marr d y
-            compute (marr, res) (d + 1) (s1 + 1) s2 nc
-        | otherwise = return ()
 
 
 
