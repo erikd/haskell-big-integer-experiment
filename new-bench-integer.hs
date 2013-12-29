@@ -20,9 +20,13 @@ main = do
     smpSmallList <- mkSmallIntegerList 1000 (\x -> S.smallInteger (unboxInt x))
     newSmallList <- mkSmallIntegerList 1000 (\x -> N.smallInteger (unboxInt x))
 
-    gmpLargeList <- mkLargeIntegerList 200 G.mkInteger
-    smpLargeList <- mkLargeIntegerList 200 S.mkInteger
-    newLargeList <- mkLargeIntegerList 200 N.mkInteger
+    gmpLargeList <- mkLargeIntegerList 200 (20, 100) G.mkInteger
+    smpLargeList <- mkLargeIntegerList 200 (20, 100) S.mkInteger
+    newLargeList <- mkLargeIntegerList 200 (20, 100) N.mkInteger
+
+    gmpHugeList <- mkLargeIntegerList 10 (200, 250) G.mkInteger
+    smpHugeList <- mkLargeIntegerList 10 (200, 250) S.mkInteger
+    newHugeList <- mkLargeIntegerList 10 (200, 250) N.mkInteger
 
     let (gmpSmallPosList, smpSmallPosList, newSmallPosList) =
                 ( map G.absInteger gmpSmallList
@@ -82,6 +86,15 @@ main = do
             , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpFirstHundred
             , C.bench "New"     $ C.whnf (foldl1 N.timesInteger) newFirstHundred
             ]
+
+        , C.bgroup
+                ( "Product of " ++ show (length gmpHugeList)
+                    ++ " huge (~2500 decimal digit) Integers."
+                )
+            [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpHugeList
+            , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpHugeList
+            , C.bench "New"     $ C.whnf (foldl1 N.timesInteger) newHugeList
+            ]
         ]
 
 --------------------------------------------------------------------------------
@@ -92,15 +105,14 @@ mkSmallIntegerList count constructor =
     fmap (map constructor . take count . R.randoms) R.newStdGen
 
 
-mkLargeIntegerList :: Int -> (Bool -> [Int] -> a) -> IO [a]
-mkLargeIntegerList count constructor = do
+mkLargeIntegerList :: Int -> (Int, Int) -> (Bool -> [Int] -> a) -> IO [a]
+mkLargeIntegerList count range constructor = do
     signs <- (take count . R.randoms) <$> R.newStdGen
-    lengths <- (take count . R.randomRs (4, 100)) <$> R.newStdGen
+    lengths <- (take count . R.randomRs range) <$> R.newStdGen
     let mkIntList len =
             (take len . R.randomRs (0, 0x7fffffff)) <$> R.newStdGen
     ints <- mapM mkIntList lengths
     return . take count $ zipWith constructor signs ints
-
 
 --------------------------------------------------------------------------------
 -- Helpers.
