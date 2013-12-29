@@ -6,7 +6,7 @@ module New.GHC.Integer.Prim
     ( FullWord, HalfWord
     , plusHalfWord, plusHalfWordC
     , minusHalfWord, minusHalfWordC
-    , timesHalfWord, timesHalfWordC
+    , timesHalfWord, timesHalfWordC, timesHalfWordCC
     , promoteHalfWord
     , splitFullWord, makeFullWord
     ) where
@@ -29,7 +29,7 @@ import GHC.Word (
 #define FC W
 #define HC W32
 #define halfShift 32#
-#define halfMask 0xffffffff#
+#define halfMask 0xffffffff##
 
 #elif WORD_SIZE_IN_BITS == 32
 
@@ -38,7 +38,7 @@ import GHC.Word (
 #define FC W
 #define HC W16
 #define halfShift 16#
-#define halfMask 0xffff#
+#define halfMask 0xffff##
 
 #else
 
@@ -100,19 +100,28 @@ timesHalfWordC !a !b !c =
         !prod = plusWord# (timesWord# fa fb) fc
     in splitFullWord (FC# prod)
 
+{-# INLINE timesHalfWordCC #-}
+timesHalfWordCC :: HalfWord -> HalfWord -> HalfWord -> HalfWord -> (HalfWord, HalfWord)
+timesHalfWordCC !a !b !c !d =
+    let !(FC# fa) = promoteHalfWord a
+        !(FC# fb) = promoteHalfWord b
+        !(FC# fc) = promoteHalfWord c
+        !(FC# fd) = promoteHalfWord d
+        !prod = plusWord# (plusWord# (timesWord# fa fb) fc) fd
+    in splitFullWord (FC# prod)
 
 {-# INLINE promoteHalfWord #-}
 promoteHalfWord :: HalfWord -> FullWord
-promoteHalfWord !(HC# x) = FC# (and# x halfMask#)
+promoteHalfWord !(HC# x) = FC# (and# x halfMask)
 
 
 {-# INLINE splitFullWord #-}
 splitFullWord :: FullWord -> (HalfWord, HalfWord)
 splitFullWord !(FC# x) =
-    (HC# (unsafeCoerce# (uncheckedShiftRL# x halfShift)), HC# (unsafeCoerce# (and# x halfMask#)))
+    (HC# (unsafeCoerce# (uncheckedShiftRL# x halfShift)), HC# (unsafeCoerce# (and# x halfMask)))
 
 
 {-# INLINE makeFullWord #-}
 makeFullWord :: (HalfWord, HalfWord) -> FullWord
 makeFullWord (!(HC# a), !(HC# b)) =
-    FC# (plusWord# (uncheckedShiftL# a halfShift) (and# b halfMask#))
+    FC# (plusWord# (uncheckedShiftL# a halfShift) (and# b halfMask))
