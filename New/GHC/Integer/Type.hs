@@ -176,13 +176,13 @@ andArray :: Sign -> Int -> ByteArray -> ByteArray -> Integer
 andArray s n arr1 arr2 = unsafeInlinePrim $ do
     !marr <- newWordArray n
     loop marr 0
-    narr <- unsafeFreezeWordArray marr
+    !narr <- unsafeFreezeWordArray marr
     finalizeLarge s n narr
   where
     loop !marr !i
         | i < n = do
-                x <- indexWordArrayM arr1 i
-                y <- indexWordArrayM arr2 i
+                !x <- indexWordArrayM arr1 i
+                !y <- indexWordArrayM arr2 i
                 writeWordArray marr i (x .&. y)
                 loop marr (i + 1)
         | otherwise = return ()
@@ -211,21 +211,21 @@ orArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = orArray s n2 arr2 n1 arr1
     | otherwise = unsafeInlinePrim $ do
         !marr <- newWordArray n1
-        nlen <- loop1 marr 0
-        narr <- unsafeFreezeWordArray marr
+        !nlen <- loop1 marr 0
+        !narr <- unsafeFreezeWordArray marr
         finalizeLarge s nlen narr
   where
     loop1 !marr !i
         | i < n2 = do
-                x <- indexWordArrayM arr1 i
-                y <- indexWordArrayM arr2 i
+                !x <- indexWordArrayM arr1 i
+                !y <- indexWordArrayM arr2 i
                 writeWordArray marr i (x .|. y)
                 loop1 marr (i + 1)
         | otherwise = loop2 marr i
     loop2 !marr !i
         | i < n1 = do
                 -- TODO : Use copyArray here?
-                x <- indexWordArrayM arr1 i
+                !x <- indexWordArrayM arr1 i
                 writeWordArray marr i x
                 loop2 marr (i + 1)
         | otherwise = return i
@@ -245,20 +245,20 @@ xorArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 xorArray !s !n1 !arr1 !n2 !arr2 = unsafeInlinePrim $ do
     !marr <- newWordArray n1
     loop1 marr 0
-    narr <- unsafeFreezeWordArray marr
+    !narr <- unsafeFreezeWordArray marr
     finalizeLarge s n1 narr
   where
     loop1 !marr !i
         | i < n2 = do
-                x <- indexWordArrayM arr1 i
-                y <- indexWordArrayM arr2 i
+                !x <- indexWordArrayM arr1 i
+                !y <- indexWordArrayM arr2 i
                 writeWordArray marr i (xor x y)
                 loop1 marr (i + 1)
         | otherwise = loop2 marr i
     loop2 !marr !i
         | i < n1 = do
                 -- TODO : Use copyArray here?
-                x <- indexWordArrayM arr1 i
+                !x <- indexWordArrayM arr1 i
                 writeWordArray marr i x
                 loop2 marr (i + 1)
         | otherwise = return ()
@@ -442,7 +442,7 @@ minusArrayW  s n arr w = unsafeInlinePrim $ do
     !marr <- newHalfWordArray (2 * succ n)
     writeHalfWordArray marr (2 * succ n - 1) 0
     let (!uw, !lw) = splitFullWord w
-    x <- indexHalfWordArrayM arr 0
+    !x <- indexHalfWordArrayM arr 0
     let (!hc, !hd) = minusHalfWord x lw
     writeHalfWordArray marr 0 hd
     !nlen <- loop1 marr 1 (hc + uw)
@@ -532,12 +532,12 @@ timesArrayHW !s !n !arr !w = unsafeInlinePrim $ do
     !marr <- newHalfWordArrayCleared (2 * succ n)
     writeHalfWordArray marr (2 * succ n - 1) 0
     loop marr 0 0
-    narr <- unsafeFreezeHalfWordArray marr
+    !narr <- unsafeFreezeHalfWordArray marr
     finalizeLarge s (n + 1) narr
   where
     loop !marr !i !carry
         | i < 2 * n = do
-            x <- indexHalfWordArrayM arr i
+            !x <- indexHalfWordArrayM arr i
             let (!hc, !hp) = timesHalfWordC x w carry
             writeHalfWordArray marr i hp
             loop marr (i + 1) hc
@@ -556,7 +556,7 @@ timesArrayHack !s !n1 !arr1 !n2 !arr2
         initLoop tmarr 0 0 (indexHalfWordArray arr2 0)
         !psum <- unsafeFreezeHalfWordArray tmarr
         let !psumLen = nonZeroLen (succ n1) psum
-        putStrLn $ "initLoop   psum " ++ arrayShow psumLen psum
+        debugPutStrLn $ "initLoop   psum " ++ arrayShow psumLen psum
         outerLoop psumLen psum 1
   where
     initLoop !marr !s1 !carry !hw
@@ -570,49 +570,51 @@ timesArrayHack !s !n1 !arr1 !n2 !arr2
 
     outerLoop !psumLen !psum !s2
         | s2 < 2 * n2 = do
-            hw <- indexHalfWordArrayM arr2 s2
+            !hw <- indexHalfWordArrayM arr2 s2
             if hw == 0
                 then do
-                    putStrLn $ "\nouterLoop1 psum " ++ arrayShow psumLen psum ++ " with zero hw  ***********************************"
+                    debugPutStrLn $ "\nouterLoop1 psum " ++ arrayShow psumLen psum ++ " with zero hw  ***********************************"
                     outerLoop psumLen psum (succ s2)
                 else do
-                    putStrLn $ "\nouterLoop  psum " ++ arrayShow psumLen psum
+                    debugPutStrLn $ "\nouterLoop  psum " ++ arrayShow psumLen psum
                     !marr <- cloneHalfWordArrayExtend (2 * s2) psum (2 * succ psumLen)
                     innerLoop marr psumLen psum 0 s2 hw 0
-                    narr <- unsafeFreezeHalfWordArray marr
+                    !narr <- unsafeFreezeHalfWordArray marr
                     let !narrLen = nonZeroLen (succ psumLen) narr
-                    putStrLn $ "outerLoop  narr " ++ arrayShow narrLen narr
+                    debugPutStrLn $ "outerLoop  narr " ++ arrayShow narrLen narr
                     outerLoop narrLen narr (succ s2)
         | otherwise = do
-            putStrLn $ "\nouterLoop2 psum " ++ arrayShow psumLen psum
+            debugPutStrLn $ "\nouterLoop2 psum " ++ arrayShow psumLen psum
             finalizeLarge s psumLen psum
 
     innerLoop !marr !pn !psum !s1 !s2 !hw !carry
         | s1 + s2 < 2 * pn && s1 < 2 * n1 = do
-            putStrLn $ "innerLoop1 " ++ show s1 ++ " " ++ show s2 ++ " " ++ show (2 * pn)
+            -- debugPutStrLn $ "innerLoop1 " ++ show s1 ++ " " ++ show s2 ++ " " ++ show (2 * pn)
             !ps <- indexHalfWordArrayM psum (s1 + s2)
             !x <- indexHalfWordArrayM arr1 s1
-            putStrLn $ "innerLoop1 : indexHalfWordArrayM psum " ++ show s1 ++ " -> 0x" ++ showHex ps ""
-            putStrLn $ "innerLoop1 : " ++ show x ++ " * " ++ show hw ++ " + " ++ showHex ps "" ++ " +  " ++ show carry
-            let (!hc, !hp) = timesHalfWordC x hw (snd $ plusHalfWord carry ps)
-            putStrLn $ "innerLoop1 writing 0x" ++ showHex hp "" ++ " at " ++ show (s1 + s2) ++ " " ++ show hc
+            debugPutStrLn $ "innerLoop1 indexHalfWordArrayM psum " ++ show s1 ++ " -> " ++ hexShowHW ps
+            debugPutStrLn $ "innerLoop1 " ++ hexShowHW x ++ " * " ++ hexShowHW hw ++ " + (" ++ hexShowHW ps ++ " + " ++ hexShowHW carry ++ ")"
+            let (!hc, !hp) = timesHalfWordCC x hw carry ps
+            debugPutStrLn $ "innerLoop1 writing 0x" ++ showHex hp "" ++ " at " ++ show (s1 + s2) ++ " with carry of " ++ hexShowHW hc
             writeHalfWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
 
         | s1 < 2 * n1 = do
-            putStrLn $ "innerLoop2 " ++ show s1 ++ " " ++ show s2 ++ " " ++ show (2 * pn)
+            -- debugPutStrLn $ "innerLoop2 " ++ show s1 ++ " " ++ show s2 ++ " " ++ show (2 * pn)
             !x <- indexHalfWordArrayM arr1 s1
             let (!hc, !hp) = timesHalfWordC x hw carry
-            putStrLn $ "innerLoop2 writing 0x" ++ showHex hp "" ++ " at " ++ show (s1 + s2)
+            debugPutStrLn $ "innerLoop2 writing 0x" ++ showHex hp "" ++ " at " ++ show (s1 + s2)
             writeHalfWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
 
         | carry /= 0 = do
-            putStrLn $ "write carry 0x" ++ showHex carry ""
+            debugPutStrLn $ "write carry 0x" ++ hexShowHW carry
             writeHalfWordArray marr (s1 + s2) carry
 
         | otherwise = return ()
 
+debugPutStrLn :: String -> IO ()
+debugPutStrLn _ = return ()
 
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
@@ -773,7 +775,7 @@ mkSingletonArray :: Sign -> Word -> IO Integer
 mkSingletonArray !s !x = do
     !marr <- newWordArray 1
     writeWordArray marr 0 x
-    narr <- unsafeFreezeWordArray marr
+    !narr <- unsafeFreezeWordArray marr
     return $ Large s 1 narr
 
 shiftLArray :: Sign -> Int -> ByteArray -> Int -> Integer
@@ -789,13 +791,13 @@ shiftLArray !s !n !arr !i
 smallShiftLArray :: Sign -> Int -> ByteArray -> (# Int, Int #) -> Integer
 smallShiftLArray !s !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
     !marr <- newWordArray (succ n)
-    nlen <- loop marr 0 0
-    narr <- unsafeFreezeWordArray marr
+    !nlen <- loop marr 0 0
+    !narr <- unsafeFreezeWordArray marr
     finalizeLarge s nlen narr
   where
     loop !marr !i !mem
         | i < n =  do
-            x <- indexWordArrayM arr i
+            !x <- indexWordArrayM arr i
             writeWordArray marr i ((unsafeShiftL x si) .|. mem)
             loop marr (i + 1) (unsafeShiftR x sj)
         | mem /= 0 = do
@@ -818,7 +820,7 @@ wordShiftArray s n arr q = unsafeInlinePrim $ do
         | otherwise = loop2 marr 0
     loop2 !marr !i
         | i < n =  do
-            x <- indexWordArrayM arr i
+            !x <- indexWordArrayM arr i
             writeWordArray marr (q + i) x
             loop2 marr (i + 1)
         | otherwise = return ()
@@ -838,7 +840,7 @@ largeShiftLArray !s !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
         | otherwise = loop2 marr 0 0
     loop2 !marr !i !mem
         | i < n =  do
-            x <- indexWordArrayM arr i
+            !x <- indexWordArrayM arr i
             writeWordArray marr (q + i) ((unsafeShiftL x si) .|. mem)
             loop2 marr (i + 1) (unsafeShiftR x sj)
         | mem /= 0 = writeWordArray marr i mem
@@ -850,7 +852,7 @@ largeShiftLArray !s !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
 finalizeLarge :: Sign -> Int -> ByteArray -> IO Integer
 finalizeLarge !s !nin !arr = do
     let !len = nonZeroLen nin arr
-    x <-indexWordArrayM arr 0
+    !x <-indexWordArrayM arr 0
     return $
         if len == 0 || (len == 1 && x == 0)
             then Small Pos 0
@@ -907,7 +909,8 @@ arrayShow !len !arr =
                 x : xs
         | otherwise = []
 
-
+hexShowHW :: HalfWord -> String
+hexShowHW hw = "0x" ++ showHex hw ""
 
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
