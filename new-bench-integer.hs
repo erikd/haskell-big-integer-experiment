@@ -35,6 +35,17 @@ main = do
                 , map S.absInteger smpLargeList
                 , map N.absInteger newLargeList
                 )
+    let (gmpFirstTen, smpFirstTen, newFirstTen) =
+                ( map (\x -> G.smallInteger (unboxInt x)) [1..10]
+                , map (\x -> S.smallInteger (unboxInt x)) [1..10]
+                , map (\x -> N.smallInteger (unboxInt x)) [1..10]
+                )
+
+    let (gmpFirstHundred, smpFirstHundred, newFirstHundred) =
+                ( map (\x -> G.smallInteger (unboxInt x)) [1..100]
+                , map (\x -> S.smallInteger (unboxInt x)) [1..100]
+                , map (\x -> N.smallInteger (unboxInt x)) [1..100]
+                )
 
     -- Run the benchmarks.
     C.defaultMain
@@ -55,11 +66,21 @@ main = do
             , C.bench "New"     $ C.whnf (foldl1 N.plusInteger) newSmallPosList
             ]
         , C.bgroup
-                ( "Sum " ++ show (length gmpLargeList) ++ " large positive Integers"
+                ( "Sum " ++ show (length gmpLargePosList) ++ " large positive Integers"
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.plusInteger) gmpLargePosList
             , C.bench "Simple"  $ C.whnf (foldl1 S.plusInteger) smpLargePosList
             , C.bench "New"     $ C.whnf (foldl1 N.plusInteger) newLargePosList
+            ]
+        , C.bgroup "Product of [1..10]"
+            [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpFirstTen
+            , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpFirstTen
+            , C.bench "New"     $ C.whnf (foldl1 N.timesInteger) newFirstTen
+            ]
+        , C.bgroup "Product of [1..100]"
+            [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpFirstHundred
+            , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpFirstHundred
+            , C.bench "New"     $ C.whnf (foldl1 N.timesInteger) newFirstHundred
             ]
         ]
 
