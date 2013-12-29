@@ -31,9 +31,7 @@ import GHC.Word (
 #define halfShift 32#
 #define halfMask 0xffffffff#
 
-#endif
-
-#if WORD_SIZE_IN_BITS == 32
+#elif WORD_SIZE_IN_BITS == 32
 
 #define FW Word
 #define HW Word16
@@ -42,10 +40,14 @@ import GHC.Word (
 #define halfShift 16#
 #define halfMask 0xffff#
 
+#else
+
+#error "Expecting WORD_SIZE_IN_BITS to be 32 or 64."
+
 #endif
 
-type FullWord = FW  -- Word64 on 64 bit systems, otherwise Word32.
-type HalfWord = HW  -- Word32 on 64 bit systems, otherwise Word16.
+type FullWord = FW  -- Word64 on 64 bit systems.
+type HalfWord = HW  -- Word32 on 32 bit systems.
 
 
 {-# INLINE plusHalfWord #-}
