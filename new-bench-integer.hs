@@ -20,9 +20,9 @@ main = do
     smpSmallList <- mkSmallIntegerList 1000 (\x -> S.smallInteger (unboxInt x))
     newSmallList <- mkSmallIntegerList 1000 (\x -> N.smallInteger (unboxInt x))
 
-    gmpLargeList <- mkLargeIntegerList 200 (20, 100) G.mkInteger
-    smpLargeList <- mkLargeIntegerList 200 (20, 100) S.mkInteger
-    newLargeList <- mkLargeIntegerList 200 (20, 100) N.mkInteger
+    gmpLargeList <- mkLargeIntegerList 200 (50, 60) G.mkInteger
+    smpLargeList <- mkLargeIntegerList 200 (50, 60) S.mkInteger
+    newLargeList <- mkLargeIntegerList 200 (50, 60) N.mkInteger
 
     gmpHugeList <- mkLargeIntegerList 10 (200, 250) G.mkInteger
     smpHugeList <- mkLargeIntegerList 10 (200, 250) S.mkInteger
@@ -54,7 +54,7 @@ main = do
     -- Run the benchmarks.
     C.defaultMain
         [ C.bgroup
-                ( "Sum " ++ show (length gmpSmallList)
+                ( "Sum of " ++ show (length gmpSmallList)
                     ++ " small Integers (positive and negative, so sum likely to stay small)"
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.plusInteger) gmpSmallList
@@ -62,7 +62,7 @@ main = do
             , C.bench "New"     $ C.whnf (foldl1 N.plusInteger) newSmallList
             ]
         , C.bgroup
-                ( "Sum " ++ show (length gmpSmallPosList)
+                ( "Sum of " ++ show (length gmpSmallPosList)
                     ++ " small positive Integers (only positive, so sum likely to grow to large Integer)"
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.plusInteger) gmpSmallPosList
@@ -70,7 +70,7 @@ main = do
             , C.bench "New"     $ C.whnf (foldl1 N.plusInteger) newSmallPosList
             ]
         , C.bgroup
-                ( "Sum " ++ show (length gmpLargePosList) ++ " large positive Integers"
+                ( "Sum of " ++ show (length gmpLargePosList) ++ " large (~600 decimal digit) positive Integers"
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.plusInteger) gmpLargePosList
             , C.bench "Simple"  $ C.whnf (foldl1 S.plusInteger) smpLargePosList
