@@ -86,10 +86,9 @@ main = do
             , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpFirstHundred
             , C.bench "New"     $ C.whnf (foldl1 N.timesInteger) newFirstHundred
             ]
-
         , C.bgroup
                 ( "Product of " ++ show (length gmpHugeList)
-                    ++ " huge (~2500 decimal digit) Integers."
+                    ++ " huge (~2500 decimal digit) Integers"
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpHugeList
             , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpHugeList
