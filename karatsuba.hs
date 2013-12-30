@@ -1,8 +1,11 @@
 -- https://en.wikipedia.org/wiki/Karatsuba_algorithm
 
+import Control.Monad
+import Data.Bits
 
 main :: IO ()
 main = do
+    isValidBase
     let result = karatsuba 123543512412 234452434456
         expected = 28965077246238452467872
     if result == expected
@@ -12,10 +15,9 @@ main = do
 
 karatsuba :: Integer -> Integer -> Integer
 karatsuba num1 num2
-    | num1 < kBaseSquared || num2 < kBaseSquared = num1 * num2
+    | num1 < kBase || num2 < kBase = num1 * num2
     | otherwise =
-        let m = max (sizeAtBase num1) (sizeAtBase num2)
-            m2 = m `div` 2
+        let m2 = (max (sizeAtBase num1) (sizeAtBase num2)) `div` 2
             (hi1, lo1) = split_at num1 m2
             (hi2, lo2) = split_at num2 m2
             z0 = karatsuba lo1 lo2
@@ -24,28 +26,28 @@ karatsuba num1 num2
         in (z2 * kBase ^ (2 * m2)) + ((z1 - z2 - z0) * kBase ^ m2) + z0
 
 
-kBase, kBaseSquared :: Integer
-kBase = 100
-kBaseSquared = kBase * 2
+kBase :: Integer
+kBase = 1024
 
 
+isValidBase :: IO ()
+isValidBase = do
+    when (kBase < 8) $
+        error "isValidBase : kBase too snall."
+    let isPower2 = (kBase .&. (kBase - 1)) == 0
+    let s = show kBase
+        slen = length s
+        isPower10 = s == ('1' : replicate (slen - 1) '0')
+    unless (isPower2 || isPower10) $
+        error $ "isValidBase failed for " ++ show kBase
+    return ()
 
 sizeAtBase :: Integer -> Int
-sizeAtBase x = length (show x) `div` length (show (kBase - 1))
+sizeAtBase x =
+    let calcSize acc 0 = acc
+        calcSize acc i = calcSize (acc + 1) (i `div` kBase)
+    in calcSize 0 (abs x)
+
 
 split_at :: Integer -> Int -> (Integer, Integer)
 split_at i c = quotRem i (kBase ^ c)
-
-
-
-
-{-
-karatsubaMultiply :: Integer -> Integer -> Integer
-karatsubaMultiply a@(Small _ _) b@(Small _ _) = timesInteger a b
-karatsubaMultiply a@(Small _ _) b@(Large _ _ _) = timesInteger a b
-karatsubaMultiply a@(Large _ _ _) b@(Small _ _) = timesInteger a b
-karatsubaMultiply a@(Large s1 n1 arr1) b@(Large s2 n2 arr2)
-    | n1 < 4 || n2 < 4 = timesInteger a b
-    | otherwise = karatsubaArray
--}
-
