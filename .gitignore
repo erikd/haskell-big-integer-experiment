@@ -1,6 +1,12 @@
 .geany
+*.html
 bench-integer
 check-integer
+check.log
+half-test
+int-bench
 integer-gmp
 integer-simple
+new-bench-integer
+sanity-test
 Stamp
