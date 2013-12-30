@@ -58,6 +58,7 @@ plusHalfWord !a !b =
         !sum = plusWord# fa fb
     in splitFullWord (FC# sum)
 
+{-# INLINE plusHalfWordC #-}
 plusHalfWordC :: HalfWord -> HalfWord -> HalfWord -> (HalfWord, HalfWord)
 plusHalfWordC !a !b !c =
     let !(FC# fa) = promoteHalfWord a
@@ -66,6 +67,7 @@ plusHalfWordC !a !b !c =
         !sum = plusWord# (plusWord# fa fc) fb
     in splitFullWord (FC# sum)
 
+{-# INLINE minusHalfWord #-}
 minusHalfWord :: HalfWord -> HalfWord -> (HalfWord, HalfWord)
 minusHalfWord !a !b =
     let !(FC# fa) = promoteHalfWord a
@@ -74,6 +76,7 @@ minusHalfWord !a !b =
         !((HC# hc), hd) = splitFullWord (FC# diff)
     in (HC# (and# hc (unsafeCoerce# 1#)), hd)
 
+{-# INLINE minusHalfWordC #-}
 minusHalfWordC :: HalfWord -> HalfWord -> HalfWord -> (HalfWord, HalfWord)
 minusHalfWordC !a !b !c =
     let !(FC# fa) = promoteHalfWord a
