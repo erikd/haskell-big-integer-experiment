@@ -58,9 +58,7 @@ data Integer
         {-# UNPACK #-} !Int
         {-# UNPACK #-} !ByteArray
 
-
--------------------------------------------------------------------
--- The hard work is done on positive numbers
+--------------------------------------------------------------------------------
 
 mkInteger :: Bool   -- non-negative?
           -> [Int]  -- absolute value in 31 bit chunks, least significant first
@@ -166,6 +164,7 @@ andInteger (Small Neg a) (Small Neg b) = Small Neg (1 + ((a - 1) .|. (b - 1)))
 
 andInteger a@(Large _ _ _) b@(Small _ _) = andInteger a (mkLarge b)
 andInteger a@(Small _ _) b@(Large _ _ _) = andInteger (mkLarge a) b
+
 
 andInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = andArray Pos (min n1 n2) arr1 arr2
 
@@ -300,45 +299,55 @@ negateInteger :: Integer -> Integer
 negateInteger (Small !s !a) = Small (negateSign s) a
 negateInteger (Large !s !n !arr) = Large (negateSign s) n arr
 
--- Note [Avoid patError]
 {-# NOINLINE plusInteger #-}
 plusInteger :: Integer -> Integer -> Integer
-plusInteger a (Small _ 0) = a
-plusInteger (Small _ 0) b = b
+plusInteger !x !y =
+    case (# x, y #) of
+        (# Small _ 0, b #) -> b
+        (# Small Pos !w1, Small Pos !w2 #) -> safeSumWord Pos w1 w2
+        (# Small Pos !a, Small Neg !b #) ->
+            if a >= b
+                then Small Pos (a - b)
+                else Small Neg (b - a)
+        (# Small Neg a, Small Pos b #) ->
+            if a >= b
+                then Small Neg (a - b)
+                else Small Pos (b - a)
+        (# Small Neg !w1, Small Neg !w2 #) -> safeSumWord Neg w1 w2
 
-plusInteger (Small Pos a) (Small Pos b) = Small Pos (a + b)
-plusInteger (Small Pos a) (Small Neg b)
-    | a >= b = Small Pos (a - b)
-    | otherwise = Small Neg (b - a)
-plusInteger (Small Neg a) (Small Pos b)
-    | a >= b = Small Neg (a - b)
-    | otherwise = Small Pos (b - a)
-plusInteger (Small Neg a) (Small Neg b) = Small Neg (a + b)
+        (# Large Pos !n !arr, Small Pos !w #) -> plusArrayW Pos n arr w
+        (# Small Pos !w, Large Pos !n !arr #) -> plusArrayW Pos n arr w
 
-plusInteger (Large Pos n arr) (Small Pos w) = plusArrayW Pos n arr w
-plusInteger (Small Pos w) (Large Pos n arr) = plusArrayW Pos n arr w
+        (# Large Neg !n !arr, Small Neg !w #) -> plusArrayW Neg n arr w
+        (# Small Neg !w, Large Neg !n !arr #) -> plusArrayW Neg n arr w
 
-plusInteger (Large Neg n arr) (Small Neg w) = plusArrayW Neg n arr w
-plusInteger (Small Neg w) (Large Neg n arr) = plusArrayW Neg n arr w
+        (# Large Pos !n !arr, Small Neg !w #) -> minusArrayW Pos n arr w
+        (# Small Neg !w, Large Pos !n !arr #) -> minusArrayW Pos n arr w
 
-plusInteger (Large Pos n arr) (Small Neg w) = minusArrayW Pos n arr w
-plusInteger (Small Neg w) (Large Pos n arr) = minusArrayW Pos n arr w
+        (# Small Pos !w, Large Neg !n !arr #) -> minusArrayW Neg n arr w
+        (# Large Neg !n !arr, Small Pos !w #) -> minusArrayW Neg n arr w
 
-plusInteger (Small Pos w) (Large Neg n arr) = minusArrayW Neg n arr w
-plusInteger (Large Neg n arr) (Small Pos w) = minusArrayW Neg n arr w
+        (# Large Pos !n1 !arr1, Large Pos !n2 !arr2 #) -> plusArray Pos n1 arr1 n2 arr2
+        (# Large Pos !n1 !arr1, Large Neg !n2 !arr2 #) ->
+            if gtArray n1 arr1 n2 arr2
+                then minusArray Pos n1 arr1 n2 arr2
+                else minusArray Neg n2 arr2 n1 arr1
+        (# Large Neg !n1 !arr1, Large Pos !n2 !arr2 #) ->
+            if gtArray n1 arr1 n2 arr2
+                then minusArray Neg n1 arr1 n2 arr2
+                else minusArray Pos n2 arr2 n1 arr1
+        (# Large Neg !n1 !arr1, Large Neg !n2 !arr2 #) -> plusArray Neg n1 arr1 n2 arr2
 
-plusInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = plusArray Pos n1 arr1 n2 arr2
-plusInteger (Large Pos n1 arr1) (Large Neg n2 arr2)
-    | gtArray n1 arr1 n2 arr2 = minusArray Pos n1 arr1 n2 arr2
-    | otherwise = minusArray Neg n2 arr2 n1 arr1
-plusInteger (Large Neg n1 arr1) (Large Pos n2 arr2)
-    | gtArray n1 arr1 n2 arr2 = minusArray Neg n1 arr1 n2 arr2
-    | otherwise = minusArray Pos n2 arr2 n1 arr1
-plusInteger (Large Neg n1 arr1) (Large Neg n2 arr2) = plusArray Neg n1 arr1 n2 arr2
-
+{-# INLINE safeSumWord #-}
+safeSumWord :: Sign -> Word -> Word -> Integer
+safeSumWord s w1 w2 =
+    let sm = w1 + w2
+    in if sm < min w1 w2
+        then plusInteger (mkSingletonArray s w1) (mkSingletonArray s w2)
+        else Small s sm
 
 plusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
-plusArrayW s n arr w = unsafeInlinePrim $ do
+plusArrayW !s !n !arr !w = unsafeInlinePrim $ do
     !marr <- newHalfWordArray (2 * succ n)
     writeHalfWordArray marr (2 * succ n - 1) 0
     let (!uw, !lw) = splitFullWord w
@@ -415,8 +424,8 @@ minusInteger (Small _ 0) b = negateInteger b
 minusInteger (Small Pos a) (Small Pos b)
     | a >= b = Small Pos (a - b)
     | otherwise = Small Neg (b - a)
-minusInteger (Small Pos a) (Small Neg b) = Small Pos (a + b)
-minusInteger (Small Neg a) (Small Pos b) = Small Neg (a + b)
+minusInteger (Small Pos a) (Small Neg b) = safeSumWord Pos a b
+minusInteger (Small Neg a) (Small Pos b) = safeSumWord Neg a b
 minusInteger (Small Neg a) (Small Neg b)
     | a > b = Small Neg (a - b)
     | otherwise = Small Pos (b - a)
@@ -449,7 +458,7 @@ minusInteger (Large Pos n1 arr1) (Large Neg n2 arr2) = plusArray Pos n1 arr1 n2 
 
 
 minusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
-minusArrayW  s n arr w = unsafeInlinePrim $ do
+minusArrayW  !s !n !arr !w = unsafeInlinePrim $ do
     !marr <- newHalfWordArray (2 * succ n)
     writeHalfWordArray marr (2 * succ n - 1) 0
     let (!uw, !lw) = splitFullWord w
@@ -517,26 +526,30 @@ minusArray !s !n1 !arr1 !n2 !arr2
             loop4 marr (i + 1)
         | otherwise = return ()
 
-
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
-timesInteger (Small _ _) (Small _ 0) = Small Pos 0
-timesInteger (Small _ 0) (Small _ _) = Small Pos 0
-timesInteger a@(Small _ _) (Small Pos 1) = a
-timesInteger (Small Pos 1) b@(Small _ _) = b
+timesInteger !x !y = case (# x, y #) of
+    (# Small _ _, Small _ 0 #) -> Small Pos 0
+    (# Small _ 0, Small _ _ #) -> Small Pos 0
+    (# !a, Small Pos 1 #) -> a
+    (# Small Pos 1, !b #) -> b
 
-timesInteger a@(Small s1 w1) b@(Small s2 w2)
-    | w1 > halfWordMax || w2 > halfWordMax = timesInteger (mkLarge a) (mkLarge b)
-    | otherwise = Small (timesSign s1 s2) (w1 * w2)
+    (# Small !s1 !w1, Small !s2 !w2 #) ->
+        if w1 > halfWordMax || w2 > halfWordMax
+            then timesInteger (mkLarge x) (mkLarge y)
+            else Small (timesSign s1 s2) (w1 * w2)
 
-timesInteger a@(Small s1 w1) b@(Large s2 n2 arr2)
-    | w1 < halfWordMax = timesArrayHW (timesSign s1 s2) n2 arr2 (snd $ splitFullWord w1)
-    | otherwise = timesInteger (mkLarge a) b
-timesInteger a@(Large s1 n1 arr1) b@(Small s2 w2)
-    | w2 < halfWordMax = timesArrayHW (timesSign s1 s2) n1 arr1 (snd $ splitFullWord w2)
-    | otherwise = timesInteger a (mkLarge b)
+    (# Small !s1 !w1, Large !s2 !n2 !arr2 #) ->
+        if w1 < halfWordMax
+            then timesArrayHW (timesSign s1 s2) n2 arr2 (snd $ splitFullWord w1)
+            else timesInteger (mkLarge x) y
+    (# Large !s1 !n1 !arr1, Small !s2 !w2 #) ->
+        if w2 < halfWordMax
+            then timesArrayHW (timesSign s1 s2) n1 arr1 (snd $ splitFullWord w2)
+            else timesInteger x (mkLarge y)
 
-timesInteger (Large s1 n1 arr1) (Large s2 n2 arr2) = timesArray (timesSign s1 s2) n1 arr1 n2 arr2
+    (# Large !s1 !n1 !arr1, Large !s2 !n2 !arr2 #) -> timesArray (timesSign s1 s2) n1 arr1 n2 arr2
+
 
 timesArrayHW :: Sign -> Int -> ByteArray -> HalfWord -> Integer
 timesArrayHW !s !n !arr !w = unsafeInlinePrim $ do
@@ -557,38 +570,23 @@ timesArrayHW !s !n !arr !w = unsafeInlinePrim $ do
 
 
 timesArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
-timesArray s n1 arr1 n2 arr2 = unsafeInlinePrim $ timesArrayHack s n1 arr1 n2 arr2
-
-timesArrayHack :: Sign -> Int -> ByteArray -> Int -> ByteArray -> IO Integer
-timesArrayHack !s !n1 !arr1 !n2 !arr2
-    | n1 < n2 = timesArrayHack s n2 arr2 n1 arr1
-    | otherwise = do
-        !tmarr <- newHalfWordArrayCleared (2 * succ n1)
-        initLoop tmarr 0 0 (indexHalfWordArray arr2 0)
-        !psum <- unsafeFreezeHalfWordArray tmarr
-        let !psumLen = nonZeroLen (succ n1) psum
-        outerLoop psumLen psum 1
+timesArray !s !n1 !arr1 !n2 !arr2
+    | n1 < n2 = timesArray s n2 arr2 n1 arr1
+    | otherwise = unsafeInlinePrim $ do
+        !psum <- newPlaceholderWordArray
+        outerLoop 0 psum 0
   where
-    initLoop !marr !s1 !carry !hw
-        | s1 < 2 * n1 = do
-            !x <- indexHalfWordArrayM arr1 s1
-            let (!hc, !hp) = timesHalfWordC x hw carry
-            writeHalfWordArray marr s1 hp
-            initLoop marr (s1 + 1) hc hw
-        | otherwise =
-            writeHalfWordArray marr s1 carry
-
     outerLoop !psumLen !psum !s2
         | s2 < 2 * n2 = do
             !hw <- indexHalfWordArrayM arr2 s2
             if hw == 0
                 then outerLoop psumLen psum (succ s2)
                 else do
-                    !marr <- cloneHalfWordArrayExtend (2 * s2) psum (2 * succ psumLen)
-                    innerLoop marr psumLen psum 0 s2 hw 0
+                    let !newPsumLen = succ (max psumLen (n1 + (s2 + 1) `div` 2))
+                    !marr <- cloneHalfWordArrayExtend (2 * psumLen) psum (2 * newPsumLen)
+                    !possLen <- innerLoop marr psumLen psum 0 s2 hw 0
                     !narr <- unsafeFreezeHalfWordArray marr
-                    let !narrLen = nonZeroLen (succ psumLen) narr
-                    outerLoop narrLen narr (succ s2)
+                    outerLoop possLen narr (succ s2)
         | otherwise =
             finalizeLarge s psumLen psum
 
@@ -604,9 +602,10 @@ timesArrayHack !s !n1 !arr1 !n2 !arr2
             let (!hc, !hp) = timesHalfWordC x hw carry
             writeHalfWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
-        | carry /= 0 =
+        | carry /= 0 = do
             writeHalfWordArray marr (s1 + s2) carry
-        | otherwise = return ()
+            return ((s1 + s2 + 2) `div` 2)
+        | otherwise = return ((s1 + s2 + 1) `div` 2)
 
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
@@ -685,7 +684,13 @@ ltInteger (Large s1 n1 arr1) (Large s2 n2 arr2)
 
 ltArray :: Int -> ByteArray -> Int -> ByteArray -> Bool
 ltArray !n1 !arr1 !n2 !arr2
-    | n1 == n2 = indexWordArray arr1 (n1 - 1) < indexWordArray arr2 (n2 - 1)
+    | n1 == n2 =
+            let check 0 = indexWordArray arr1 0 < indexWordArray arr2 0
+                check i =
+                    if indexWordArray arr1 i == indexWordArray arr2 i
+                        then check (i - 1)
+                        else indexWordArray arr1 i < indexWordArray arr2 i
+            in check (n1 - 1)
     | n1 > n2 = False
     | n1 < n2 = True
     | otherwise = False
@@ -699,7 +704,7 @@ gtInteger (Small Neg _) (Small Pos _) = False
 gtInteger (Small Neg a) (Small Neg b) = a < b
 gtInteger a@(Small {}) b = leInteger b (mkLarge a)
 gtInteger a b@(Small {}) = gtInteger a (mkLarge b)
-gtInteger (Large s1 n1 arr1) (Large s2 n2 arr2)
+gtInteger (Large !s1 !n1 !arr1) (Large !s2 !n2 !arr2)
     | s1 /= s2 = s1 > s2
     | s1 == Pos = gtArray n1 arr1 n2 arr2
     | otherwise = gtArray n2 arr2 n1 arr1
@@ -707,7 +712,13 @@ gtInteger (Large s1 n1 arr1) (Large s2 n2 arr2)
 
 gtArray :: Int -> ByteArray -> Int -> ByteArray -> Bool
 gtArray !n1 !arr1 !n2 !arr2
-    | n1 == n2 = indexWordArray arr1 (n1 - 1) > indexWordArray arr2 (n2 - 1)
+    | n1 == n2 =
+            let check 0 = indexWordArray arr1 0 > indexWordArray arr2 0
+                check i =
+                    if indexWordArray arr1 i == indexWordArray arr2 i
+                        then check (i - 1)
+                        else indexWordArray arr1 i > indexWordArray arr2 i
+            in check (n1 - 1)
     | n1 > n2 = True
     | n1 < n2 = False
     | otherwise = False
@@ -759,16 +770,19 @@ unboxWord :: Word -> Word#
 unboxWord !(W# w) = w
 
 mkLarge :: Integer -> Integer
-mkLarge (Small Pos w) = unsafeInlinePrim $ mkSingletonArray Pos w
-mkLarge (Small Neg w) = unsafeInlinePrim $ mkSingletonArray Neg w
+mkLarge (Small Pos w) = mkSingletonArray Pos w
+mkLarge (Small Neg w) = mkSingletonArray Neg w
 mkLarge a = a
 
-mkSingletonArray :: Sign -> Word -> IO Integer
-mkSingletonArray !s !x = do
-    !marr <- newWordArray 1
-    writeWordArray marr 0 x
-    !narr <- unsafeFreezeWordArray marr
-    return $ Large s 1 narr
+mkSingletonArray :: Sign -> Word -> Integer
+mkSingletonArray !s !x = unsafeInlinePrim mkSingleton
+  where
+    mkSingleton :: IO Integer
+    mkSingleton = do
+        !marr <- newWordArray 1
+        writeWordArray marr 0 x
+        !narr <- unsafeFreezeWordArray marr
+        return $ Large s 1 narr
 
 shiftLArray :: Sign -> Int -> ByteArray -> Int -> Integer
 shiftLArray !s !n !arr !i
@@ -799,7 +813,7 @@ smallShiftLArray !s !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
 
 -- | TODO : Use copy here
 wordShiftLArray :: Sign -> Int -> ByteArray -> Int -> Integer
-wordShiftLArray s n arr q = unsafeInlinePrim $ do
+wordShiftLArray !s !n !arr !q = unsafeInlinePrim $ do
     !marr <- newWordArray (n + q)
     loop1 marr 0
     !narr <- unsafeFreezeWordArray marr
@@ -865,7 +879,7 @@ smallShiftRArray !s !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
         | otherwise = return ()
 
 wordShiftRArray :: Sign -> Int -> ByteArray -> Int -> Integer
-wordShiftRArray s n arr q = unsafeInlinePrim $ do
+wordShiftRArray !s !n !arr !q = unsafeInlinePrim $ do
     !marr <- newWordArray (n - q)
     copyWordArray marr 0 arr q (n - q)
     !narr <- unsafeFreezeWordArray marr
@@ -895,7 +909,6 @@ finalizeLarge !s !nin !arr = do
         if len == 0 || (len == 1 && x == 0)
             then Small Pos 0
             else Large s len arr
-  where
 
 nonZeroLen :: Int -> ByteArray -> Int
 nonZeroLen !len !arr
@@ -962,5 +975,6 @@ absInt x = if x < 0 then -x else x
 
 debugPutStrLn :: String -> IO ()
 debugPutStrLn = putStrLn
+-- debugPutStrLn _ = return ()
 
 #endif
