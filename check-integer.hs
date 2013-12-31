@@ -59,29 +59,6 @@ testExistingInteger = do
 
 testNewInternal :: Spec
 testNewInternal = do
-    prop "Can split and make FullWords." $ \ fw ->
-        fw == makeFullWord (splitFullWord fw)
-    prop "Can add HalfWords." $ \ (h1, h2) ->
-        let f1 = makeFullWord (plusHalfWord h1 h2)
-            f2 = (promoteHalfWord h1) + (promoteHalfWord h2)
-        in f1 `shouldBe` f2
-    prop "Can add HalfWords with a carry." $ \ (h1, h2, hc) ->
-        let f1 = makeFullWord (plusHalfWordC h1 h2 hc)
-            f2 = (promoteHalfWord h1) + (promoteHalfWord h2) + (promoteHalfWord hc)
-        in f1 `shouldBe` f2
-    prop "Can subtract HalfWords." $ \ (h1, h2) ->
-        let f1 = makeFullWord (minusHalfWord h1 h2)
-            f2 = ((promoteHalfWord h1) - (promoteHalfWord h2)) .&. 0x1ffffffff
-        in f1 `shouldBe` f2
-    prop "Can multiply HalfWords." $ \ (h1, h2) ->
-        let f1 = makeFullWord (timesHalfWord h1 h2)
-            f2 = (promoteHalfWord h1) * (promoteHalfWord h2)
-        in f2 `shouldBe` f1
-    prop "Can multiply HalfWords with a carry." $ \ (h1, h2, hc) ->
-        let f1 = makeFullWord (timesHalfWordC h1 h2 hc)
-            f2 = (promoteHalfWord h1) * (promoteHalfWord h2) + (promoteHalfWord hc)
-        in f2 `shouldBe` f1
-
     prop "Can add Words catching the carry." $ \ (w1, w2) ->
         let (# c, s #) = plusWord2 w1 w2
             f1 = G.plusInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))
