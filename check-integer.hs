@@ -214,6 +214,9 @@ testNewInteger = do
         show (N.timesInteger maxSmall twoSmall) `shouldBe` "+0x1fffffffffffffffe"
         show (N.timesInteger twoSmall maxSmall) `shouldBe` "+0x1fffffffffffffffe"
 
+        let allBitsSet = N.mkInteger True (replicate 8 0x7fffffff ++ [0xff])
+        show (N.timesInteger allBitsSet allBitsSet) `shouldBe` "+0x" ++ replicate 63 'f' ++ "e" ++ replicate 63 '0' ++ "1"
+
 
 
 {-
