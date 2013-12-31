@@ -1,10 +1,9 @@
-{-# LANGUAGE FlexibleInstances, MagicHash, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances, ScopedTypeVariables #-}
 
 import Prelude hiding (Integer)
 
 import Control.Applicative ((<$>))
 import Data.Bits ((.&.))
-import GHC.Base
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Arbitrary
@@ -18,6 +17,7 @@ import New.GHC.Integer.Prim
 import New.GHC.Integer.Sign
 import New.GHC.Integer.Type
 
+import TestHelpers
 
 main :: IO ()
 main = hspec $ do
@@ -132,7 +132,6 @@ testNewInteger = do
     prop "Can OR two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (N.orInteger (N.absInteger sa) (N.absInteger sb)) `shouldBe` show (G.orInteger (G.absInteger ga) (G.absInteger gb))
 
-
     it "Can multiply two small Integers." $ do
         show (N.timesInteger (N.smallInteger 0x100#) (N.smallInteger 0x22#)) `shouldBe` "+0x2200"
         show (N.timesInteger (N.smallInteger -0x100#) (N.smallInteger 0x22#)) `shouldBe` "-0x2200"
@@ -145,101 +144,32 @@ testNewInteger = do
         show (N.timesInteger (N.mkInteger True [0,2]) (N.smallInteger -0x22#)) `shouldBe` "-0x2200000000"
         show (N.timesInteger (N.mkInteger False [0,2]) (N.smallInteger -0x22#)) `shouldBe` "+0x2200000000"
 
-
-    it "Can multiply two Integers A." $ do
-        show (G.timesInteger (G.mkInteger True [1, 2, 4]) (G.mkInteger True [1, 2])) `shouldBe` "+0x1000000020000000200000001"
+    it "Can multiply two Integers (old failures)." $ do
         show (N.timesInteger (N.mkInteger True [1, 2, 4]) (N.mkInteger True [1, 2])) `shouldBe` "+0x1000000020000000200000001"
-    it "Can multiply two Integers B." $ do
-        show (G.timesInteger (G.mkInteger True [1, 2, 4, 8]) (G.mkInteger True [1, 2, 4, 8])) `shouldBe` "+0x1000000020000000300000004000000030000000200000001"
         show (N.timesInteger (N.mkInteger True [1, 2, 4, 8]) (N.mkInteger True [1, 2, 4, 8])) `shouldBe` "+0x1000000020000000300000004000000030000000200000001"
-    it "Can multiply two Integers C." $ do
-        show (G.timesInteger (G.mkInteger True [0x7ffffffe, 0x7ffffffe, 4]) (G.mkInteger True [0x7ffffffe, 0x7ffffffe, 4])) `shouldBe` "+0x18ffffffebffffffb4000000200000004"
         show (N.timesInteger (N.mkInteger True [0x7ffffffe, 0x7ffffffe, 4]) (N.mkInteger True [0x7ffffffe, 0x7ffffffe, 4])) `shouldBe` "+0x18ffffffebffffffb4000000200000004"
-    it "Can multiply two Integers D." $ do
-        show (G.timesInteger (G.mkInteger False [0, 0x7fffffff]) (G.mkInteger False [0, 0xfffffffe])) `shouldBe` "+0x1fffffff800000008000000000000000"
         show (N.timesInteger (N.mkInteger False [0, 0x7fffffff]) (N.mkInteger False [0, 0xfffffffe])) `shouldBe` "+0x1fffffff800000008000000000000000"
-    it "Can multiply two Integers E." $ do
-        show (G.timesInteger (G.mkInteger False [1, 0x7fffffff]) (G.mkInteger False [1, 0xfffffffe])) `shouldBe` "+0x1fffffff800000013ffffffe80000001"
         show (N.timesInteger (N.mkInteger False [1, 0x7fffffff]) (N.mkInteger False [1, 0xfffffffe])) `shouldBe` "+0x1fffffff800000013ffffffe80000001"
-    it "Can multiply two Integers F." $ do
-        show (G.timesInteger (G.mkInteger False [0x3b129743, 0x6b866650]) (G.mkInteger False [0x18865e53,0x6295e0a])) `shouldBe` "+0xa5a19af9c4da2c1eaac6f46fa3a4b9"
         show (N.timesInteger (N.mkInteger False [0x3b129743, 0x6b866650]) (N.mkInteger False [0x18865e53,0x6295e0a])) `shouldBe` "+0xa5a19af9c4da2c1eaac6f46fa3a4b9"
+        show (N.timesInteger (N.mkInteger True [1, 1, 6]) (N.mkInteger True [1, 1, 6])) `shouldBe` "+0x240000001800000034000000100000001"
+        show (N.timesInteger (N.mkInteger True [ 0, 0, 0, 4, 8, 1 ]) (N.mkInteger True [ 0, 0, 0, 8 ])) `shouldBe` "+0x800000080000000800000000000000000000000000000000000000000000000"
+        show (N.timesInteger (N.mkInteger True [0, 2, 4, 8, 16, 32]) (N.mkInteger True [0,2])) `shouldBe` "+0x1000000010000000100000001000000010000000000000000"
+        show (N.timesInteger (N.mkInteger True [0, 1, 1, 1, 1 , 1]) (N.mkInteger True [0, 1, 0, 0, 1])) `shouldBe` "+0x8000000100000002000000080000001000000010000000200000004000000000000000"
+        let a4 = [0x7ffffc3d,0x7ffffdc4,0x7ffffeab]
+            b4 = [0x7fffff03,0x7ffffc71,0x7fffff6e,0x7ffffd6d,0x7fffff7a,0x294]
+        show (N.timesInteger (N.mkInteger True a4) (N.mkInteger True b4)) `shouldBe` "+0x294fff9232dffebaeebffd6dbf80086cfb001f4c78002d7cc4007c9bc8003b7b7"
 
-    it "Can multiply two Integers G." $ do
-        let a = [1, 1, 6]
-        show (N.timesInteger (N.mkInteger True a) (N.mkInteger True a)) `shouldBe` show (G.timesInteger (G.mkInteger True a) (G.mkInteger True a))
-
-{-
-================================================================================
-timesInteger
-expected: "+0xf800000067fffffe05fffffcf3fffff09000000bc000000520000024bffffff8ffffffec00000000"
- but got: "+0xf800000067fffffe05fffffbfbfffff29000000bc000000520000024bffffff8ffffffec00000000"
-(GNP +0xf7ffffff6ffffffd600000013ffffff300000014 +0xf7ffffff6ffffffd600000013ffffff300000014,GNP +0x100000001000000013ffffffeffffffff00000000 +0x100000001000000013ffffffeffffffff00000000)
-
-expected: "-0xffffff9400000b140000013000002750000064800000ddfffffff57ffffe4800000222000002f4000000c00000000"
- but got: "-0xab0000051200000bdfffffff57ffffe4800000222000002f4000000c00000000"
-(GNP -0x1ffffff83ffffffc00000000 -0x1ffffff83ffffffc00000000,GNP +0x7fffffe900000007ffffffa7ffffff57fffffe90000000e0000002fffffff9fffffffd +0x7fffffe900000007ffffffa7ffffff57fffffe90000000e0000002fffffff9fffffffd)
-
-expected: "-0xebffff433ffffca0fffffadbdffff4433ffff7527fff24acfffbbf8dfff6deb00000a8f8002add5000335f80000bdac00003f67fff1ac400048c0400077d3ffff51ddfffdd3ba0002ff680001fecffff9fc200000000"
- but got: "-0xebffff3e6800fc92f00006468001003cbfffde307ffee135fffb05bffffabe0000018bd80013ede000590e000042c03fff59b77ffddaf6000340340003f13ffff51ddfffdd3ba0002ff680001fecffff9fc200000000"
-(GNP +0xffffff2e00000098000003affffff20fffffe1ffffffd5bfffff8e800000e4000001e3fffffe67fffff8e000000c2 +0xffffff2e00000098000003affffff20fffffe1ffffffd5bfffff8e800000e4000001e3fffffe67fffff8e000000c2,GNP -0xec000004d800000e1000001e7fffffeb7fffffb4ffffff1d000001b7fffffdf7fffff8100000000 -0xec000004d800000e1000001e7fffffeb7fffffb4ffffff1d000001b7fffffdf7fffff8100000000)
-
-expected: "-0x33bfffffecbffffbc37ffff399fffff39fffffe6c7ffff6df7fffec54ffffdb6fffffa73fffffbbc00000000"
- but got: "-0x6bfffffe300000035a000005c3ffffcfc7ffff6df7fffec54ffffdb6fffffa73fffffbbc00000000"
-(GNP -0x11ffffffb5ffffff180000012ffffffddffffff6800000003fffffd6ffffffcc -0x11ffffffb5ffffff180000012ffffffddffffff6800000003fffffd6ffffffcc,GNP +0x2e000000ac000001500000000 +0x2e000000ac000001500000000)
-
-================================================================================
-plusInteger
-
-expected: "-0x21321bef7737d0f3"
- but got: "+0x1decde41088c82f0d"
-(GNP -0x37991cc71c0f0ec5 -0x37991cc71c0f0ec5,GNP +0x166700d7a4d73dd2 +0x166700d7a4d73dd2)
-
-================================================================================
-minusInteger
-expected: "+0x667b91c8cad7812"
- but got: "-0x1f99846e3735287ee"
-(GNP -0x126808840730755a -0x126808840730755a,GNP -0x18cfc1a093dded6c -0x18cfc1a093dded6c)
-================================================================================
-ltInteger
-expected: False
- but got: True
-(GNP 0x0 0x0,GNP 0x0 0x0)
-expected: False
- but got: True
-(GNP 0x0 0x0,GNP 0x0 0x0)
-
-geInteger
-expected: True
- but got: False
-(GNP 0x0 0x0,GNP 0x0 0x0)
-expected: True
- but got: False
-(GNP 0x0 0x0,GNP 0x0 0x0)
-
-================================================================================
-shiftRInteger
-expected: "-0x5c"
- but got: "-0x5d"
-(GNP -0xb8 -0xb8,1153)
-
-expected: "-0x6f95cc9"
- but got: "-0x6f95cca"
-(GNP -0x1be57324 -0x1be57324,2)
-
-expected: "-0x4fffffff30000001a000000280000000"
- but got: "-0x4fffffff30000001a000000280000001"
-(GNP -0x9ffffffe600000034000000500000000 -0x9ffffffe600000034000000500000000,1)
-
-expected: "-0x1"
- but got: "-0x2"
-(GNP -0x2 -0x2,1)
-================================================================================
-
--}
 
     prop "Can multiply two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (N.timesInteger sa sb) `shouldBe` show (G.timesInteger ga gb)
+
+    it "Tests that have failed once for no good reason." $ do
+        let a1 = [0x1c0f0ec5,0x6f32398e]
+            b1 = [0x24d73dd2,0x2cce01af]
+        show (N.plusInteger (N.mkInteger False a1) (N.mkInteger True b1)) `shouldBe` show (G.plusInteger (G.mkInteger False a1) (G.mkInteger True b1))
+        let a2 = [0x730755a,0x24d01108]
+            b2 = [0x13dded6c,0x319f8341]
+        show (N.minusInteger (N.mkInteger False a2) (N.mkInteger True b2)) `shouldBe` show (G.minusInteger (G.mkInteger False a2) (G.mkInteger True b2))
 
     it "Can calculate product [1..n]." $ do
         show (foldl1 N.timesInteger $ map (\x -> N.smallInteger (unboxInt x)) [1..10])
@@ -255,7 +185,7 @@ expected: "-0x1"
         show (N.shiftRInteger (N.mkInteger True [0, 0, 8]) 65#) `shouldBe` "+0x1"
         show (N.shiftRInteger (N.mkInteger True [0x7fffffff, 0x7fffffff, 3]) 64#) `shouldBe` "0x0"
 
-        "1 " ++ show (N.shiftRInteger (N.smallInteger (-1#)) 1#) `shouldBe` "1 -0x1"
+        show (N.shiftRInteger (N.smallInteger (-1#)) 1#) `shouldBe` "-0x1"
         show (N.shiftRInteger (N.smallInteger (-2#)) 1#) `shouldBe` "-0x1"
         show (N.shiftRInteger (N.smallInteger (-3#)) 1#) `shouldBe` "-0x2"
         show (N.shiftRInteger (N.smallInteger (-4#)) 1#) `shouldBe` "-0x2"
@@ -263,9 +193,9 @@ expected: "-0x1"
         show (N.shiftRInteger (N.smallInteger (-6#)) 1#) `shouldBe` "-0x3"
         show (N.shiftRInteger (N.smallInteger (-7#)) 1#) `shouldBe` "-0x4"
 
-        "A " ++ show (N.shiftRInteger (N.smallInteger (-3#)) 3#) `shouldBe` "A -0x1"
-        "B " ++ show (N.shiftRInteger (N.smallInteger (-1#)) 1271#) `shouldBe` "B -0x1"
-        "C " ++ show (N.shiftRInteger (N.smallInteger (-1123123123223#)) 127#) `shouldBe` "C -0x1"
+        show (N.shiftRInteger (N.smallInteger (-3#)) 3#) `shouldBe` "-0x1"
+        show (N.shiftRInteger (N.smallInteger (-1#)) 1271#) `shouldBe` "-0x1"
+        show (N.shiftRInteger (N.smallInteger (-1123123123223#)) 127#) `shouldBe` "-0x1"
 
         show (N.shiftRInteger (N.mkInteger False [0x7ffffffd,0x2]) 2#) `shouldBe` "-0x60000000"
         show (G.shiftRInteger (G.mkInteger False [0,0x2]) 1#) `shouldBe` "-0x80000000"
@@ -284,6 +214,24 @@ expected: "-0x1"
         show (N.timesInteger maxSmall twoSmall) `shouldBe` "+0x1fffffffffffffffe"
         show (N.timesInteger twoSmall maxSmall) `shouldBe` "+0x1fffffffffffffffe"
 
+
+
+{-
+================================================================================
+timesInteger
+
+================================================================================
+plusInteger
+
+================================================================================
+minusInteger
+
+================================================================================
+ltInteger
+
+================================================================================
+-}
+
 {-
     prop "Can OR two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (N.orInteger sa sb) `shouldBe` show (G.orInteger ga gb)
@@ -295,12 +243,6 @@ expected: "-0x1"
 
 
 --------------------------------------------------------------------------------
-
-boxIntHash :: Int# -> Int
-boxIntHash i = I# i
-
-unboxInt :: Int -> Int#
-unboxInt (I# i) = i
 
 data GmpSimplePair
     = GSP G.Integer S.Integer
@@ -315,7 +257,7 @@ instance Arbitrary GmpSimplePair where
                 return $! GSP (G.smallInteger (unboxInt i)) (S.smallInteger (unboxInt i))
             else do
                 sign <- arbitrary
-                pos <- pos32bits <$> arbitrary
+                pos <- positive32bits <$> arbitrary
                 return $! GSP (G.mkInteger sign pos) (S.mkInteger sign pos)
 
 data GmpNewPair
@@ -331,9 +273,6 @@ instance Arbitrary GmpNewPair where
                 return $! GNP (G.smallInteger (unboxInt i)) (N.smallInteger (unboxInt i))
             else do
                 sign <- arbitrary
-                pos <- pos32bits <$> arbitrary
+                pos <- positive32bits <$> arbitrary
                 return $! GNP (G.mkInteger sign pos) (N.mkInteger sign pos)
 
--- The mkInteger functions expect values in range [0, 0x7fffffff].
-pos32bits :: [Int] -> [Int]
-pos32bits = map (0x7fffffff .&.)

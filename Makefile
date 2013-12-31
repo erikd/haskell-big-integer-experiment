@@ -4,7 +4,7 @@ GHC = ghc
 GHCVER = $(shell $(GHC) --version | sed "s/.* //")
 GHCFLAGS = -Wall -fwarn-tabs -O3 $(PACKAGES) $(PRAGMAS)
 
-hsfiles = $(shell find GMP/ New/ Simple/ -name \*.hs -o -name \*.lhs)
+hsfiles = $(shell find GMP/ New/ Simple/ -name \*.hs -o -name \*.lhs) *.hs
 
 PRAGMAS = -XCPP -XMagicHash -XUnboxedTuples -XUnliftedFFITypes
 
@@ -22,6 +22,7 @@ bench : bench-integer
 
 new-bench : new-bench-integer
 	./new-bench-integer -o new-bench-integer.html --template=Criterion/report.tpl
+	chmod a+r new-bench-integer.html
 
 check : check-integer
 	./check-integer # | tee check.log
@@ -33,6 +34,9 @@ bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
 
 new-bench-integer : new-bench-integer.hs Stamp/copy $(hsfiles)
+	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
+
+int-bench : int-bench.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
 
 Stamp/update :

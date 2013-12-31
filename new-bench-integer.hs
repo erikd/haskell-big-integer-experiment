@@ -2,16 +2,13 @@
 
 import Prelude hiding (Integer)
 
-import Control.Applicative ((<$>))
-import GHC.Base
-
 import qualified Criterion.Main as C
-import qualified System.Random as R
-
 
 import qualified GMP.Integer as G
 import qualified New.Integer as N
 import qualified Simple.Integer as S
+
+import TestHelpers
 
 main :: IO ()
 main = do
@@ -20,13 +17,15 @@ main = do
     smpSmallList <- mkSmallIntegerList 1000 (\x -> S.smallInteger (unboxInt x))
     newSmallList <- mkSmallIntegerList 1000 (\x -> N.smallInteger (unboxInt x))
 
-    gmpLargeList <- mkLargeIntegerList 200 (50, 60) G.mkInteger
-    smpLargeList <- mkLargeIntegerList 200 (50, 60) S.mkInteger
-    newLargeList <- mkLargeIntegerList 200 (50, 60) N.mkInteger
+    largeList <- mkLargeIntegerList 200 (50, 60)
+    let gmpLargeList = map (\(b, l) -> G.mkInteger b l) largeList
+        smpLargeList = map (\(b, l) -> S.mkInteger b l) largeList
+        newLargeList = map (\(b, l) -> N.mkInteger b l) largeList
 
-    gmpHugeList <- mkLargeIntegerList 10 (200, 250) G.mkInteger
-    smpHugeList <- mkLargeIntegerList 10 (200, 250) S.mkInteger
-    newHugeList <- mkLargeIntegerList 10 (200, 250) N.mkInteger
+    hugeList <- mkLargeIntegerList 10 (200, 250)
+    let gmpHugeList = map (\(b, l) -> G.mkInteger b l) hugeList
+        -- smpHugeList = map (\(b, l) -> S.mkInteger b l) hugeList
+        newHugeList = map (\(b, l) -> N.mkInteger b l) hugeList
 
     let (gmpSmallPosList, smpSmallPosList, newSmallPosList) =
                 ( map G.absInteger gmpSmallList
@@ -44,7 +43,6 @@ main = do
                 , map (\x -> S.smallInteger (unboxInt x)) [1..10]
                 , map (\x -> N.smallInteger (unboxInt x)) [1..10]
                 )
-
     let (gmpFirstHundred, smpFirstHundred, newFirstHundred) =
                 ( map (\x -> G.smallInteger (unboxInt x)) [1..100]
                 , map (\x -> S.smallInteger (unboxInt x)) [1..100]
@@ -91,30 +89,8 @@ main = do
                     ++ " huge (~2500 decimal digit) Integers"
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpHugeList
-            , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpHugeList
+            -- , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpHugeList
             , C.bench "New"     $ C.whnf (foldl1 N.timesInteger) newHugeList
             ]
         ]
 
---------------------------------------------------------------------------------
--- Data generators.
-
-mkSmallIntegerList :: Int -> (Int -> a) -> IO [a]
-mkSmallIntegerList count constructor =
-    fmap (map constructor . take count . R.randoms) R.newStdGen
-
-
-mkLargeIntegerList :: Int -> (Int, Int) -> (Bool -> [Int] -> a) -> IO [a]
-mkLargeIntegerList count range constructor = do
-    signs <- (take count . R.randoms) <$> R.newStdGen
-    lengths <- (take count . R.randomRs range) <$> R.newStdGen
-    let mkIntList len =
-            (take len . R.randomRs (0, 0x7fffffff)) <$> R.newStdGen
-    ints <- mapM mkIntList lengths
-    return . take count $ zipWith constructor signs ints
-
---------------------------------------------------------------------------------
--- Helpers.
-
-unboxInt :: Int -> Int#
-unboxInt (I# i) = i
