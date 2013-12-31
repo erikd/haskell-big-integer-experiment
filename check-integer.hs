@@ -81,6 +81,11 @@ testNewInternal = do
         let f1 = makeFullWord (timesHalfWordC h1 h2 hc)
             f2 = (promoteHalfWord h1) * (promoteHalfWord h2) + (promoteHalfWord hc)
         in f2 `shouldBe` f1
+    prop "Can multiply Words catching overflow." $ \ (w1, w2) ->
+        let (ov, prod) = timesWord2 w1 w2
+            f1 = G.timesInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))
+            f2 = G.plusInteger (G.wordToInteger (unboxWord prod)) (G.shiftLInteger (G.wordToInteger (unboxWord ov)) 64#)
+        in f2 `shouldBe` f1
 
 
 testNewInteger :: Spec
