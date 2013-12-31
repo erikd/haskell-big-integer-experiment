@@ -30,6 +30,7 @@ plusWord2C !(W# a) !(W# b) !(W# c) =
 minusWord2 :: Word -> Word -> (Word, Word)
 minusWord2 !(W# a) !(W# b) =
     let !diff = minusWord# a b
+        -- TODO : Really need a minusWord2# PrimOp.
         !carry = if ltWord# a b then 1## else 0##
     in (W# carry, W# diff)
 
