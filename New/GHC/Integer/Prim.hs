@@ -7,6 +7,7 @@ module New.GHC.Integer.Prim
     , plusHalfWord, plusHalfWordC
     , minusHalfWord, minusHalfWordC
     , timesHalfWord, timesHalfWordC, timesHalfWordCC
+    , timesWord2
     , promoteHalfWord
     , splitFullWord, makeFullWord
     ) where
@@ -102,6 +103,12 @@ timesHalfWordC !a !b !c =
         !(FC# fc) = promoteHalfWord c
         !prod = plusWord# (timesWord# fa fb) fc
     in splitFullWord (FC# prod)
+
+{-# INLINE timesWord2 #-}
+timesWord2 :: FullWord -> FullWord -> (FullWord, FullWord)
+timesWord2 !(FC# a) !(FC# b) =
+    let (# p, c #) = timesWord2# a b
+    in (FC# p, FC# c)
 
 {-# INLINE timesHalfWordCC #-}
 timesHalfWordCC :: HalfWord -> HalfWord -> HalfWord -> HalfWord -> (HalfWord, HalfWord)
