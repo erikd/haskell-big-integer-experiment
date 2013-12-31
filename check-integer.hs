@@ -81,9 +81,20 @@ testNewInternal = do
         let f1 = makeFullWord (timesHalfWordC h1 h2 hc)
             f2 = (promoteHalfWord h1) * (promoteHalfWord h2) + (promoteHalfWord hc)
         in f2 `shouldBe` f1
+
+    prop "Can add Words catching the carry." $ \ (w1, w2) ->
+        let (c, s) = plusWordC w1 w2
+            f1 = G.plusInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))
+            f2 = G.plusInteger (G.wordToInteger (unboxWord s)) (G.shiftLInteger (G.wordToInteger (unboxWord c)) 64#)
+        in f1 `shouldBe` f2
     prop "Can multiply Words catching overflow." $ \ (w1, w2) ->
         let (ov, prod) = timesWord2 w1 w2
             f1 = G.timesInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))
+            f2 = G.plusInteger (G.wordToInteger (unboxWord prod)) (G.shiftLInteger (G.wordToInteger (unboxWord ov)) 64#)
+        in f2 `shouldBe` f1
+    prop "Can multiply Words add a carry and catch overflow." $ \ (w1, w2, c) ->
+        let (ov, prod) = timesWord2C w1 w2 c
+            f1 = G.plusInteger (G.timesInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))) (G.wordToInteger (unboxWord c))
             f2 = G.plusInteger (G.wordToInteger (unboxWord prod)) (G.shiftLInteger (G.wordToInteger (unboxWord ov)) 64#)
         in f2 `shouldBe` f1
 
