@@ -83,10 +83,15 @@ testNewInternal = do
         in f2 `shouldBe` f1
 
     prop "Can add Words catching the carry." $ \ (w1, w2) ->
-        let (c, s) = plusWordC w1 w2
+        let (# c, s #) = plusWord2 w1 w2
             f1 = G.plusInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))
             f2 = G.plusInteger (G.wordToInteger (unboxWord s)) (G.shiftLInteger (G.wordToInteger (unboxWord c)) 64#)
         in f1 `shouldBe` f2
+    prop "Can add Words add a carry and catch overflow." $ \ (w1, w2, c) ->
+        let (# cry, sm #) = plusWord2C w1 w2 c
+            f1 = foldl1 G.plusInteger [G.wordToInteger (unboxWord w1), G.wordToInteger (unboxWord w2), G.wordToInteger (unboxWord c)]
+            f2 = G.plusInteger (G.wordToInteger (unboxWord sm)) (G.shiftLInteger (G.wordToInteger (unboxWord cry)) 64#)
+        in f2 `shouldBe` f1
     prop "Can multiply Words catching overflow." $ \ (w1, w2) ->
         let (ov, prod) = timesWord2 w1 w2
             f1 = G.timesInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))
@@ -232,6 +237,9 @@ testNewInteger = do
 
         let allBitsSet = N.mkInteger True (replicate 8 0x7fffffff ++ [0xff])
         show (N.timesInteger allBitsSet allBitsSet) `shouldBe` "+0x" ++ replicate 63 'f' ++ "e" ++ replicate 63 '0' ++ "1"
+
+        show (N.complementInteger (N.smallInteger 0#)) `shouldBe` "-0x1"
+        show (N.complementInteger (N.mkInteger True [0])) `shouldBe` "-0x1"
 
 
 
