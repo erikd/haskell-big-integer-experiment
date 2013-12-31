@@ -264,10 +264,10 @@ xorArray !s !n1 !arr1 !n2 !arr2 = unsafeInlinePrim $ do
 
 {-# NOINLINE complementInteger #-}
 complementInteger :: Integer -> Integer
-complementInteger (Small Pos a) = Small Neg (a + 1)
-complementInteger (Small Neg a) = Small Pos (a - 1)
-complementInteger (Large Pos n arr) = plusArrayW Neg n arr 1
-complementInteger (Large Neg n arr) = minusArrayW Pos n arr 1
+complementInteger !(Small Pos a) = Small Neg (a + 1)
+complementInteger !(Small Neg a) = Small Pos (a - 1)
+complementInteger !(Large Pos n arr) = plusArrayW Neg n arr 1
+complementInteger !(Large Neg n arr) = minusArrayW Pos n arr 1
 
 
 {-# NOINLINE shiftLInteger #-}
@@ -340,38 +340,37 @@ plusInteger !x !y =
 
 {-# INLINE safeSumWord #-}
 safeSumWord :: Sign -> Word -> Word -> Integer
-safeSumWord s w1 w2 =
-    let sm = w1 + w2
-    in if sm < min w1 w2
-        then plusInteger (mkSingletonArray s w1) (mkSingletonArray s w2)
-        else Small s sm
+safeSumWord !sign !w1 !w2 =
+    let (# !c, !s #) = plusWord2 w1 w2
+    in if c == 0
+        then Small sign s
+        else mkPair sign s c
 
 plusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
 plusArrayW !s !n !arr !w = unsafeInlinePrim $ do
-    !marr <- newHalfWordArray (2 * succ n)
-    writeHalfWordArray marr (2 * succ n - 1) 0
-    let (!uw, !lw) = splitFullWord w
-    !x <- indexHalfWordArrayM arr 0
-    let (!hc, !hs) = plusHalfWord x lw
-    writeHalfWordArray marr 0 hs
-    !nlen <- loop1 marr 1 (hc + uw)
-    !narr <- unsafeFreezeHalfWordArray marr
+    !marr <- newWordArray (succ n)
+    writeWordArray marr n 0
+    !x <- indexWordArrayM arr 0
+    let (# !cry, !sm #) = plusWord2 x w
+    writeWordArray marr 0 sm
+    !nlen <- loop1 marr 1 cry
+    !narr <- unsafeFreezeWordArray marr
     finalizeLarge s nlen narr
   where
     loop1 !marr !i !carry
         | carry == 0 = loop2 marr i
-        | i < 2 * n =  do
-            !x <- indexHalfWordArrayM arr i
-            let (!hc, !hs) = plusHalfWord x carry
-            writeHalfWordArray marr i hs
-            loop1 marr (i + 1) hc
+        | i < n =  do
+            !x <- indexWordArrayM arr i
+            let (# !cry, !sm #) = plusWord2 x carry
+            writeWordArray marr i sm
+            loop1 marr (i + 1) cry
         | otherwise = do
-            writeHalfWordArray marr i carry
+            writeWordArray marr i carry
             return $ n + 1
     loop2 !marr !i
-        | i < 2 * n =  do
-            !x <- indexHalfWordArrayM arr i
-            writeHalfWordArray marr i x
+        | i < n =  do
+            !x <- indexWordArrayM arr i
+            writeWordArray marr i x
             loop2 marr (i + 1)
         | otherwise = return n
 
@@ -380,38 +379,38 @@ plusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 plusArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray s n2 arr2 n1 arr1
     | otherwise = unsafeInlinePrim $ do --
-        !marr <- newHalfWordArray (2 * succ n1)
+        !marr <- newWordArray (succ n1)
         loop1 marr 0 0
-        !narr <- unsafeFreezeHalfWordArray marr
+        !narr <- unsafeFreezeWordArray marr
         finalizeLarge s (succ n1) narr
   where
     loop1 !marr !i !carry
-        | i < 2 * n2 = do
-            !x <- indexHalfWordArrayM arr1 i
-            !y <- indexHalfWordArrayM arr2 i
-            let (!hc, !hs) = plusHalfWordC x y carry
-            writeHalfWordArray marr i hs
-            loop1 marr (i + 1) hc
+        | i < n2 = do
+            !x <- indexWordArrayM arr1 i
+            !y <- indexWordArrayM arr2 i
+            let (# !cry, !sm #) = plusWord2C x y carry
+            writeWordArray marr i sm
+            loop1 marr (i + 1) cry
         | otherwise = loop2 marr i carry
     loop2 !marr !i !carry
         | carry == 0 = loop3 marr i
-        | i < 2 * n1 = do
-            !x <- indexHalfWordArrayM arr1 i
-            let (!hc, !hs) = plusHalfWord x carry
-            writeHalfWordArray marr i hs
-            loop2 marr (i + 1) hc
+        | i < n1 = do
+            !x <- indexWordArrayM arr1 i
+            let (# !cry, !sm #) = plusWord2 x carry
+            writeWordArray marr i sm
+            loop2 marr (i + 1) cry
         | otherwise = do
-            writeHalfWordArray marr i carry
+            writeWordArray marr i carry
             loop4 marr (i + 1)
     loop3 !marr !i
-        | i < 2 * n1 = do
-            !x <- indexHalfWordArrayM arr1 i
-            writeHalfWordArray marr i x
+        | i < n1 = do
+            !x <- indexWordArrayM arr1 i
+            writeWordArray marr i x
             loop3 marr (i + 1)
         | otherwise = loop4 marr i
     loop4 !marr !i
-        | i < 2 * (n1 + 1) = do
-            writeHalfWordArray marr i 0
+        | i <= n1 = do
+            writeWordArray marr i 0
             loop4 marr (i + 1)
         | otherwise = return ()
 
@@ -540,33 +539,30 @@ timesInteger !x !y = case (# x, y #) of
             else Small (timesSign s1 s2) (w1 * w2)
 
     (# Small !s1 !w1, Large !s2 !n2 !arr2 #) ->
-        if w1 < halfWordMax
-            then timesArrayHW (timesSign s1 s2) n2 arr2 (snd $ splitFullWord w1)
-            else timesInteger (mkLarge x) y
+            timesArrayW (timesSign s1 s2) n2 arr2 w1
+
     (# Large !s1 !n1 !arr1, Small !s2 !w2 #) ->
-        if w2 < halfWordMax
-            then timesArrayHW (timesSign s1 s2) n1 arr1 (snd $ splitFullWord w2)
-            else timesInteger x (mkLarge y)
+            timesArrayW (timesSign s1 s2) n1 arr1 w2
 
     (# Large !s1 !n1 !arr1, Large !s2 !n2 !arr2 #) -> timesArray (timesSign s1 s2) n1 arr1 n2 arr2
 
 
-timesArrayHW :: Sign -> Int -> ByteArray -> HalfWord -> Integer
-timesArrayHW !s !n !arr !w = unsafeInlinePrim $ do
-    !marr <- newHalfWordArrayCleared (2 * succ n)
-    writeHalfWordArray marr (2 * succ n - 1) 0
+timesArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
+timesArrayW !s !n !arr !w = unsafeInlinePrim $ do
+    !marr <- newWordArrayCleared (succ n)
+    writeWordArray marr (n - 1) 0
     loop marr 0 0
-    !narr <- unsafeFreezeHalfWordArray marr
-    finalizeLarge s (n + 1) narr
+    !narr <- unsafeFreezeWordArray marr
+    finalizeLarge s (succ n) narr
   where
     loop !marr !i !carry
-        | i < 2 * n = do
-            !x <- indexHalfWordArrayM arr i
-            let (!hc, !hp) = timesHalfWordC x w carry
-            writeHalfWordArray marr i hp
-            loop marr (i + 1) hc
+        | i < n = do
+            !x <- indexWordArrayM arr i
+            let (!c, !p) = timesWord2C x w carry
+            writeWordArray marr i p
+            loop marr (i + 1) c
         | otherwise =
-            writeHalfWordArray marr i carry
+            writeWordArray marr i carry
 
 
 timesArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
@@ -577,35 +573,35 @@ timesArray !s !n1 !arr1 !n2 !arr2
         outerLoop 0 psum 0
   where
     outerLoop !psumLen !psum !s2
-        | s2 < 2 * n2 = do
-            !hw <- indexHalfWordArrayM arr2 s2
-            if hw == 0
+        | s2 < n2 = do
+            !w <- indexWordArrayM arr2 s2
+            if w == 0
                 then outerLoop psumLen psum (succ s2)
                 else do
-                    let !newPsumLen = succ (max psumLen (n1 + (s2 + 1) `div` 2))
-                    !marr <- cloneHalfWordArrayExtend (2 * psumLen) psum (2 * newPsumLen)
-                    !possLen <- innerLoop marr psumLen psum 0 s2 hw 0
-                    !narr <- unsafeFreezeHalfWordArray marr
+                    let !newPsumLen = succ (max psumLen (n1 + succ s2))
+                    !marr <- cloneWordArrayExtend psumLen psum newPsumLen
+                    !possLen <- innerLoop marr psumLen psum 0 s2 w 0
+                    !narr <- unsafeFreezeWordArray marr
                     outerLoop possLen narr (succ s2)
         | otherwise =
             finalizeLarge s psumLen psum
 
     innerLoop !marr !pn !psum !s1 !s2 !hw !carry
-        | s1 + s2 < 2 * pn && s1 < 2 * n1 = do
-            !ps <- indexHalfWordArrayM psum (s1 + s2)
-            !x <- indexHalfWordArrayM arr1 s1
-            let (!hc, !hp) = timesHalfWordCC x hw carry ps
-            writeHalfWordArray marr (s1 + s2) hp
+        | s1 + s2 < pn && s1 < n1 = do
+            !ps <- indexWordArrayM psum (s1 + s2)
+            !x <- indexWordArrayM arr1 s1
+            let (!hc, !hp) = timesWord2CC x hw carry ps
+            writeWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
-        | s1 < 2 * n1 = do
-            !x <- indexHalfWordArrayM arr1 s1
-            let (!hc, !hp) = timesHalfWordC x hw carry
-            writeHalfWordArray marr (s1 + s2) hp
+        | s1 < n1 = do
+            !x <- indexWordArrayM arr1 s1
+            let (!hc, !hp) = timesWord2C x hw carry
+            writeWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
         | carry /= 0 = do
-            writeHalfWordArray marr (s1 + s2) carry
-            return ((s1 + s2 + 2) `div` 2)
-        | otherwise = return ((s1 + s2 + 1) `div` 2)
+            writeWordArray marr (s1 + s2) carry
+            return (s1 + s2 + 1)
+        | otherwise = return (s1 + s2 + 1)
 
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
@@ -773,6 +769,17 @@ mkLarge :: Integer -> Integer
 mkLarge (Small Pos w) = mkSingletonArray Pos w
 mkLarge (Small Neg w) = mkSingletonArray Neg w
 mkLarge a = a
+
+mkPair :: Sign -> Word -> Word -> Integer
+mkPair !sign !sm !carry = unsafeInlinePrim mkLargePair
+  where
+    mkLargePair :: IO Integer
+    mkLargePair = do
+        !marr <- newWordArray 2
+        writeWordArray marr 0 sm
+        writeWordArray marr 1 carry
+        !narr <- unsafeFreezeWordArray marr
+        return $ Large sign 2 narr
 
 mkSingletonArray :: Sign -> Word -> Integer
 mkSingletonArray !s !x = unsafeInlinePrim mkSingleton

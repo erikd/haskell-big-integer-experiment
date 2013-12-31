@@ -5,10 +5,10 @@
 module New.GHC.Integer.Prim
     ( FullWord, HalfWord
     , plusHalfWord, plusHalfWordC
-    , plusWordC
+    , plusWord2, plusWord2C
     , minusHalfWord, minusHalfWordC
     , timesHalfWord, timesHalfWordC, timesHalfWordCC
-    , timesWord2, timesWord2C
+    , timesWord2, timesWord2C, timesWord2CC
     , promoteHalfWord
     , splitFullWord, makeFullWord
     ) where
@@ -69,11 +69,19 @@ plusHalfWordC !a !b !c =
         !sum = plusWord# (plusWord# fa fc) fb
     in splitFullWord (FC# sum)
 
-{-# INLINE plusWordC #-}
-plusWordC :: FullWord -> FullWord -> (FullWord, FullWord)
-plusWordC !(FC# a) !(FC# b) =
-    let (# p, c #) = plusWord2# a b
-    in (FC# p, FC# c)
+{-# INLINE plusWord2 #-}
+plusWord2 :: FullWord -> FullWord -> (# FullWord, FullWord #)
+plusWord2 !(FC# a) !(FC# b) =
+    let (# c, s #) = plusWord2# a b
+    in (# FC# c, FC# s #)
+
+{-# INLINE plusWord2C #-}
+plusWord2C :: FullWord -> FullWord -> FullWord -> (# FullWord, FullWord #)
+plusWord2C !(FC# a) !(FC# b) !(FC# c) =
+    let (# c1, s1 #) = plusWord2# a b
+        (# c2, s2 #) = plusWord2# s1 c
+        !carry = plusWord# c1 c2
+    in (# FC# carry, FC# s2 #)
 
 {-# INLINE minusHalfWord #-}
 minusHalfWord :: HalfWord -> HalfWord -> (HalfWord, HalfWord)
@@ -123,6 +131,15 @@ timesWord2C !(FC# a) !(FC# b) !(FC# c) =
     let (# ovf, prod #) = timesWord2# a b
         (# cry, prodc #) = plusWord2# prod c
         carry = plusWord# ovf cry
+    in (FC# carry, FC# prodc)
+
+{-# INLINE timesWord2CC #-}
+timesWord2CC :: FullWord -> FullWord -> FullWord -> FullWord -> (FullWord, FullWord)
+timesWord2CC !(FC# a) !(FC# b) !(FC# c) !(FC# d) =
+    let (# ovf, prod #) = timesWord2# a b
+        (# c1, sm #) = plusWord2# c d
+        (# cry, prodc #) = plusWord2# prod sm
+        carry = plusWord# (plusWord# ovf cry) c1
     in (FC# carry, FC# prodc)
 
 {-# INLINE timesHalfWordCC #-}

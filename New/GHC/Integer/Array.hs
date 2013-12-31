@@ -21,6 +21,12 @@ newHalfWordArray !len = do
     !marr <- newByteArray (len * sizeOf (0 :: HalfWord))
     return $ MHWA marr
 
+newWordArrayCleared :: PrimMonad m => Int -> m (MutableWordArray m)
+newWordArrayCleared !len = do
+    !marr <- newByteArray (len * sizeOf (0 :: FullWord))
+    setByteArray marr 0 len (0 :: FullWord)
+    return $ MWA marr
+
 newHalfWordArrayCleared :: PrimMonad m => Int -> m (MutableHalfWordArray m)
 newHalfWordArrayCleared !len = do
     !marr <- newByteArray (len * sizeOf (0 :: HalfWord))
@@ -34,6 +40,15 @@ newPlaceholderWordArray :: PrimMonad m => m ByteArray
 newPlaceholderWordArray = do
     !marr <- newByteArray (sizeOf (0 :: FullWord))
     unsafeFreezeByteArray marr
+
+cloneWordArrayExtend :: PrimMonad m=> Int -> ByteArray -> Int -> m (MutableWordArray m)
+cloneWordArrayExtend !oldLen !arr !newLen = do
+    !marr <- newByteArray (newLen * sizeOf (0 :: FullWord))
+    if oldLen > 0
+        then copyByteArray marr 0 arr 0 ((min oldLen newLen) * sizeOf (0 :: FullWord))
+        else return ()
+    setByteArray marr oldLen (max 0 (newLen - oldLen)) (0 :: FullWord)
+    return $ MWA marr
 
 cloneHalfWordArrayExtend :: PrimMonad m=> Int -> ByteArray -> Int -> m (MutableHalfWordArray m)
 cloneHalfWordArrayExtend !oldLen !arr !newLen = do
