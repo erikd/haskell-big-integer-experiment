@@ -7,6 +7,7 @@ module New.GHC.Integer.Prim
     , plusHalfWord, plusHalfWordC
     , plusWord2, plusWord2C
     , minusHalfWord, minusHalfWordC
+    , minusWord2, minusWord2C
     , timesHalfWord, timesHalfWordC, timesHalfWordCC
     , timesWord2, timesWord2C, timesWord2CC
     , promoteHalfWord
@@ -101,6 +102,20 @@ minusHalfWordC !a !b !c =
         !diff = minusWord# fa (plusWord# fb fc)
         !((HC# hc), hd) = splitFullWord (FC# diff)
     in (HC# (and# hc (unsafeCoerce# 1#)), hd)
+
+{-# INLINE minusWord2 #-}
+minusWord2 :: FullWord -> FullWord -> (FullWord, FullWord)
+minusWord2 !(FC# a) !(FC# b) =
+    let !diff = minusWord# a b
+        !carry = if ltWord# a b then 1## else 0##
+    in (FC# carry, FC# diff)
+
+{-# INLINE minusWord2C #-}
+minusWord2C :: FullWord -> FullWord -> FullWord -> (FullWord, FullWord)
+minusWord2C !(FC# a) !(FC# b) !(FC# c) =
+    let !diff = minusWord# a (plusWord# b c)
+        !carry = if ltWord# a b then 1## else 0##
+    in (FC# carry, FC# diff)
 
 {-# INLINE timesHalfWord #-}
 timesHalfWord :: HalfWord -> HalfWord -> (HalfWord, HalfWord)
