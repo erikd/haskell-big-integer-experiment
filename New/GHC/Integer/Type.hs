@@ -304,7 +304,7 @@ plusInteger :: Integer -> Integer -> Integer
 plusInteger !x !y =
     case (# x, y #) of
         (# Small _ 0, b #) -> b
-        (# Small Pos !w1, Small Pos !w2 #) -> safeSumWord Pos w1 w2
+        (# Small Pos !w1, Small Pos !w2 #) -> safePlusWord Pos w1 w2
         (# Small Pos !a, Small Neg !b #) ->
             if a >= b
                 then Small Pos (a - b)
@@ -313,7 +313,7 @@ plusInteger !x !y =
             if a >= b
                 then Small Neg (a - b)
                 else Small Pos (b - a)
-        (# Small Neg !w1, Small Neg !w2 #) -> safeSumWord Neg w1 w2
+        (# Small Neg !w1, Small Neg !w2 #) -> safePlusWord Neg w1 w2
 
         (# Large Pos !n !arr, Small Pos !w #) -> plusArrayW Pos n arr w
         (# Small Pos !w, Large Pos !n !arr #) -> plusArrayW Pos n arr w
@@ -338,9 +338,9 @@ plusInteger !x !y =
                 else minusArray Pos n2 arr2 n1 arr1
         (# Large Neg !n1 !arr1, Large Neg !n2 !arr2 #) -> plusArray Neg n1 arr1 n2 arr2
 
-{-# INLINE safeSumWord #-}
-safeSumWord :: Sign -> Word -> Word -> Integer
-safeSumWord !sign !w1 !w2 =
+{-# INLINE safePlusWord #-}
+safePlusWord :: Sign -> Word -> Word -> Integer
+safePlusWord !sign !w1 !w2 =
     let (# !c, !s #) = plusWord2 w1 w2
     in if c == 0
         then Small sign s
@@ -423,8 +423,8 @@ minusInteger (Small _ 0) b = negateInteger b
 minusInteger (Small Pos a) (Small Pos b)
     | a >= b = Small Pos (a - b)
     | otherwise = Small Neg (b - a)
-minusInteger (Small Pos a) (Small Neg b) = safeSumWord Pos a b
-minusInteger (Small Neg a) (Small Pos b) = safeSumWord Neg a b
+minusInteger (Small Pos a) (Small Neg b) = safePlusWord Pos a b
+minusInteger (Small Neg a) (Small Pos b) = safePlusWord Neg a b
 minusInteger (Small Neg a) (Small Neg b)
     | a > b = Small Neg (a - b)
     | otherwise = Small Pos (b - a)
@@ -533,9 +533,7 @@ timesInteger !x !y = case (# x, y #) of
     (# Small Pos 1, !b #) -> b
 
     (# Small !s1 !w1, Small !s2 !w2 #) ->
-        if w1 > halfWordMax || w2 > halfWordMax
-            then timesInteger (mkLarge x) (mkLarge y)
-            else Small (timesSign s1 s2) (w1 * w2)
+            safeTimesWord (timesSign s1 s2) w1 w2
 
     (# Small !s1 !w1, Large !s2 !n2 !arr2 #) ->
             timesArrayW (timesSign s1 s2) n2 arr2 w1
@@ -543,8 +541,16 @@ timesInteger !x !y = case (# x, y #) of
     (# Large !s1 !n1 !arr1, Small !s2 !w2 #) ->
             timesArrayW (timesSign s1 s2) n1 arr1 w2
 
-    (# Large !s1 !n1 !arr1, Large !s2 !n2 !arr2 #) -> timesArray (timesSign s1 s2) n1 arr1 n2 arr2
+    (# Large !s1 !n1 !arr1, Large !s2 !n2 !arr2 #) ->
+            timesArray (timesSign s1 s2) n1 arr1 n2 arr2
 
+{-# INLINE safeTimesWord #-}
+safeTimesWord :: Sign -> Word -> Word -> Integer
+safeTimesWord !s !w1 !w2 =
+    let (!ovf, !prod) = timesWord2 w1 w2
+    in if ovf == 0
+        then Small s prod
+        else mkPair s prod ovf
 
 timesArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
 timesArrayW !s !n !arr !w = unsafeInlinePrim $ do
@@ -749,16 +755,6 @@ hashInteger = integerToInt
 
 --------------------------------------------------------------------------------
 -- Helpers (not part of the API).
-
-halfWordMax :: Word
-maxPositiveInt :: Word
-#if WORD_SIZE_IN_BITS == 64
-halfWordMax = 0xffffffff
-maxPositiveInt = 0x7fffffffffffffff
-#elif WORD_SIZE_IN_BITS == 32
-halfWordMax = 0xffff
-maxPositiveInt = 0x7fffffff
-#endif
 
 
 unboxWord :: Word -> Word#
