@@ -324,13 +324,13 @@ negateInteger (Negative a) = Positive a
 
 {-# NOINLINE plusInteger #-}
 plusInteger :: Integer -> Integer -> Integer
-plusInteger (Positive a) (Positive b) = Positive (plusNatural a b)
-plusInteger (Negative a) (Negative b) = Negative (plusNatural a b)
-plusInteger (Positive a) (Negative b) =
+plusInteger !(Positive a) !(Positive b) = Positive (plusNatural a b)
+plusInteger !(Negative a) !(Negative b) = Negative (plusNatural a b)
+plusInteger !(Positive a) !(Negative b) =
                 if gtNatural a b
                     then Positive (minusNatural a b)
                     else Negative (minusNatural b a)
-plusInteger (Negative a) (Positive b) =
+plusInteger !(Negative a) !(Positive b) =
                 if gtNatural a b
                     then Negative (minusNatural a b)
                     else Positive (minusNatural b a)
@@ -423,23 +423,23 @@ plusArray !n1 !arr1 !n2 !arr2
 
 {-# NOINLINE minusInteger #-}
 minusInteger :: Integer -> Integer -> Integer
-minusInteger (Positive a) (Negative b) = Positive (plusNatural a b)
-minusInteger (Negative a) (Positive b) = Negative (plusNatural a b)
-minusInteger (Positive a) (Positive b) =
+minusInteger !(Positive a) !(Negative b) = Positive (plusNatural a b)
+minusInteger !(Negative a) !(Positive b) = Negative (plusNatural a b)
+minusInteger !(Positive a) !(Positive b) =
                 if gtNatural a b
                     then Positive (minusNatural a b)
                     else Negative (minusNatural b a)
 
-minusInteger (Negative a) (Negative b) =
+minusInteger !(Negative a) !(Negative b) =
                 if gtNatural a b
                     then Negative (minusNatural a b)
                     else Positive (minusNatural b a)
 
 minusNatural :: Natural -> Natural -> Natural
-minusNatural (Small a) (Small b) = Small (a - b)
-minusNatural (Large n arr) (Small w) = minusArrayW n arr w
-minusNatural (Small w) (Large n arr) = plusArrayW n arr w
-minusNatural (Large n1 arr1) (Large n2 arr2) = minusArray n1 arr1 n2 arr2
+minusNatural !(Small a) !(Small b) = Small (a - b)
+minusNatural !(Large n arr) !(Small w) = minusArrayW n arr w
+minusNatural !(Small w) !(Large n arr) = plusArrayW n arr w
+minusNatural !(Large n1 arr1) !(Large n2 arr2) = minusArray n1 arr1 n2 arr2
 
 
 minusArrayW :: Int -> ByteArray -> Word -> Natural
@@ -512,10 +512,11 @@ minusArray !n1 !arr1 !n2 !arr2
 
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
-timesInteger !(Positive a) !(Positive b) = Positive (timesNatural a b)
-timesInteger !(Positive a) !(Negative b) = Negative (timesNatural a b)
-timesInteger !(Negative a) !(Positive b) = Negative (timesNatural a b)
-timesInteger !(Negative a) !(Negative b) = Positive (timesNatural a b)
+timesInteger !x !y = case (# x, y #) of
+    (# Positive a, Positive b #) -> Positive (timesNatural a b)
+    (# Positive a, Negative b #) -> Negative (timesNatural a b)
+    (# Negative a, Positive b #) -> Negative (timesNatural a b)
+    (# Negative a, Negative b #) -> Positive (timesNatural a b)
 
 timesNatural :: Natural -> Natural -> Natural
 timesNatural !x !y = case (# x, y #) of
