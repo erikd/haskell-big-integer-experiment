@@ -19,7 +19,7 @@ bench : bench-integer
 	./bench-integer -o bench-integer.html
 
 new-bench : new-bench-integer
-	./new-bench-integer -o new-bench-integer.html --template=Criterion/report.tpl
+	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
 	chmod a+r new-bench-integer.html
 
 check : check-integer
