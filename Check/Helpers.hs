@@ -1,5 +1,5 @@
 {-# LANGUAGE MagicHash #-}
-module TestHelpers where
+module Check.Helpers where
 
 import Prelude hiding (Integer)
 
