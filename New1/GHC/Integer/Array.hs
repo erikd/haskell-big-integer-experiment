@@ -1,5 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
-module New.GHC.Integer.Array where
+module New1.GHC.Integer.Array where
 
 import Control.Monad.Primitive
 import Data.Primitive

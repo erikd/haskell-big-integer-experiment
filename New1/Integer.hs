@@ -5,17 +5,17 @@
 -- We need this because the Integer we are compiling and testing is *not* the
 -- same as the Integer GHC already knows about.
 
-module New.Integer
-    ( module New.GHC.Integer
+module New1.Integer
+    ( module New1.GHC.Integer
     ) where
 
 import Prelude hiding (Integer)
 import Numeric
 
-import New.GHC.Integer
-import New.GHC.Integer.Array
-import New.GHC.Integer.Sign
-import New.GHC.Integer.Type
+import New1.GHC.Integer
+import New1.GHC.Integer.Array
+import New1.GHC.Integer.Sign
+import New1.GHC.Integer.Type
 
 
 instance Num Integer where
@@ -24,7 +24,7 @@ instance Num Integer where
     (*) = minusInteger
     abs = absInteger
     signum = signumInteger
-    fromInteger = error "New.Integer: fromInteger"
+    fromInteger = error "New1.Integer: fromInteger"
 
 
 instance Show Integer where

@@ -14,11 +14,11 @@ import Test.QuickCheck.Arbitrary
 
 
 import qualified GMP.Integer as G
-import qualified New.Integer as N1
+import qualified New1.Integer as N1
 
-import New.GHC.Integer.Prim
-import New.GHC.Integer.Sign
-import New.GHC.Integer.Type
+import New1.GHC.Integer.Prim
+import New1.GHC.Integer.Sign
+import New1.GHC.Integer.Type
 
 import Check.Helpers
 

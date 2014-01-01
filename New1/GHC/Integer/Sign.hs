@@ -1,6 +1,6 @@
 {-# LANGUAGE BangPatterns, NoImplicitPrelude #-}
 
-module New.GHC.Integer.Sign where
+module New1.GHC.Integer.Sign where
 
 import GHC.Classes
 import GHC.Types

@@ -5,7 +5,7 @@ import Prelude hiding (Integer)
 import qualified Criterion.Main as C
 
 import qualified GMP.Integer as G
-import qualified New.Integer as N1
+import qualified New1.Integer as N1
 import qualified New2.Integer as N2
 import qualified Simple.Integer as S
 

@@ -3,7 +3,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  New.GHC.Integer
+-- Module      :  New1.GHC.Integer
 -- Copyright   :  (c) Erik de Castro Lopo
 -- License     :  BSD3
 --
@@ -17,7 +17,7 @@
 
 #include "MachDeps.h"
 
-module New.GHC.Integer (
+module New1.GHC.Integer (
     Integer, mkInteger,
     smallInteger, wordToInteger, integerToWord, integerToInt,
 #if WORD_SIZE_IN_BITS < 64
@@ -36,5 +36,5 @@ module New.GHC.Integer (
     hashInteger,
     ) where
 
-import New.GHC.Integer.Type
+import New1.GHC.Integer.Type
 

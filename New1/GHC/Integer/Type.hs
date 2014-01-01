@@ -4,7 +4,7 @@
 
 #include "MachDeps.h"
 
-module New.GHC.Integer.Type
+module New1.GHC.Integer.Type
 {-
     ( Integer (..)
     , mkInteger, smallInteger, wordToInteger, integerToWord, integerToInt
@@ -45,9 +45,9 @@ import GHC.IntWord64
 
 import Numeric (showHex) -- TODO: Remove when its working.
 
-import New.GHC.Integer.Array
-import New.GHC.Integer.Prim
-import New.GHC.Integer.Sign
+import New1.GHC.Integer.Array
+import New1.GHC.Integer.Prim
+import New1.GHC.Integer.Sign
 
 #if !defined(__HADDOCK__)
 
@@ -109,49 +109,49 @@ integerToInt (Large !s _ arr) =
 #elif WORD_SIZE_IN_BITS == 32
 {-# NOINLINE integerToWord64 #-}
 integerToWord64 :: Integer -> Word64#
-integerToWord64 = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+integerToWord64 = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE word64ToInteger #-}
 word64ToInteger:: Word64# -> Integer
-word64ToInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+word64ToInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE integerToInt64 #-}
 integerToInt64 :: Integer -> Int64#
-integerToInt64 = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+integerToInt64 = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE int64ToInteger #-}
 int64ToInteger :: Int64# -> Integer
-int64ToInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+int64ToInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 #else
 #error WORD_SIZE_IN_BITS not supported
 #endif
 
 {-# NOINLINE encodeDoubleInteger #-}
 encodeDoubleInteger :: Integer -> Int# -> Double#
-encodeDoubleInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+encodeDoubleInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE encodeFloatInteger #-}
 encodeFloatInteger :: Integer -> Int# -> Float#
-encodeFloatInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+encodeFloatInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE decodeFloatInteger #-}
 decodeFloatInteger :: Float# -> (# Integer, Int# #)
-decodeFloatInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+decodeFloatInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 -- XXX This could be optimised better, by either (word-size dependent)
 -- using single 64bit value for the mantissa, or doing the multiplication
 -- by just building the Digits directly
 {-# NOINLINE decodeDoubleInteger #-}
 decodeDoubleInteger :: Double# -> (# Integer, Int# #)
-decodeDoubleInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+decodeDoubleInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE doubleFromInteger #-}
 doubleFromInteger :: Integer -> Double#
-doubleFromInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+doubleFromInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE floatFromInteger #-}
 floatFromInteger :: Integer -> Float#
-floatFromInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+floatFromInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE andInteger #-}
 andInteger :: Integer -> Integer -> Integer
@@ -168,7 +168,7 @@ andInteger a@(Small _ _) b@(Large _ _ _) = andInteger (mkLarge a) b
 
 andInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = andArray Pos (min n1 n2) arr1 arr2
 
-andInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+andInteger _ _ = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
 andArray :: Sign -> Int -> ByteArray -> ByteArray -> Integer
@@ -201,7 +201,7 @@ orInteger a@(Small _ _) b@(Large _ _ _) = orInteger (mkLarge a) b
 
 orInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = orArray Pos n1 arr1 n2 arr2
 
-orInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+orInteger _ _ = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
 
@@ -237,7 +237,7 @@ xorInteger (Large _ n1 arr1) (Large _ n2 arr2) =
     if n1 >= n2
         then xorArray Pos n1 arr1 n2 arr2
         else xorArray Pos n2 arr2 n1 arr1
-xorInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+xorInteger _ _ = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
 xorArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
@@ -610,11 +610,11 @@ timesArray !s !n1 !arr1 !n2 !arr2
 
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
-divModInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+divModInteger _ _ = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE quotRemInteger #-}
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
-quotRemInteger _ _ = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+quotRemInteger _ _ = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE quotInteger #-}
 quotInteger :: Integer -> Integer -> Integer
@@ -624,11 +624,11 @@ quotInteger a b =
 
 {-# NOINLINE remInteger #-}
 remInteger :: Integer -> Integer -> Integer
-remInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+remInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE compareInteger #-}
 compareInteger :: Integer -> Integer -> Ordering
-compareInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+compareInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE eqInteger #-}
 eqInteger :: Integer -> Integer -> Bool
@@ -747,7 +747,7 @@ absInteger a = a
 
 {-# NOINLINE signumInteger #-}
 signumInteger :: Integer -> Integer
-signumInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+signumInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE hashInteger #-}
 hashInteger :: Integer -> Int#
@@ -930,7 +930,7 @@ minusOneInteger = Small Neg 1
 {-
 
 twoToTheThirtytwoInteger :: Integer
-twoToTheThirtytwoInteger = error ("New/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+twoToTheThirtytwoInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 -}
 
 
