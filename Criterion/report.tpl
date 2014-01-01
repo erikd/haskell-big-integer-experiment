@@ -46,6 +46,17 @@ This report shows their performance in comparison to a new library that aims
 to compete.
 </p>
 
+<p>
+These tests are being carried out with ghc-7.6.3 and the integer-gmp and
+integer-simple versions tagged in git as belonging to this version of GHC.
+</p>
+
+<p>
+New1, New2 and New3 use three slightly different definitions of the <tt>Integer</tt>
+data structure to investigate how much difference that makes.
+</p>
+
+
 <p><a href="#grokularation">want to understand this report?</a></p>
 
 <div id="overview" class="ovchart" style="width:900px;height:100px;"></div>
