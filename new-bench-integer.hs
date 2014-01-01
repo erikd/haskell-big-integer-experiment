@@ -5,48 +5,56 @@ import Prelude hiding (Integer)
 import qualified Criterion.Main as C
 
 import qualified GMP.Integer as G
-import qualified New.Integer as N
+import qualified New.Integer as N1
+import qualified New2.Integer as N2
 import qualified Simple.Integer as S
 
-import TestHelpers
+import Check.Helpers
 
 main :: IO ()
 main = do
     -- Generate all the data needed for testing.
     gmpSmallList <- mkSmallIntegerList 1000 (\x -> G.smallInteger (unboxInt x))
     smpSmallList <- mkSmallIntegerList 1000 (\x -> S.smallInteger (unboxInt x))
-    newSmallList <- mkSmallIntegerList 1000 (\x -> N.smallInteger (unboxInt x))
+    new1SmallList <- mkSmallIntegerList 1000 (\x -> N1.smallInteger (unboxInt x))
+    new2SmallList <- mkSmallIntegerList 1000 (\x -> N2.smallInteger (unboxInt x))
 
     largeList <- mkLargeIntegerList 200 (50, 60)
     let gmpLargeList = map (\(b, l) -> G.mkInteger b l) largeList
         smpLargeList = map (\(b, l) -> S.mkInteger b l) largeList
-        newLargeList = map (\(b, l) -> N.mkInteger b l) largeList
+        new1LargeList = map (\(b, l) -> N1.mkInteger b l) largeList
+        new2LargeList = map (\(b, l) -> N2.mkInteger b l) largeList
 
     hugeList <- mkLargeIntegerList 10 (200, 250)
     let gmpHugeList = map (\(b, l) -> G.mkInteger b l) hugeList
         -- smpHugeList = map (\(b, l) -> S.mkInteger b l) hugeList
-        newHugeList = map (\(b, l) -> N.mkInteger b l) hugeList
+        new1HugeList = map (\(b, l) -> N1.mkInteger b l) hugeList
+        new2HugeList = map (\(b, l) -> N2.mkInteger b l) hugeList
 
-    let (gmpSmallPosList, smpSmallPosList, newSmallPosList) =
+    let (gmpSmallPosList, smpSmallPosList, new1SmallPosList, new2SmallPosList) =
                 ( map G.absInteger gmpSmallList
                 , map S.absInteger smpSmallList
-                , map N.absInteger newSmallList
+                , map N1.absInteger new1SmallList
+                , map N2.absInteger new2SmallList
                 )
 
-    let (gmpLargePosList, smpLargePosList, newLargePosList) =
+    let (gmpLargePosList, smpLargePosList, new1LargePosList, new2LargePosList) =
                 ( map G.absInteger gmpLargeList
                 , map S.absInteger smpLargeList
-                , map N.absInteger newLargeList
+                , map N1.absInteger new1LargeList
+                , map N2.absInteger new2LargeList
                 )
-    let (gmpFirstTen, smpFirstTen, newFirstTen) =
+    let (gmpFirstTen, smpFirstTen, new1FirstTen, new2FirstTen) =
                 ( map (\x -> G.smallInteger (unboxInt x)) [1..10]
                 , map (\x -> S.smallInteger (unboxInt x)) [1..10]
-                , map (\x -> N.smallInteger (unboxInt x)) [1..10]
+                , map (\x -> N1.smallInteger (unboxInt x)) [1..10]
+                , map (\x -> N2.smallInteger (unboxInt x)) [1..10]
                 )
-    let (gmpFirstHundred, smpFirstHundred, newFirstHundred) =
+    let (gmpFirstHundred, smpFirstHundred, new1FirstHundred, new2FirstHundred) =
                 ( map (\x -> G.smallInteger (unboxInt x)) [1..100]
                 , map (\x -> S.smallInteger (unboxInt x)) [1..100]
-                , map (\x -> N.smallInteger (unboxInt x)) [1..100]
+                , map (\x -> N1.smallInteger (unboxInt x)) [1..100]
+                , map (\x -> N2.smallInteger (unboxInt x)) [1..100]
                 )
 
     -- Run the benchmarks.
@@ -57,7 +65,8 @@ main = do
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.plusInteger) gmpSmallList
             , C.bench "Simple"  $ C.whnf (foldl1 S.plusInteger) smpSmallList
-            , C.bench "New"     $ C.whnf (foldl1 N.plusInteger) newSmallList
+            , C.bench "New1"    $ C.whnf (foldl1 N1.plusInteger) new1SmallList
+            , C.bench "New2"    $ C.whnf (foldl1 N2.plusInteger) new2SmallList
             ]
         , C.bgroup
                 ( "Sum of " ++ show (length gmpSmallPosList)
@@ -65,24 +74,28 @@ main = do
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.plusInteger) gmpSmallPosList
             , C.bench "Simple"  $ C.whnf (foldl1 S.plusInteger) smpSmallPosList
-            , C.bench "New"     $ C.whnf (foldl1 N.plusInteger) newSmallPosList
+            , C.bench "New1"    $ C.whnf (foldl1 N1.plusInteger) new1SmallPosList
+            , C.bench "New2"    $ C.whnf (foldl1 N2.plusInteger) new2SmallPosList
             ]
         , C.bgroup
                 ( "Sum of " ++ show (length gmpLargePosList) ++ " large (~600 decimal digit) positive Integers"
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.plusInteger) gmpLargePosList
             , C.bench "Simple"  $ C.whnf (foldl1 S.plusInteger) smpLargePosList
-            , C.bench "New"     $ C.whnf (foldl1 N.plusInteger) newLargePosList
+            , C.bench "New1"    $ C.whnf (foldl1 N1.plusInteger) new1LargePosList
+            , C.bench "New2"    $ C.whnf (foldl1 N2.plusInteger) new2LargePosList
             ]
         , C.bgroup "Product of [1..10] (final result fits in a 64 bit Word)"
             [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpFirstTen
             , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpFirstTen
-            , C.bench "New"     $ C.whnf (foldl1 N.timesInteger) newFirstTen
+            , C.bench "New1"    $ C.whnf (foldl1 N1.timesInteger) new1FirstTen
+            , C.bench "New2"    $ C.whnf (foldl1 N2.timesInteger) new2FirstTen
             ]
         , C.bgroup "Product of [1..100] (final result is >> a 64 bit Word)"
             [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpFirstHundred
             , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpFirstHundred
-            , C.bench "New"     $ C.whnf (foldl1 N.timesInteger) newFirstHundred
+            , C.bench "New1"    $ C.whnf (foldl1 N1.timesInteger) new1FirstHundred
+            , C.bench "New2"    $ C.whnf (foldl1 N2.timesInteger) new2FirstHundred
             ]
         , C.bgroup
                 ( "Product of " ++ show (length gmpHugeList)
@@ -90,7 +103,8 @@ main = do
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpHugeList
             -- , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpHugeList
-            , C.bench "New"     $ C.whnf (foldl1 N.timesInteger) newHugeList
+            , C.bench "New1"     $ C.whnf (foldl1 N1.timesInteger) new1HugeList
+            , C.bench "New2"     $ C.whnf (foldl1 N2.timesInteger) new2HugeList
             ]
         ]
 
