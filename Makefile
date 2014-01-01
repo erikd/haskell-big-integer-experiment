@@ -4,7 +4,7 @@ GHC = ghc
 GHCVER = $(shell $(GHC) --version | sed "s/.* //")
 GHCFLAGS = -Wall -fwarn-tabs -Werror -O3 $(PACKAGES) $(PRAGMAS)
 
-hsfiles = $(shell find GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs
+hsfiles = $(shell find Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs
 
 PRAGMAS = -XCPP -XMagicHash -XUnboxedTuples -XUnliftedFFITypes
 
