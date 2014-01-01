@@ -2,7 +2,7 @@ TARGETS = check-integer bench-integer new-bench-integer
 
 GHC = ghc
 GHCVER = $(shell $(GHC) --version | sed "s/.* //")
-GHCFLAGS = -Wall -fwarn-tabs -O3 $(PACKAGES) $(PRAGMAS)
+GHCFLAGS = -Wall -fwarn-tabs -Werror -O3 $(PACKAGES) $(PRAGMAS)
 
 hsfiles = $(shell find GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs
 
