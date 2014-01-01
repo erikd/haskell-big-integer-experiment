@@ -1,10 +1,10 @@
-TARGETS = check-integer bench-integer
+TARGETS = check-integer bench-integer new-bench-integer
 
 GHC = ghc
 GHCVER = $(shell $(GHC) --version | sed "s/.* //")
 GHCFLAGS = -Wall -fwarn-tabs -O3 $(PACKAGES) $(PRAGMAS)
 
-hsfiles = $(shell find GMP/ New/ Simple/ -name \*.hs -o -name \*.lhs) *.hs
+hsfiles = $(shell find GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs
 
 PRAGMAS = -XCPP -XMagicHash -XUnboxedTuples -XUnliftedFFITypes
 
@@ -14,8 +14,6 @@ GMP = -i:integer-gmp
 
 
 all : $(TARGETS)
-	./check-integer
-	./bench-integer -o bench-integer.html
 
 bench : bench-integer
 	./bench-integer -o bench-integer.html
