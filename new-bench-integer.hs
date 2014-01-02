@@ -28,9 +28,9 @@ main = do
         new2LargeList = map (\(b, l) -> N2.mkInteger b l) largeList
         new3LargeList = map (\(b, l) -> N3.mkInteger b l) largeList
 
-    hugeList <- mkLargeIntegerList 10 (200, 250)
+    hugeList <- mkLargeIntegerList 5 (200, 250)
     let gmpHugeList = map (\(b, l) -> G.mkInteger b l) hugeList
-        -- smpHugeList = map (\(b, l) -> S.mkInteger b l) hugeList
+        smpHugeList = map (\(b, l) -> S.mkInteger b l) hugeList
         new1HugeList = map (\(b, l) -> N1.mkInteger b l) hugeList
         new2HugeList = map (\(b, l) -> N2.mkInteger b l) hugeList
         new3HugeList = map (\(b, l) -> N3.mkInteger b l) hugeList
@@ -112,10 +112,10 @@ main = do
             ]
         , C.bgroup
                 ( "Product of " ++ show (length gmpHugeList)
-                    ++ " huge (~2500 decimal digit) Integers (drop Simple)"
+                    ++ " huge (~2500 decimal digit) Integers"
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpHugeList
-            -- , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpHugeList
+            , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpHugeList
             , C.bench "New1"     $ C.whnf (foldl1 N1.timesInteger) new1HugeList
             , C.bench "New2"     $ C.whnf (foldl1 N2.timesInteger) new2HugeList
             , C.bench "New3"     $ C.whnf (foldl1 N3.timesInteger) new3HugeList
