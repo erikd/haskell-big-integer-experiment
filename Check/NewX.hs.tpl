@@ -73,7 +73,7 @@ testNewInteger = do
         show (X.shiftLInteger s 68#) `shouldBe` "+0x1234500000000000000000"
         show (X.shiftLInteger (X.mkInteger False [0x7fffffff]) 127#) `shouldBe` "-0x3fffffff80000000000000000000000000000000"
 
-    prop "Can shiftL Integers by up to 128 bits." $ \ (GNP g s, int) -> do
+    prop "Can shiftL Integers by up to 256 bits." $ \ (GNP g s, int) -> do
         let bits = unboxInt (int .&. 0x7f)
         show (X.shiftLInteger s bits) `shouldBe` show (G.shiftLInteger g bits)
 
@@ -141,7 +141,7 @@ testNewInteger = do
         show (foldl1 X.timesInteger $ map (\x -> X.smallInteger (unboxInt x)) [1..100])
             `shouldBe` show (foldl1 G.timesInteger $ map (\x -> G.smallInteger (unboxInt x)) [1..100])
 
-    it "Can shiftR Integers." $ do
+    it "Can shiftR known Integers." $ do
         show (X.shiftRInteger (X.smallInteger 0x12345#) 4#) `shouldBe` "+0x1234"
         show (X.shiftRInteger (X.mkInteger True [0, 0, 4]) 0#) `shouldBe` "+0x10000000000000000"
         show (X.shiftRInteger (X.mkInteger True [0, 0, 4]) 4#) `shouldBe` "+0x1000000000000000"
@@ -164,6 +164,7 @@ testNewInteger = do
         show (X.shiftRInteger (X.mkInteger False [0x7ffffffd,0x2]) 2#) `shouldBe` "-0x60000000"
         show (X.shiftRInteger (X.mkInteger False [0,0x2]) 1#) `shouldBe` "-0x80000000"
         show (X.shiftRInteger (X.mkInteger False [0x16a3153f,0xb08fa82]) 64#) `shouldBe` "-0x1"
+        show (X.shiftRInteger (X.mkInteger False [0x7fffe63e,0x7ffff16e,0x122e,0x7ffff58f]) 155#) `shouldBe` "-0x1"
 
     prop "Can shiftR Integers by up to 128 bits." $ \ (GNP g s, shift) -> do
         let bits = shiftCount shift
@@ -182,6 +183,7 @@ testNewInteger = do
         show (X.timesInteger allBitsSet allBitsSet) `shouldBe` "+0x" ++ replicate 63 'f' ++ "e" ++ replicate 63 '0' ++ "1"
 
         show (X.complementInteger (X.smallInteger 0#)) `shouldBe` "-0x1"
+        show (X.complementInteger (X.mkInteger True [])) `shouldBe` "-0x1"
         show (X.complementInteger (X.mkInteger True [0])) `shouldBe` "-0x1"
 
 --------------------------------------------------------------------------------
