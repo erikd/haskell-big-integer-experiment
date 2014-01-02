@@ -300,8 +300,8 @@ complementInteger !(Negative !a) = fromNatural Pos (minusNaturalW a 1)
 
 {-# NOINLINE shiftLInteger #-}
 shiftLInteger :: Integer -> Int# -> Integer
-shiftLInteger Zero _ = Zero
-shiftLInteger a 0# = a
+shiftLInteger !Zero _ = Zero
+shiftLInteger !a 0# = a
 shiftLInteger !(SmallPos !a) b
     | a == 0 = Zero
     | b >=# WORD_SIZE_IN_BITS# = fromNatural Pos (shiftLNatural (mkNatural a) (I# b))
@@ -312,41 +312,153 @@ shiftLInteger !(SmallPos !a) b
             then SmallPos lo
             else Positive (mkPair lo hi)
 
-shiftLInteger !(SmallNeg !a) b = fromNatural Neg (shiftLNatural (mkNatural a) (I# b))
-shiftLInteger !(Positive !a) b = fromNatural Pos (shiftLNatural a (I# b))
-shiftLInteger !(Negative !a) b = fromNatural Neg (shiftLNatural a (I# b))
+shiftLInteger !(SmallNeg !a) !b = fromNatural Neg (shiftLNatural (mkNatural a) (I# b))
+shiftLInteger !(Positive !a) !b = fromNatural Pos (shiftLNatural a (I# b))
+shiftLInteger !(Negative !a) !b = fromNatural Neg (shiftLNatural a (I# b))
+
+shiftLNatural :: Natural -> Int -> Natural
+shiftLNatural !(Natural !n !arr) !i
+    | i < WORD_SIZE_IN_BITS =
+            smallShiftLArray n arr (# i, WORD_SIZE_IN_BITS - i #)
+    | otherwise = do
+            let (!q, !r) = quotRem i WORD_SIZE_IN_BITS
+            if r == 0
+                then wordShiftLArray n arr q
+                else largeShiftLArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
+
+smallShiftLArray :: Int -> ByteArray -> (# Int, Int #) -> Natural
+smallShiftLArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
+    !marr <- newWordArray (succ n)
+    !nlen <- loop marr 0 0
+    !narr <- unsafeFreezeWordArray marr
+    finalizeNatural nlen narr
+  where
+    loop !marr !i !mem
+        | i < n =  do
+            !x <- indexWordArrayM arr i
+            writeWordArray marr i ((unsafeShiftL x si) .|. mem)
+            loop marr (i + 1) (unsafeShiftR x sj)
+        | mem /= 0 = do
+            writeWordArray marr i mem
+            return $ i + 1
+        | otherwise = return n
+
+-- | TODO : Use copy here
+wordShiftLArray :: Int -> ByteArray -> Int -> Natural
+wordShiftLArray !n !arr !q = unsafeInlinePrim $ do
+    !marr <- newWordArray (n + q)
+    loop1 marr 0
+    !narr <- unsafeFreezeWordArray marr
+    finalizeNatural (n + q) narr
+  where
+    loop1 !marr !i
+        | i < q = do
+            writeWordArray marr i 0
+            loop1 marr (i + 1)
+        | otherwise = loop2 marr 0
+    loop2 !marr !i
+        | i < n =  do
+            !x <- indexWordArrayM arr i
+            writeWordArray marr (q + i) x
+            loop2 marr (i + 1)
+        | otherwise = return ()
+
+largeShiftLArray :: Int -> ByteArray-> (# Int, Int, Int #) -> Natural
+largeShiftLArray !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
+    !marr <- newWordArray (n + q + 1)
+    setWordArray marr 0 q 0
+    loop2 marr 0 0
+    !narr <- unsafeFreezeWordArray marr
+    finalizeNatural (n + q + 1) narr
+  where
+    loop2 !marr !i !mem
+        | i < n =  do
+            !x <- indexWordArrayM arr i
+            writeWordArray marr (q + i) ((unsafeShiftL x si) .|. mem)
+            loop2 marr (i + 1) (unsafeShiftR x sj)
+        | mem /= 0 = do
+            writeWordArray marr (q + i) mem
+        | otherwise =
+            writeWordArray marr (q + i) 0
 
 {-# NOINLINE shiftRInteger #-}
 shiftRInteger :: Integer -> Int# -> Integer
 shiftRInteger Zero _ = Zero
-shiftRInteger a 0# = a
-shiftRInteger (SmallPos a) b
+shiftRInteger !a 0# = a
+shiftRInteger !(SmallPos !a) !b
     | b >=# WORD_SIZE_IN_BITS# = Zero
     | otherwise = fromSmall Pos (shiftRWord a (I# b))
-shiftRInteger (SmallNeg a) b
+shiftRInteger !(SmallNeg !a) !b
     | b >=# WORD_SIZE_IN_BITS# = SmallNeg 1
     | otherwise = fromSmall Neg ((shiftRWord (a - 1) (I# b)) + 1)
 
-shiftRInteger (Positive a) b = fromNatural Pos (shiftRNatural a (I# b))
-shiftRInteger (Negative a) b =
-    let nat@(Natural nx _) = shiftRNatural (minusNaturalW a 1) (I# b)
+shiftRInteger !(Positive !a) !b = fromNatural Pos (shiftRNatural a (I# b))
+shiftRInteger !(Negative !a) !b =
+    let !nat@(Natural !nx _) = shiftRNatural (minusNaturalW a 1) (I# b)
     in if nx == 0
         then SmallNeg 1
         else fromNatural Neg (plusNaturalW nat 1)
 
+shiftRNatural :: Natural -> Int -> Natural
+shiftRNatural !(Natural !n !arr) !i
+    | i < WORD_SIZE_IN_BITS =
+            smallShiftRArray n arr (# i, WORD_SIZE_IN_BITS - i #)
+    | otherwise = do
+            let (!q, !r) = quotRem i WORD_SIZE_IN_BITS
+            if q >= n
+                then Natural 0 arr
+                else if r == 0
+                    then wordShiftRArray n arr q
+                    else largeShiftRArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
+
+
+smallShiftRArray :: Int -> ByteArray -> (# Int, Int #) -> Natural
+smallShiftRArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
+    !marr <- newWordArray n
+    loop marr (n - 1) 0
+    !narr <- unsafeFreezeWordArray marr
+    finalizeNatural n narr
+  where
+    loop !marr !i !mem
+        | i >= 0 =  do
+            !x <- indexWordArrayM arr i
+            writeWordArray marr i ((unsafeShiftR x si) .|. mem)
+            loop marr (i - 1) (unsafeShiftL x sj)
+        | otherwise = return ()
+
+wordShiftRArray :: Int -> ByteArray -> Int -> Natural
+wordShiftRArray !n !arr !q = unsafeInlinePrim $ do
+    !marr <- newWordArray (n - q)
+    copyWordArray marr 0 arr q (n - q)
+    !narr <- unsafeFreezeWordArray marr
+    finalizeNatural (n - q) narr
+
+largeShiftRArray :: Int -> ByteArray-> (# Int, Int, Int #) -> Natural
+largeShiftRArray !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
+    !marr <- newWordArray (n - q)
+    loop marr (n - q - 1) 0
+    !narr <- unsafeFreezeWordArray marr
+    finalizeNatural (n - q) narr
+  where
+    loop !marr !i !mem
+        | i >= 0 =  do
+            !x <- indexWordArrayM arr (q + i)
+            writeWordArray marr i ((unsafeShiftR x si) .|. mem)
+            loop marr (i - 1) (unsafeShiftL x sj)
+        | otherwise = return ()
 
 {-# NOINLINE negateInteger #-}
 negateInteger :: Integer -> Integer
-negateInteger Zero = Zero
-negateInteger (SmallPos a) = SmallNeg a
-negateInteger (SmallNeg a) = SmallPos a
-negateInteger (Positive a) = Negative a
-negateInteger (Negative a) = Positive a
+negateInteger !Zero = Zero
+negateInteger !(SmallPos !a) = SmallNeg a
+negateInteger !(SmallNeg !a) = SmallPos a
+negateInteger !(Positive !a) = Negative a
+negateInteger !(Negative !a) = Positive a
 
 {-# NOINLINE plusInteger #-}
 plusInteger :: Integer -> Integer -> Integer
-plusInteger Zero !a = a
-plusInteger !a Zero = a
+plusInteger !Zero !a = a
+plusInteger !a !Zero = a
 plusInteger !(SmallPos !a) !(SmallPos !b) = safePlusWord Pos a b
 plusInteger !(SmallPos !a) !(SmallNeg !b) = safeMinusWord a b
 plusInteger !(SmallNeg !a) !(SmallPos !b) = safeMinusWord b a
@@ -468,7 +580,7 @@ plusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
 
 {-# NOINLINE minusInteger #-}
 minusInteger :: Integer -> Integer -> Integer
-minusInteger Zero !a = negateInteger a
+minusInteger !Zero !a = negateInteger a
 minusInteger !a Zero = a
 minusInteger !(SmallPos !a) !(SmallPos !b) = safeMinusWord a b
 minusInteger !(SmallPos !a) !(SmallNeg !b) = safePlusWord Pos a b
@@ -688,26 +800,25 @@ compareInteger = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: I
 
 {-# NOINLINE eqInteger #-}
 eqInteger :: Integer -> Integer -> Bool
-eqInteger Zero Zero = True
-eqInteger (SmallPos a) (SmallPos b) = a == b
-eqInteger (SmallNeg a) (SmallNeg b) = b == a
-eqInteger (Positive a) (Positive b) = eqNatural a b
-eqInteger (Negative a) (Negative b) = eqNatural b a
+eqInteger !Zero !Zero = True
+eqInteger !(SmallPos !a) !(SmallPos !b) = a == b
+eqInteger !(SmallNeg !a) !(SmallNeg !b) = b == a
+eqInteger !(Positive !a) !(Positive !b) = eqNatural a b
+eqInteger !(Negative !a) !(Negative !b) = eqNatural b a
 
+eqInteger !(SmallPos _) !Zero = False
+eqInteger !(SmallPos _) !(SmallNeg _) = False
+eqInteger !(SmallPos _) !(Positive _) = False
+eqInteger !(SmallPos _) !(Negative _) = False
 
-eqInteger (SmallPos _) Zero = False
-eqInteger (SmallPos _) (SmallNeg _) = False
-eqInteger (SmallPos _) (Positive _) = False
-eqInteger (SmallPos _) (Negative _) = False
+eqInteger !(Positive _) !Zero = False
+eqInteger !(Positive _) !(SmallPos _) = False
+eqInteger !(Positive _) !(SmallNeg _) = False
+eqInteger !(Positive _) !(Negative _) = False
 
-eqInteger (Positive _) Zero = False
-eqInteger (Positive _) (SmallPos _) = False
-eqInteger (Positive _) (SmallNeg _) = False
-eqInteger (Positive _) (Negative _) = False
-
-eqInteger Zero _ = False
-eqInteger (SmallNeg _) _ = False
-eqInteger (Negative _) _ = False
+eqInteger !Zero _ = False
+eqInteger !(SmallNeg _) _ = False
+eqInteger !(Negative _) _ = False
 
 
 eqNatural :: Natural -> Natural -> Bool
@@ -736,7 +847,7 @@ compareNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2)
 
 {-# NOINLINE neqInteger #-}
 neqInteger :: Integer -> Integer -> Bool
-neqInteger a b = not (eqInteger a b)
+neqInteger !a !b = not (eqInteger a b)
 
 instance  Eq Integer  where
     (==) = eqInteger
@@ -744,40 +855,40 @@ instance  Eq Integer  where
 
 {-# NOINLINE ltInteger #-}
 ltInteger :: Integer -> Integer -> Bool
-ltInteger Zero Zero = False
-ltInteger (SmallPos _) Zero = False
-ltInteger (SmallNeg _) Zero = True
+ltInteger !Zero !Zero = False
+ltInteger !(SmallPos _) !Zero = False
+ltInteger !(SmallNeg _) !Zero = True
 
-ltInteger (SmallPos a) (SmallPos b) = a < b
-ltInteger (SmallPos _) (SmallNeg _) = False
-ltInteger (SmallNeg a) (SmallNeg b) = b < a
-ltInteger (SmallNeg _) (SmallPos _) = True
+ltInteger !(SmallPos !a) !(SmallPos !b) = a < b
+ltInteger !(SmallNeg !a) !(SmallNeg !b) = b < a
+ltInteger !(SmallPos _) !(SmallNeg _) = False
+ltInteger !(SmallNeg _) !(SmallPos _) = True
 
-ltInteger (SmallPos _) (Positive _) = True
-ltInteger (SmallPos _) (Negative _) = False
-ltInteger (SmallNeg _) (Positive _) = True
-ltInteger (SmallNeg _) (Negative _) = False
+ltInteger !(SmallPos _) !(Positive _) = True
+ltInteger !(SmallPos _) !(Negative _) = False
+ltInteger !(SmallNeg _) !(Positive _) = True
+ltInteger !(SmallNeg _) !(Negative _) = False
 
-ltInteger (Positive _) Zero = False
-ltInteger (Positive _) (SmallPos _) = False
-ltInteger (Positive _) (SmallNeg _) = False
-ltInteger (Positive _) (Negative _) = False
+ltInteger !(Positive _) !Zero = False
+ltInteger !(Positive _) !(SmallPos _) = False
+ltInteger !(Positive _) !(SmallNeg _) = False
+ltInteger !(Positive _) !(Negative _) = False
 
-ltInteger (Negative _) Zero = True
-ltInteger (Negative _) (SmallPos _) = True
-ltInteger (Negative _) (SmallNeg _) = True
-ltInteger (Negative _) (Positive _) = True
+ltInteger !(Negative _) !Zero = True
+ltInteger !(Negative _) !(SmallPos _) = True
+ltInteger !(Negative _) !(SmallNeg _) = True
+ltInteger !(Negative _) !(Positive _) = True
 
-ltInteger (Positive a) (Positive b) = ltNatural a b
-ltInteger (Negative a) (Negative b) = ltNatural b a
+ltInteger !(Positive !a) !(Positive !b) = ltNatural a b
+ltInteger !(Negative !a) !(Negative !b) = ltNatural b a
 
-ltInteger Zero b = geInteger b Zero
-
-
-
+ltInteger !Zero !(SmallPos _) = True
+ltInteger !Zero !(Positive _) = True
+ltInteger !Zero !(SmallNeg _) = False
+ltInteger !Zero !(Negative _) = False
 
 ltNatural :: Natural -> Natural -> Bool
-ltNatural (Natural n1 arr1) (Natural n2 arr2)
+ltNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2)
     | n1 < n2 = True
     | n1 > n2 = False
     | otherwise =
@@ -791,38 +902,41 @@ ltNatural (Natural n1 arr1) (Natural n2 arr2)
 
 {-# NOINLINE gtInteger #-}
 gtInteger :: Integer -> Integer -> Bool
-gtInteger Zero Zero = False
-gtInteger (SmallPos _) Zero = True
-gtInteger (SmallNeg _) Zero = False
+gtInteger !Zero !Zero = False
+gtInteger !(SmallPos _) !Zero = True
+gtInteger !(SmallNeg _) !Zero = False
 
-gtInteger (SmallPos a) (SmallPos b) = a > b
-gtInteger (SmallPos _) (SmallNeg _) = True
-gtInteger (SmallNeg a) (SmallNeg b) = a < b
-gtInteger (SmallNeg _) (SmallPos _) = False
+gtInteger !(SmallPos !a) !(SmallPos !b) = a > b
+gtInteger !(SmallNeg !a) !(SmallNeg !b) = a < b
+gtInteger !(SmallPos _) !(SmallNeg _) = True
+gtInteger !(SmallNeg _) !(SmallPos _) = False
 
-gtInteger (SmallPos _) (Positive _) = False
-gtInteger (SmallPos _) (Negative _) = True
-gtInteger (SmallNeg _) (Positive _) = False
-gtInteger (SmallNeg _) (Negative _) = True
+gtInteger !(SmallPos _) !(Positive _) = False
+gtInteger !(SmallPos _) !(Negative _) = True
+gtInteger !(SmallNeg _) !(Positive _) = False
+gtInteger !(SmallNeg _) !(Negative _) = True
 
-gtInteger (Positive _) Zero = True
-gtInteger (Positive _) (SmallPos _) = True
-gtInteger (Positive _) (SmallNeg _) = True
-gtInteger (Positive _) (Negative _) = True
+gtInteger !(Positive _) !Zero = True
+gtInteger !(Positive _) !(SmallPos _) = True
+gtInteger !(Positive _) !(SmallNeg _) = True
+gtInteger !(Positive _) !(Negative _) = True
 
-gtInteger (Negative _) Zero = False
-gtInteger (Negative _) (SmallPos _) = False
-gtInteger (Negative _) (SmallNeg _) = False
-gtInteger (Negative _) (Positive _) = False
+gtInteger !(Negative _) !Zero = False
+gtInteger !(Negative _) !(SmallPos _) = False
+gtInteger !(Negative _) !(SmallNeg _) = False
+gtInteger !(Negative _) !(Positive _) = False
 
-gtInteger (Positive a) (Positive b) = gtNatural a b
-gtInteger (Negative a) (Negative b) = gtNatural b a
+gtInteger !(Positive !a) !(Positive !b) = gtNatural a b
+gtInteger !(Negative !a) !(Negative !b) = gtNatural b a
 
-gtInteger Zero b = not (gtInteger b Zero)
+gtInteger !Zero !(SmallPos _) = False
+gtInteger !Zero !(Positive _) = False
+gtInteger !Zero !(SmallNeg _) = True
+gtInteger !Zero !(Negative _) = True
 
 
 gtNatural :: Natural -> Natural -> Bool
-gtNatural (Natural !n1 !arr1) (Natural !n2 !arr2)
+gtNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2)
     | n1 > n2 = True
     | n1 < n2 = False
     | otherwise =
@@ -834,10 +948,10 @@ gtNatural (Natural !n1 !arr1) (Natural !n2 !arr2)
             in check (n1 - 1)
 
 leInteger :: Integer -> Integer -> Bool
-leInteger a b = not (gtInteger a b)
+leInteger !a !b = not (gtInteger a b)
 
 geInteger :: Integer -> Integer -> Bool
-geInteger a b = not (ltInteger a b)
+geInteger !a !b = not (ltInteger a b)
 
 instance Ord Integer where
     (<=) = leInteger
@@ -848,11 +962,11 @@ instance Ord Integer where
 
 {-# NOINLINE absInteger #-}
 absInteger :: Integer -> Integer
-absInteger Zero = Zero
-absInteger a@(SmallPos _) = a
-absInteger (SmallNeg a) = SmallPos a
-absInteger a@(Positive _) = a
-absInteger (Negative a) = Positive a
+absInteger !Zero = Zero
+absInteger !a@(SmallPos _) = a
+absInteger !(SmallNeg !a) = SmallPos a
+absInteger !a@(Positive _) = a
+absInteger !(Negative !a) = Positive a
 
 {-# NOINLINE signumInteger #-}
 signumInteger :: Integer -> Integer
@@ -867,7 +981,7 @@ hashInteger = integerToInt
 
 
 unboxWord :: Word -> Word#
-unboxWord !(W# w) = w
+unboxWord !(W# !w) = w
 
 
 fromSmall :: Sign -> Word -> Integer
@@ -882,6 +996,7 @@ fromNatural !s !nat@(Natural n _)
     | s == Pos = Positive nat
     | otherwise = Negative nat
 
+{-# INLINE zerothWordOfNatural #-}
 zerothWordOfNatural :: Natural -> Word
 zerothWordOfNatural !(Natural _ arr) = indexWordArray arr 0
 
@@ -905,122 +1020,6 @@ mkNatural !x = unsafeInlinePrim $ mkNat
         writeWordArray marr 0 x
         !narr <- unsafeFreezeWordArray marr
         return $ Natural 1 narr
-
-shiftLNatural :: Natural -> Int -> Natural
-shiftLNatural !(Natural !n !arr) !i
-    | i < WORD_SIZE_IN_BITS =
-            smallShiftLArray n arr (# i, WORD_SIZE_IN_BITS - i #)
-    | otherwise = do
-            let (!q, !r) = quotRem i WORD_SIZE_IN_BITS
-            if r == 0
-                then wordShiftLArray n arr q
-                else largeShiftLArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
-
-smallShiftLArray :: Int -> ByteArray -> (# Int, Int #) -> Natural
-smallShiftLArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
-    !marr <- newWordArray (succ n)
-    !nlen <- loop marr 0 0
-    !narr <- unsafeFreezeWordArray marr
-    finalizeNatural nlen narr
-  where
-    loop !marr !i !mem
-        | i < n =  do
-            !x <- indexWordArrayM arr i
-            writeWordArray marr i ((unsafeShiftL x si) .|. mem)
-            loop marr (i + 1) (unsafeShiftR x sj)
-        | mem /= 0 = do
-            writeWordArray marr i mem
-            return $ i + 1
-        | otherwise = return n
-
--- | TODO : Use copy here
-wordShiftLArray :: Int -> ByteArray -> Int -> Natural
-wordShiftLArray !n !arr !q = unsafeInlinePrim $ do
-    !marr <- newWordArray (n + q)
-    loop1 marr 0
-    !narr <- unsafeFreezeWordArray marr
-    finalizeNatural (n + q) narr
-  where
-    loop1 !marr !i
-        | i < q = do
-            writeWordArray marr i 0
-            loop1 marr (i + 1)
-        | otherwise = loop2 marr 0
-    loop2 !marr !i
-        | i < n =  do
-            !x <- indexWordArrayM arr i
-            writeWordArray marr (q + i) x
-            loop2 marr (i + 1)
-        | otherwise = return ()
-
-
-largeShiftLArray :: Int -> ByteArray-> (# Int, Int, Int #) -> Natural
-largeShiftLArray !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
-    !marr <- newWordArray (n + q + 1)
-    setWordArray marr 0 q 0
-    loop2 marr 0 0
-    !narr <- unsafeFreezeWordArray marr
-    finalizeNatural (n + q + 1) narr
-  where
-    loop2 !marr !i !mem
-        | i < n =  do
-            !x <- indexWordArrayM arr i
-            writeWordArray marr (q + i) ((unsafeShiftL x si) .|. mem)
-            loop2 marr (i + 1) (unsafeShiftR x sj)
-        | mem /= 0 = do
-            writeWordArray marr (q + i) mem
-        | otherwise =
-            writeWordArray marr (q + i) 0
-
-
-shiftRNatural :: Natural -> Int -> Natural
-shiftRNatural !(Natural !n !arr) !i
-    | i < WORD_SIZE_IN_BITS =
-            smallShiftRArray n arr (# i, WORD_SIZE_IN_BITS - i #)
-    | otherwise = do
-            let (!q, !r) = quotRem i WORD_SIZE_IN_BITS
-            if q >= n
-                then Natural 0 arr
-                else if r == 0
-                    then wordShiftRArray n arr q
-                    else largeShiftRArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
-
-
-smallShiftRArray :: Int -> ByteArray -> (# Int, Int #) -> Natural
-smallShiftRArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
-    !marr <- newWordArray n
-    loop marr (n - 1) 0
-    !narr <- unsafeFreezeWordArray marr
-    finalizeNatural n narr
-  where
-    loop !marr !i !mem
-        | i >= 0 =  do
-            !x <- indexWordArrayM arr i
-            writeWordArray marr i ((unsafeShiftR x si) .|. mem)
-            loop marr (i - 1) (unsafeShiftL x sj)
-        | otherwise = return ()
-
-wordShiftRArray :: Int -> ByteArray -> Int -> Natural
-wordShiftRArray !n !arr !q = unsafeInlinePrim $ do
-    !marr <- newWordArray (n - q)
-    copyWordArray marr 0 arr q (n - q)
-    !narr <- unsafeFreezeWordArray marr
-    finalizeNatural (n - q) narr
-
-
-largeShiftRArray :: Int -> ByteArray-> (# Int, Int, Int #) -> Natural
-largeShiftRArray !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
-    !marr <- newWordArray (n - q)
-    loop marr (n - q - 1) 0
-    !narr <- unsafeFreezeWordArray marr
-    finalizeNatural (n - q) narr
-  where
-    loop !marr !i !mem
-        | i >= 0 =  do
-            !x <- indexWordArrayM arr (q + i)
-            writeWordArray marr i ((unsafeShiftR x si) .|. mem)
-            loop marr (i - 1) (unsafeShiftL x sj)
-        | otherwise = return ()
 
 
 finalizeNatural :: Int -> ByteArray -> IO Natural
