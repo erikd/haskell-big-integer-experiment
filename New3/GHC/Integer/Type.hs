@@ -291,11 +291,11 @@ xorArray !n1 !arr1 !n2 !arr2
 
 {-# NOINLINE complementInteger #-}
 complementInteger :: Integer -> Integer
-complementInteger Zero = SmallNeg 1
-complementInteger (SmallPos a) = fromSmall Neg (a + 1)
-complementInteger (SmallNeg a) = fromSmall Pos (a - 1)
-complementInteger (Positive a) = fromNatural Neg (plusNaturalW a 1)
-complementInteger (Negative a) = fromNatural Pos (minusNaturalW a 1)
+complementInteger !Zero = SmallNeg 1
+complementInteger !(SmallPos !a) = fromSmall Neg (a + 1)
+complementInteger !(SmallNeg !a) = fromSmall Pos (a - 1)
+complementInteger !(Positive !a) = fromNatural Neg (plusNaturalW a 1)
+complementInteger !(Negative !a) = fromNatural Pos (minusNaturalW a 1)
 
 
 {-# NOINLINE shiftLInteger #-}
