@@ -1,4 +1,4 @@
-{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE BangPatterns, MagicHash #-}
 module Check.Helpers where
 
 import Prelude hiding (Integer)
@@ -6,6 +6,7 @@ import Prelude hiding (Integer)
 import Control.Applicative ((<$>))
 import Data.Bits
 import GHC.Base
+import GHC.Word (Word8)
 
 import qualified System.Random as R
 
@@ -35,3 +36,9 @@ boxIntHash i = I# i
 -- The mkInteger functions expect values in range [0, 0x7fffffff].
 positive32bits :: [Int] -> [Int]
 positive32bits = map (0x7fffffff .&.)
+
+
+shiftCount :: Word8 -> Int#
+shiftCount w =
+    let !(I# i) = fromIntegral w
+    in i

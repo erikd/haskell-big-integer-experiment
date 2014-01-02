@@ -164,8 +164,8 @@ testNewInteger = do
         show (X.shiftRInteger (X.mkInteger False [0x16a3153f,0xb08fa82]) 64#) `shouldBe` "-0x1"
 
 
-    prop "Can shiftR Integers by up to 128 bits." $ \ (GNP g s, int) -> do
-        let bits = unboxInt (int .&. 0x7f)
+    prop "Can shiftR Integers by up to 128 bits." $ \ (GNP g s, shift) -> do
+        let bits = shiftCount shift
         show (X.shiftRInteger s bits) `shouldBe` show (G.shiftRInteger g bits)
 
     it "Get correct result at boundaries." $ do
