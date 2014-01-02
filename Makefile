@@ -11,39 +11,35 @@ checkfiles = Check/New1.hs Check/New2.hs Check/New3.hs
 PRAGMAS = -XCPP -XMagicHash -XUnboxedTuples -XUnliftedFFITypes
 
 
-SIMPLE = -i:integer-simple
-GMP = -i:integer-gmp
-
-
 all : $(TARGETS)
 
 check : check-integer
 	./check-integer # | tee check.log
 
 check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs
-	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
+	$(GHC) $(GHCFLAGS) --make $< -o $@
 
 bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
-	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
+	$(GHC) $(GHCFLAGS) --make $< -o $@
 
 new-bench-integer : new-bench-integer.hs Stamp/copy $(hsfiles)
-	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
+	$(GHC) $(GHCFLAGS) --make $< -o $@
 
 int-bench : int-bench.hs Stamp/copy $(hsfiles)
-	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
+	$(GHC) $(GHCFLAGS) --make $< -o $@
 
 new-bench : new-bench-integer
 	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
 	chmod a+r new-bench-integer.html
 
 Check/New1.hs : Check/NewX.hs.tpl
-	sed "s/NewX/New1/" $+ > $@
+	sed "s/NewX/New1/;s/###//g" $+ > $@
 
 Check/New2.hs : Check/NewX.hs.tpl
-	sed "s/NewX/New2/" $+ > $@
+	sed "s/NewX/New2/;s/###//g" $+ > $@
 
 Check/New3.hs : Check/NewX.hs.tpl
-	sed "s/NewX/New3/" $+ > $@
+	sed "s/NewX/New3/;s/###/#/g" $+ > $@
 
 view-bench : new-bench-integer.html
 	make new-bench
