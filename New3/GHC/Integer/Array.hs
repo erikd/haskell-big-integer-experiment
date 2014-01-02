@@ -9,6 +9,7 @@ import GHC.Word (Word)
 newtype MutableWordArray m = MWA (MutableByteArray (PrimState m))
 
 
+{-# INLINE newWordArray #-}
 newWordArray :: PrimMonad m => Int -> m (MutableWordArray m)
 newWordArray !len = do
     !marr <- newByteArray (len * sizeOf (0 :: Word))
@@ -37,22 +38,27 @@ cloneWordArrayExtend !oldLen !arr !newLen = do
     setByteArray marr oldLen (max 0 (newLen - oldLen)) (0 :: Word)
     return $ MWA marr
 
+{-# INLINE unsafeFreezeWordArray #-}
 unsafeFreezeWordArray :: PrimMonad m => MutableWordArray m -> m ByteArray
-unsafeFreezeWordArray !(MWA marr) = unsafeFreezeByteArray marr
+unsafeFreezeWordArray !(MWA !marr) = unsafeFreezeByteArray marr
 
+{-# INLINE indexWordArray #-}
 indexWordArray :: ByteArray -> Int -> Word
 indexWordArray = indexByteArray
 
+{-# INLINE indexWordArrayM #-}
 indexWordArrayM :: Monad m => ByteArray -> Int -> m Word
-indexWordArrayM !arr !i = return $ indexByteArray arr i
+indexWordArrayM !arr !i = case indexByteArray arr i of x -> return x
 
+{-# INLINE writeWordArray #-}
 writeWordArray :: PrimMonad m => MutableWordArray m -> Int -> Word -> m ()
-writeWordArray !(MWA marr) = writeByteArray marr
+writeWordArray !(MWA !marr) = writeByteArray marr
 
+{-# INLINE setWordArray #-}
 setWordArray :: PrimMonad m => MutableWordArray m -> Int -> Int -> Word -> m ()
-setWordArray !(MWA marr) !off !count !word = setByteArray marr off count word
+setWordArray !(MWA !marr) !off !count !word = setByteArray marr off count word
 
 copyWordArray :: PrimMonad m => MutableWordArray m -> Int -> ByteArray -> Int -> Int -> m ()
-copyWordArray !(MWA marr) !doff !arr !soff !wrds =
+copyWordArray !(MWA !marr) !doff !arr !soff !wrds =
     let !wordsize = sizeOf (0 :: Word)
     in copyByteArray marr (doff * wordsize) arr (soff * wordsize) (wrds * wordsize)
