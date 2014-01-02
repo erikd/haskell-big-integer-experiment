@@ -34,7 +34,6 @@ import Prelude hiding (Integer, abs, pi) -- (all, error, otherwise, return, show
 
 import Control.Monad.Primitive
 import Data.Bits
-import Data.Primitive.ByteArray
 
 import GHC.Prim
 import GHC.Types
@@ -45,9 +44,9 @@ import GHC.IntWord64
 
 import Numeric (showHex) -- TODO: Remove when its working.
 
-import New3.GHC.Integer.Array
 import New3.GHC.Integer.Prim
 import New3.GHC.Integer.Sign
+import New3.GHC.Integer.WordArray
 
 #if !defined(__HADDOCK__)
 
@@ -61,7 +60,7 @@ data Integer
 data Natural
     = Natural
         {-# UNPACK #-} !Int
-        {-# UNPACK #-} !ByteArray
+        {-# UNPACK #-} !WordArray
 
 --------------------------------------------------------------------------------
 
@@ -110,7 +109,7 @@ integerToInt (SmallNeg (W# w)) = negateInt# (word2Int# w)
 integerToInt (Positive (Natural _ arr)) = firstWordAsInt Pos arr
 integerToInt (Negative (Natural _ arr)) = firstWordAsInt Neg arr
 
-firstWordAsInt :: Sign -> ByteArray -> Int#
+firstWordAsInt :: Sign -> WordArray -> Int#
 firstWordAsInt s arr =
     let i = word2Int# (unboxWord (indexWordArray arr 0))
     in case s of
@@ -187,7 +186,7 @@ andInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: I
 andNatural :: Natural -> Natural -> Natural
 andNatural (Natural n1 arr1) (Natural n2 arr2) = andArray (min n1 n2) arr1 arr2
 
-andArray :: Int -> ByteArray -> ByteArray -> Natural
+andArray :: Int -> WordArray -> WordArray -> Natural
 andArray n arr1 arr2 = unsafeInlinePrim $ do
     !marr <- newWordArray n
     loop1 marr 0
@@ -236,7 +235,7 @@ orNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
     !narr <- unsafeFreezeWordArray marr
     returnNatural n narr
 
-orArray :: Int -> ByteArray -> Int -> ByteArray -> Natural
+orArray :: Int -> WordArray -> Int -> WordArray -> Natural
 orArray !n1 !arr1 !n2 !arr2
     | n1 < n2 = orArray n2 arr2 n1 arr1
     | otherwise = unsafeInlinePrim $ do
@@ -269,7 +268,7 @@ xorInteger (Positive (Natural n1 arr1)) (Positive (Natural n2 arr2)) = Positive 
 xorInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
-xorArray :: Int -> ByteArray -> Int -> ByteArray -> Natural
+xorArray :: Int -> WordArray -> Int -> WordArray -> Natural
 xorArray !n1 !arr1 !n2 !arr2
     | n1 < n2 = xorArray n2 arr2 n1 arr1
     | otherwise = unsafeInlinePrim $ do
@@ -331,7 +330,7 @@ shiftLNatural !(Natural !n !arr) !i
                 then wordShiftLArray n arr q
                 else largeShiftLArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
 
-smallShiftLArray :: Int -> ByteArray -> (# Int, Int #) -> Natural
+smallShiftLArray :: Int -> WordArray -> (# Int, Int #) -> Natural
 smallShiftLArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
     !marr <- newWordArray (succ n)
     !nlen <- loop marr 0 0
@@ -349,7 +348,7 @@ smallShiftLArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
         | otherwise = return n
 
 -- | TODO : Use copy here? Check benchmark results.
-wordShiftLArray :: Int -> ByteArray -> Int -> Natural
+wordShiftLArray :: Int -> WordArray -> Int -> Natural
 wordShiftLArray !n !arr !q = unsafeInlinePrim $ do
     !marr <- newWordArray (n + q)
     loop1 marr 0
@@ -368,7 +367,7 @@ wordShiftLArray !n !arr !q = unsafeInlinePrim $ do
             loop2 marr (i + 1)
         | otherwise = return ()
 
-largeShiftLArray :: Int -> ByteArray-> (# Int, Int, Int #) -> Natural
+largeShiftLArray :: Int -> WordArray-> (# Int, Int, Int #) -> Natural
 largeShiftLArray !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
     !marr <- newWordArray (n + q + 1)
     setWordArray marr 0 q 0
@@ -418,7 +417,7 @@ shiftRNatural !(Natural !n !arr) !i
                     else largeShiftRArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
 
 
-smallShiftRArray :: Int -> ByteArray -> (# Int, Int #) -> Natural
+smallShiftRArray :: Int -> WordArray -> (# Int, Int #) -> Natural
 smallShiftRArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
     !marr <- newWordArray n
     loop marr (n - 1) 0
@@ -432,14 +431,14 @@ smallShiftRArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
             loop marr (i - 1) (unsafeShiftL x sj)
         | otherwise = return ()
 
-wordShiftRArray :: Int -> ByteArray -> Int -> Natural
+wordShiftRArray :: Int -> WordArray -> Int -> Natural
 wordShiftRArray !n !arr !q = unsafeInlinePrim $ do
     !marr <- newWordArray (n - q)
     copyWordArray marr 0 arr q (n - q)
     !narr <- unsafeFreezeWordArray marr
     returnNatural (n - q) narr
 
-largeShiftRArray :: Int -> ByteArray-> (# Int, Int, Int #) -> Natural
+largeShiftRArray :: Int -> WordArray-> (# Int, Int, Int #) -> Natural
 largeShiftRArray !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
     !marr <- newWordArray (n - q)
     loop marr (n - q - 1) 0
@@ -747,6 +746,7 @@ timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
         | otherwise =
             returnNatural psumLen psum
 
+    -- innerLoop :: MutableWordArray IO -> Int -> WordArray -> Int -> Int -> Word -> Word -> IO Int
     innerLoop !marr !pn !psum !s1 !s2 !hw !carry
         | s1 + s2 < pn && s1 < n1 = do
             !ps <- indexWordArrayM psum (s1 + s2)
@@ -1015,7 +1015,7 @@ mkNatural !x = unsafeInlinePrim $ mkNat
         return $ Natural 1 narr
 
 
-finalizeNatural :: Int -> ByteArray -> IO Natural
+finalizeNatural :: Int -> WordArray -> IO Natural
 finalizeNatural 0 !arr = return (Natural 0 arr)
 finalizeNatural !nin !arr = do
     let !len = nonZeroLen nin arr
@@ -1026,12 +1026,12 @@ finalizeNatural !nin !arr = do
             else Natural len arr
 
 {-# INLINE returnNatural #-}
-returnNatural :: Int -> ByteArray -> IO Natural
+returnNatural :: Int -> WordArray -> IO Natural
 returnNatural !0 !arr = return (Natural 0 arr)
 returnNatural !n !arr = return (Natural n arr)
 
 
-nonZeroLen :: Int -> ByteArray -> Int
+nonZeroLen :: Int -> WordArray -> Int
 nonZeroLen !len !arr
     | len <= 1 = 0
     | otherwise =
@@ -1071,7 +1071,7 @@ toList ii =
                     x : xs
                 | otherwise = []
 
-arrayShow :: Int -> ByteArray -> String
+arrayShow :: Int -> WordArray -> String
 arrayShow !len !arr =
     let hexify w =
             let x = showHex w ""

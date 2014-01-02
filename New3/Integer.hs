@@ -14,7 +14,7 @@ import Prelude hiding (Integer)
 import Numeric
 
 import New3.GHC.Integer
-import New3.GHC.Integer.Array
+import New3.GHC.Integer.WordArray
 import New3.GHC.Integer.Type
 
 
