@@ -9,4 +9,5 @@ integer-gmp
 integer-simple
 new-bench-integer
 sanity-test
+Check/New*.hs
 Stamp

@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances, ScopedTypeVariables #-}
-module Check.New3
+module Check.NewX
     ( testNewInternal
     , testNewInteger
     ) where
@@ -14,10 +14,10 @@ import Test.QuickCheck.Arbitrary
 
 
 import qualified GMP.Integer as G
-import qualified New3.Integer as X
+import qualified NewX.Integer as X
 
-import New3.GHC.Integer.Prim
-import New3.GHC.Integer.Type
+import NewX.GHC.Integer.Prim
+import NewX.GHC.Integer.Type
 
 import Check.Helpers
 

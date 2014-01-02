@@ -4,7 +4,9 @@ GHC = ghc
 GHCVER = $(shell $(GHC) --version | sed "s/.* //")
 GHCFLAGS = -Wall -fwarn-tabs -Werror -O3 $(PACKAGES) $(PRAGMAS)
 
-hsfiles = $(shell find Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs
+hsfiles = $(shell find Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
+
+checkfiles = Check/New1.hs Check/New2.hs Check/New3.hs
 
 PRAGMAS = -XCPP -XMagicHash -XUnboxedTuples -XUnliftedFFITypes
 
@@ -15,17 +17,10 @@ GMP = -i:integer-gmp
 
 all : $(TARGETS)
 
-bench : bench-integer
-	./bench-integer -o bench-integer.html
-
-new-bench : new-bench-integer
-	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
-	chmod a+r new-bench-integer.html
-
 check : check-integer
 	./check-integer # | tee check.log
 
-check-integer : check-integer.hs Stamp/copy $(hsfiles)
+check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs
 	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
 
 bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
@@ -36,6 +31,26 @@ new-bench-integer : new-bench-integer.hs Stamp/copy $(hsfiles)
 
 int-bench : int-bench.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $(SIMPLE) $< -o $@
+
+new-bench : new-bench-integer
+	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
+	chmod a+r new-bench-integer.html
+
+Check/New1.hs : Check/NewX.hs.tpl
+	sed "s/NewX/New1/" $+ > $@
+
+Check/New2.hs : Check/NewX.hs.tpl
+	sed "s/NewX/New2/" $+ > $@
+
+Check/New3.hs : Check/NewX.hs.tpl
+	sed "s/NewX/New3/" $+ > $@
+
+view-bench : new-bench-integer.html
+	make new-bench
+	gnome-www-browser $<
+
+upload : new-bench-integer.html
+	scp -p $< mega-nerd.net:/home/www.mega-nerd.com/data/tmp/
 
 Stamp/update :
 	@if test ! -d integer-gmp ; then \
@@ -59,7 +74,7 @@ Stamp/copy : Stamp/version-$(GHCVER)
 	@touch $@
 
 clean :
-	@rm -f $(TARGETS)
+	@rm -f $(TARGETS) Check/New*.hs
 	@find . -name \*.o -o -name \*.hi | xargs rm -f
 
 realclean :
