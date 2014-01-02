@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, ScopedTypeVariables #-}
 module Check.New2
-    ( testNew2Internal
-    , testNew2Integer
+    ( testNewInternal
+    , testNewInteger
     ) where
 
 import Prelude hiding (Integer)
@@ -21,8 +21,8 @@ import New2.GHC.Integer.Type
 
 import Check.Helpers
 
-testNew2Internal :: Spec
-testNew2Internal = do
+testNewInternal :: Spec
+testNewInternal = do
     prop "Can add Words catching the carry." $ \ (w1, w2) ->
         let (# c, s #) = plusWord2 w1 w2
             f1 = G.plusInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))
@@ -45,8 +45,8 @@ testNew2Internal = do
         in f2 `shouldBe` f1
 
 
-testNew2Integer :: Spec
-testNew2Integer = do
+testNewInteger :: Spec
+testNewInteger = do
     prop "Can convert from Int." $ \ i ->
         show (X.smallInteger (unboxInt i)) `shouldBe` show (G.smallInteger (unboxInt i))
     prop "Can convert to Int." $ \ i ->
@@ -169,9 +169,9 @@ testNew2Integer = do
         show (X.shiftRInteger s bits) `shouldBe` show (G.shiftRInteger g bits)
 
     it "Get correct result at boundaries." $ do
-        let maxSmall = Positive (Small 0xffffffffffffffff)
-            oneSmall = Positive (Small 1)
-            twoSmall = Positive (Small 2)
+        let maxSmall = wordToInteger (unboxWord 0xffffffffffffffff)
+            oneSmall = wordToInteger (unboxWord 1)
+            twoSmall = wordToInteger (unboxWord 2)
         show (X.plusInteger maxSmall oneSmall) `shouldBe` "+0x10000000000000000"
         show (X.plusInteger oneSmall maxSmall) `shouldBe` "+0x10000000000000000"
         show (X.timesInteger maxSmall twoSmall) `shouldBe` "+0x1fffffffffffffffe"
