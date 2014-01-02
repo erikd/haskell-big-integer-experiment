@@ -457,35 +457,37 @@ negateInteger !(Negative !a) = Positive a
 
 {-# NOINLINE plusInteger #-}
 plusInteger :: Integer -> Integer -> Integer
-plusInteger !Zero !a = a
-plusInteger !a !Zero = a
-plusInteger !(SmallPos !a) !(SmallPos !b) = safePlusWord Pos a b
-plusInteger !(SmallPos !a) !(SmallNeg !b) = safeMinusWord a b
-plusInteger !(SmallNeg !a) !(SmallPos !b) = safeMinusWord b a
-plusInteger !(SmallNeg !a) !(SmallNeg !b) = safePlusWord Neg a b
-plusInteger !(SmallPos !a) !(Positive !b) = Positive (plusNaturalW b a)
-plusInteger !(SmallPos !a) !(Negative !b) = Negative (minusNaturalW b a)
+plusInteger !x !y = case (# x, y #) of
+    (# !Zero, !a #) -> a
+    (# !a, !Zero #) -> a
+    (# !SmallPos !a, !SmallPos !b #) -> safePlusWord Pos a b
+    (# !SmallPos !a, !SmallNeg !b #) -> safeMinusWord a b
+    (# !SmallNeg !a, !SmallPos !b #) -> safeMinusWord b a
+    (# !SmallNeg !a, !SmallNeg !b #) -> safePlusWord Neg a b
 
-plusInteger !(SmallNeg !a) !(Positive !b) = Positive (minusNaturalW b a)
-plusInteger !(SmallNeg !a) !(Negative !b) = Negative (plusNaturalW b a)
+    (# !SmallPos !a, !Positive !b #) -> Positive (plusNaturalW b a)
+    (# !SmallPos !a, !Negative !b #) -> Negative (minusNaturalW b a)
+    (# !SmallNeg !a, !Positive !b #) -> Positive (minusNaturalW b a)
+    (# !SmallNeg !a, !Negative !b #) -> Negative (plusNaturalW b a)
 
-plusInteger !(Positive !a) !(SmallPos !b) = Positive (plusNaturalW a b)
-plusInteger !(Positive !a) !(SmallNeg !b) = Positive (minusNaturalW a b)
-plusInteger !(Positive !a) !(Positive !b) = Positive (plusNatural a b)
-plusInteger !(Positive !a) !(Negative !b) =
+    (# !Positive !a, !SmallPos !b #) -> Positive (plusNaturalW a b)
+    (# !Positive !a, !SmallNeg !b #) -> Positive (minusNaturalW a b)
+    (# !Positive !a, !Positive !b #) -> Positive (plusNatural a b)
+    (# !Positive !a, !Negative !b #) -> plusMinusNatural a b
+
+    (# !Negative !a, !SmallPos !b #) -> Negative (minusNaturalW a b)
+    (# !Negative !a, !SmallNeg !b #) -> Negative (plusNaturalW a b)
+    (# !Negative !a, !Positive !b #) -> plusMinusNatural b a
+    (# !Negative !a, !Negative !b #) -> Negative (plusNatural a b)
+
+
+{-# NOINLINE plusMinusNatural #-}
+plusMinusNatural :: Natural -> Natural -> Integer
+plusMinusNatural !a !b =
     case compareNatural a b of
         EQ -> Zero
         GT -> Positive (minusNatural a b)
         LT -> Negative (minusNatural b a)
-
-plusInteger !(Negative !a) !(SmallPos !b) = Negative (minusNaturalW a b)
-plusInteger !(Negative !a) !(SmallNeg !b) = Negative (plusNaturalW a b)
-plusInteger !(Negative !a) !(Positive !b) =
-    case compareNatural a b of
-        EQ -> Zero
-        GT -> Negative (minusNatural a b)
-        LT -> Positive (minusNatural b a)
-plusInteger !(Negative !a) !(Negative !b) = Negative (plusNatural a b)
 
 {-# INLINE safePlusWord #-}
 safePlusWord :: Sign -> Word -> Word -> Integer
@@ -505,6 +507,7 @@ safeMinusWord !a !b =
         GT -> SmallPos (a - b)
         LT -> SmallNeg (b - a)
 
+{-# INLINE plusNaturalW #-}
 plusNaturalW :: Natural -> Word -> Natural
 plusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
     !marr <- newWordArray (succ n)
@@ -533,11 +536,7 @@ plusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
             loop2 marr (i + 1)
         | otherwise = return n
 
-{-# INLINE returnNatural #-}
-returnNatural :: Int -> ByteArray -> IO Natural
-returnNatural !n !arr = return (Natural n arr)
-
-
+{-# NOINLINE plusNatural #-}
 plusNatural :: Natural -> Natural -> Natural
 plusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = plusNatural b a
@@ -578,39 +577,33 @@ plusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
         | otherwise = return ()
 
 
-{-# NOINLINE minusInteger #-}
+{-# INLINE minusInteger #-}
 minusInteger :: Integer -> Integer -> Integer
-minusInteger !Zero !a = negateInteger a
-minusInteger !a Zero = a
-minusInteger !(SmallPos !a) !(SmallPos !b) = safeMinusWord a b
-minusInteger !(SmallPos !a) !(SmallNeg !b) = safePlusWord Pos a b
+minusInteger !x !y = case (# x, y #) of
+    (# !a, !Zero #) -> a
+    (# !Zero, !a #) -> negateInteger a
+    (# !SmallPos !a, !SmallPos !b #) -> safeMinusWord a b
+    (# !SmallPos !a, !SmallNeg !b #) -> safePlusWord Pos a b
+    (# !SmallNeg !a, !SmallPos !b #) -> safePlusWord Neg a b
+    (# !SmallNeg !a, !SmallNeg !b #) -> safeMinusWord b a
 
-minusInteger !(SmallNeg !a) !(SmallPos !b) = safePlusWord Neg a b
-minusInteger !(SmallNeg !a) !(SmallNeg !b) = safeMinusWord b a
-minusInteger !(SmallPos !a) !(Positive !b) = Negative (minusNaturalW b a)
-minusInteger !(SmallPos !a) !(Negative !b) = Positive (plusNaturalW b a)
+    (# !SmallPos !a, !Positive !b #) -> Negative (minusNaturalW b a)
+    (# !SmallPos !a, !Negative !b #) -> Positive (plusNaturalW b a)
 
-minusInteger !(SmallNeg !a) !(Positive !b) = Negative (plusNaturalW b a)
-minusInteger !(SmallNeg !a) !(Negative !b) = Positive (minusNaturalW b a)
+    (# !SmallNeg !a, !Positive !b #) -> Negative (plusNaturalW b a)
+    (# !SmallNeg !a, !Negative !b #) -> Positive (minusNaturalW b a)
 
-minusInteger !(Positive !a) !(SmallPos !b) = Positive (minusNaturalW a b)
-minusInteger !(Positive !a) !(SmallNeg !b) = Positive (plusNaturalW a b)
-minusInteger !(Positive !a) !(Positive !b) =
-    case compareNatural a b of
-        EQ -> Zero
-        GT -> Positive (minusNatural a b)
-        LT -> Negative (minusNatural b a)
-minusInteger !(Positive !a) !(Negative !b) = Positive (plusNatural a b)
+    (# !Positive !a, !SmallPos !b #) -> Positive (minusNaturalW a b)
+    (# !Positive !a, !SmallNeg !b #) -> Positive (plusNaturalW a b)
+    (# !Positive !a, !Positive !b #) -> plusMinusNatural a b
+    (# !Positive !a, !Negative !b #) -> Positive (plusNatural a b)
 
-minusInteger !(Negative !a) !(SmallPos !b) = Negative (plusNaturalW a b)
-minusInteger !(Negative !a) !(SmallNeg !b) = Negative (minusNaturalW a b)
-minusInteger !(Negative !a) !(Positive !b) = Negative (plusNatural a b)
-minusInteger !(Negative !a) !(Negative !b) =
-    case compareNatural a b of
-        EQ -> Zero
-        GT -> Negative (minusNatural a b)
-        LT -> Positive (minusNatural b a)
+    (# !Negative !a, !SmallPos !b #) -> Negative (plusNaturalW a b)
+    (# !Negative !a, !SmallNeg !b #) -> Negative (minusNaturalW a b)
+    (# !Negative !a, !Positive !b #) -> Negative (plusNatural a b)
+    (# !Negative !a, !Negative !b #) -> plusMinusNatural b a
 
+{-# INLINE minusNaturalW #-}
 minusNaturalW :: Natural -> Word -> Natural
 minusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
     !marr <- newWordArray (succ n)
@@ -640,6 +633,7 @@ minusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
         | otherwise = return n
 
 
+{-# INLINE minusNatural #-}
 minusNatural :: Natural -> Natural -> Natural
 minusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = plusNatural b a
@@ -705,9 +699,6 @@ timesInteger !x !y = case (# x, y #) of
     (# Negative a, Positive b #) -> Negative (timesNatural a b)
     (# Negative a, Negative b #) -> Positive (timesNatural a b)
 
-{-# INLINE timesNatural #-}
-timesNatural :: Natural -> Natural -> Natural
-timesNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2) = timesArray n1 arr1 n2 arr2
 
 {-# INLINE safeTimesWord #-}
 safeTimesWord :: Sign -> Word -> Word -> Integer
@@ -720,8 +711,9 @@ safeTimesWord !sign !w1 !w2 =
         (# True, Neg #) -> SmallNeg prod
 
 
+{-# NOINLINE timesNaturalW #-}
 timesNaturalW :: Natural -> Word -> Natural
-timesNaturalW !(Natural n arr) !w = unsafeInlinePrim $ do
+timesNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
     !marr <- newWordArrayCleared (succ n)
     writeWordArray marr (n - 1) 0
     loop marr 0 0
@@ -737,10 +729,10 @@ timesNaturalW !(Natural n arr) !w = unsafeInlinePrim $ do
         | otherwise =
             writeWordArray marr i carry
 
-
-timesArray :: Int -> ByteArray -> Int -> ByteArray -> Natural
-timesArray !n1 !arr1 !n2 !arr2
-    | n1 < n2 = timesArray n2 arr2 n1 arr1
+{-# NOINLINE timesNatural #-}
+timesNatural :: Natural -> Natural -> Natural
+timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
+    | n1 < n2 = timesNatural b a
     | otherwise = unsafeInlinePrim $ do
         !psum <- newPlaceholderWordArray
         outerLoop 0 psum 0
@@ -775,6 +767,8 @@ timesArray !n1 !arr1 !n2 !arr2
             writeWordArray marr (s1 + s2) carry
             return (s1 + s2 + 1)
         | otherwise = return (s1 + s2 + 1)
+
+
 
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
