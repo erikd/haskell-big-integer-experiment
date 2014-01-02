@@ -302,14 +302,19 @@ complementInteger (Negative a) = fromNatural Pos (minusNaturalW a 1)
 shiftLInteger :: Integer -> Int# -> Integer
 shiftLInteger Zero _ = Zero
 shiftLInteger a 0# = a
-shiftLInteger !(SmallPos !a) b = Positive (shiftLNatural (mkNatural a) b)
-shiftLInteger !(SmallNeg !a) b = Negative (shiftLNatural (mkNatural a) b)
-shiftLInteger !(Positive !a) b = Positive (shiftLNatural a b)
-shiftLInteger !(Negative !a) b = Negative (shiftLNatural a b)
+shiftLInteger !(SmallPos !a) b
+    | a == 0 = Zero
+    | b >=# WORD_SIZE_IN_BITS# = fromNatural Pos (shiftLNatural (mkNatural a) (I# b))
+    | otherwise =
+        let !lo = unsafeShiftL a (I# b)
+            !hi = unsafeShiftR a (I# ( WORD_SIZE_IN_BITS# -# b))
+        in if hi == 0
+            then SmallPos lo
+            else Positive (mkPair lo hi)
 
-shiftLNatural :: Natural -> Int# -> Natural
-shiftLNatural (Natural !n !arr) b = shiftLArray n arr (I# b)
-
+shiftLInteger !(SmallNeg !a) b = fromNatural Neg (shiftLNatural (mkNatural a) (I# b))
+shiftLInteger !(Positive !a) b = fromNatural Pos (shiftLNatural a (I# b))
+shiftLInteger !(Negative !a) b = fromNatural Neg (shiftLNatural a (I# b))
 
 {-# NOINLINE shiftRInteger #-}
 shiftRInteger :: Integer -> Int# -> Integer
@@ -324,7 +329,11 @@ shiftRInteger (SmallNeg a) b
 
 shiftRInteger (Positive a) b = fromNatural Pos (shiftRNatural a (I# b))
 shiftRInteger (Negative a) b =
-    Negative (plusNaturalW (shiftRNatural (minusNaturalW a 1) (I# b)) 1)
+    let nat@(Natural nx _) = shiftRNatural (minusNaturalW a 1) (I# b)
+    in if nx == 0
+        then SmallNeg 1
+        else fromNatural Neg (plusNaturalW nat 1)
+
 
 {-# NOINLINE negateInteger #-}
 negateInteger :: Integer -> Integer
@@ -897,8 +906,8 @@ mkNatural !x = unsafeInlinePrim $ mkNat
         !narr <- unsafeFreezeWordArray marr
         return $ Natural 1 narr
 
-shiftLArray :: Int -> ByteArray -> Int -> Natural
-shiftLArray !n !arr !i
+shiftLNatural :: Natural -> Int -> Natural
+shiftLNatural !(Natural !n !arr) !i
     | i < WORD_SIZE_IN_BITS =
             smallShiftLArray n arr (# i, WORD_SIZE_IN_BITS - i #)
     | otherwise = do
@@ -1098,5 +1107,20 @@ isSmall Zero = True
 isSmall (SmallPos _) = True
 isSmall (SmallNeg _) = True
 isSmall _ = False
+
+assertNatural :: Int -> Natural -> IO ()
+assertNatural linenum (Natural n arr) =
+    if n <= 0
+        then error $ "Bad natural (" ++ show linenum ++ ") " ++ show n ++ " " ++ arrayShow n arr
+        else return ()
+
+traceNatural :: Int -> Natural -> Natural
+traceNatural linenum nat@(Natural n arr) =
+    if n <= 0
+        then error $ "Bad natural (" ++ show linenum ++ ") " ++ show n ++ " " ++ arrayShow n arr
+        else nat
+
+errorLine :: Int -> String -> a
+errorLine linenum s = error $ "Line " ++ show linenum ++ ": " ++ s
 
 #endif
