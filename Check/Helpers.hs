@@ -1,8 +1,6 @@
 {-# LANGUAGE BangPatterns, MagicHash #-}
 module Check.Helpers where
 
-import Prelude hiding (Integer)
-
 import Control.Applicative ((<$>))
 import Data.Bits
 import GHC.Base
@@ -42,3 +40,6 @@ shiftCount :: Word8 -> Int#
 shiftCount w =
     let !(I# i) = fromIntegral w
     in i
+
+readInteger :: String -> Integer
+readInteger = read

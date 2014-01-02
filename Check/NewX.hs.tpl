@@ -7,7 +7,9 @@ module Check.NewX
 import Prelude hiding (Integer)
 
 import Control.Applicative ((<$>))
-import Data.Bits ((.&.))
+import Data.Bits ((.&.), shiftR)
+import Data.List (intercalate)
+import Numeric (showHex)
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Arbitrary
@@ -163,7 +165,6 @@ testNewInteger = do
         show (X.shiftRInteger (X.mkInteger False [0,0x2]) 1#) `shouldBe` "-0x80000000"
         show (X.shiftRInteger (X.mkInteger False [0x16a3153f,0xb08fa82]) 64#) `shouldBe` "-0x1"
 
-
     prop "Can shiftR Integers by up to 128 bits." $ \ (GNP g s, shift) -> do
         let bits = shiftCount shift
         show (X.shiftRInteger s bits) `shouldBe` show (G.shiftRInteger g bits)
@@ -183,39 +184,33 @@ testNewInteger = do
         show (X.complementInteger (X.smallInteger 0#)) `shouldBe` "-0x1"
         show (X.complementInteger (X.mkInteger True [0])) `shouldBe` "-0x1"
 
-
-
-{-
-================================================================================
-timesInteger
-
-================================================================================
-plusInteger
-
-================================================================================
-minusInteger
-
-================================================================================
-ltInteger
-
-================================================================================
--}
-
-{-
-    prop "Can OR two Integers." $ \ (GNP ga sa, GNP gb sb) ->
-        show (X.orInteger sa sb) `shouldBe` show (G.orInteger ga gb)
-    prop "Can AND two Integers." $ \ (GNP ga na, GNP gb nb) ->
-        show (X.andInteger na nb) `shouldBe` show (G.andInteger ga gb)
-    prop "Can XOR two Integers." $ \ (GNP ga na, GNP gb nb) ->
-        show (X.xorInteger na nb) `shouldBe` show (G.xorInteger ga gb)
--}
-
-
 --------------------------------------------------------------------------------
 
 data GmpNewPair
     = GNP G.Integer X.Integer
-    deriving Show
+
+instance Show GmpNewPair where
+    show (GNP g x) =
+        if show g /= show x
+            then error $ "show GmpNewPair error " ++ show g ++ " /= " ++ show x
+            else toMakeInteger x
+
+
+toMakeInteger :: X.Integer -> String
+toMakeInteger xi =
+    let s = X.hexShow xi
+        nonNeg = case head s of
+                    '-' -> False
+                    _ -> True
+        i = readInteger (if head s == '0' then s else tail s)
+    in "mkInteger " ++ show nonNeg ++ " [" ++ wrds i ++ "]"
+  where
+    wrds i =
+        intercalate "," . map (\w -> "0x" ++ showHex w "") $ decompose i
+    decompose x
+        | x <= 0 = []
+        | otherwise =
+            x .&. 0x7fffffff : decompose (x `shiftR` 31)
 
 instance Arbitrary GmpNewPair where
     arbitrary = do
