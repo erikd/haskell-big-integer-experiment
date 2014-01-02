@@ -91,6 +91,14 @@ testNewInteger = do
     prop "Can subtract two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (X.minusInteger sa sb) `shouldBe` show (G.minusInteger ga gb)
 
+    it "Can AND known pairs of positive Integers." $ do
+        let a1 = [1,0,0,0,0,0,0,0,0,0,0,1]
+            b1 = [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1]
+        show (X.andInteger (X.mkInteger True a1) (X.mkInteger True b1)) `shouldBe` "+0x1"
+        let a2 = [0,0,0,0,0,0,0,0,0,0,0,1]
+            b2 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1]
+        show (X.andInteger (X.mkInteger True a2) (X.mkInteger True b2)) `shouldBe` "0x0"
+
     prop "Can AND two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (X.andInteger (X.absInteger sa) (X.absInteger sb)) `shouldBe` show (G.andInteger (G.absInteger ga) (G.absInteger gb))
     prop "Can OR two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
@@ -185,6 +193,9 @@ testNewInteger = do
         show (X.complementInteger (X.smallInteger 0#)) `shouldBe` "-0x1"
         show (X.complementInteger (X.mkInteger True [])) `shouldBe` "-0x1"
         show (X.complementInteger (X.mkInteger True [0])) `shouldBe` "-0x1"
+
+        show (X.mkInteger True [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1]) `shouldBe` show (G.mkInteger True [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1])
+
 
 --------------------------------------------------------------------------------
 
