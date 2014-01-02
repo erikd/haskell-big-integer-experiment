@@ -7,6 +7,7 @@
 
 module New3.Integer
     ( module New3.GHC.Integer
+    , hexShow
     ) where
 
 import Prelude hiding (Integer)
