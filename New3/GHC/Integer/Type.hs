@@ -82,6 +82,15 @@ mkInteger nonNegative is =
     f [I# x] = smallInteger x
     f (I# x : xs) = smallInteger x `orInteger` shiftLInteger (f xs) 31#
 
+mkNatural :: [Int] -> Natural
+mkNatural ws =
+    case mkInteger True ws of
+        Positive a -> a
+        Negative a -> a
+        Zero -> mkSingletonNat 0
+        SmallPos x -> mkSingletonNat x
+        SmallNeg x -> mkSingletonNat x
+
 {-# NOINLINE smallInteger #-}
 smallInteger :: Int# -> Integer
 smallInteger i
@@ -308,7 +317,7 @@ shiftLInteger !Zero _ = Zero
 shiftLInteger !a 0# = a
 shiftLInteger !(SmallPos !a) b
     | a == 0 = Zero
-    | b >=# WORD_SIZE_IN_BITS# = fromNatural Pos (shiftLNatural (mkNatural a) (I# b))
+    | b >=# WORD_SIZE_IN_BITS# = fromNatural Pos (shiftLNatural (mkSingletonNat a) (I# b))
     | otherwise =
         let !lo = unsafeShiftL a (I# b)
             !hi = unsafeShiftR a (I# ( WORD_SIZE_IN_BITS# -# b))
@@ -316,7 +325,7 @@ shiftLInteger !(SmallPos !a) b
             then SmallPos lo
             else Positive (mkPair lo hi)
 
-shiftLInteger !(SmallNeg !a) !b = fromNatural Neg (shiftLNatural (mkNatural a) (I# b))
+shiftLInteger !(SmallNeg !a) !b = fromNatural Neg (shiftLNatural (mkSingletonNat a) (I# b))
 shiftLInteger !(Positive !a) !b = fromNatural Pos (shiftLNatural a (I# b))
 shiftLInteger !(Negative !a) !b = fromNatural Neg (shiftLNatural a (I# b))
 
@@ -544,7 +553,7 @@ plusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
 plusNatural :: Natural -> Natural -> Natural
 plusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = plusNatural b a
-    | otherwise = unsafeInlinePrim $ do --
+    | otherwise = unsafeInlinePrim $ do
         !marr <- newWordArray (succ n1)
         !nlen <- loop1 marr 0 0
         !narr <- unsafeFreezeWordArray marr
@@ -994,18 +1003,18 @@ zerothWordOfNatural :: Natural -> Word
 zerothWordOfNatural !(Natural _ arr) = indexWordArray arr 0
 
 mkPair :: Word -> Word -> Natural
-mkPair !sm !carry = unsafeInlinePrim mkNaturalPair
+mkPair !sm !carry = unsafeInlinePrim mkNatPair
   where
-    mkNaturalPair :: IO Natural
-    mkNaturalPair = do
+    mkNatPair :: IO Natural
+    mkNatPair = do
         !marr <- newWordArray 2
         writeWordArray marr 0 sm
         writeWordArray marr 1 carry
         !narr <- unsafeFreezeWordArray marr
         return $ Natural 2 narr
 
-mkNatural :: Word -> Natural
-mkNatural !x = unsafeInlinePrim $ mkNat
+mkSingletonNat :: Word -> Natural
+mkSingletonNat !x = unsafeInlinePrim mkNat
   where
     mkNat :: IO Natural
     mkNat = do
