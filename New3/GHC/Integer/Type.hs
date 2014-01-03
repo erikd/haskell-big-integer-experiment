@@ -1106,8 +1106,8 @@ signShow Neg = "Neg"
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
 
-debugPutStrLn :: String -> IO ()
-debugPutStrLn = putStrLn
+debugPutStrLn :: Int -> String -> IO ()
+debugPutStrLn line s = putStrLn $ show line ++ " : " ++ s
 -- debugPutStrLn _ = return ()
 
 isSmall :: Integer -> Bool
