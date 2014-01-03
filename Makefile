@@ -28,6 +28,12 @@ new-bench-integer : new-bench-integer.hs Stamp/copy $(hsfiles)
 int-bench : int-bench.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
 
+karatsubaSlice : karatsubaSlice.hs $(hsfiles)
+	$(GHC) $(GHCFLAGS) --make $< -o $@
+
+kslice : karatsubaSlice
+	./karatsubaSlice
+
 new-bench : new-bench-integer
 	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
 	chmod a+r new-bench-integer.html

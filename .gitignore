@@ -7,6 +7,7 @@ half-test
 int-bench
 integer-gmp
 integer-simple
+karatsubaSlice
 new-bench-integer
 sanity-test
 Check/New*.hs
