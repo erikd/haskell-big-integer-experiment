@@ -330,7 +330,8 @@ shiftLInteger !(Positive !a) !b = fromNatural Pos (shiftLNatural a (I# b))
 shiftLInteger !(Negative !a) !b = fromNatural Neg (shiftLNatural a (I# b))
 
 shiftLNatural :: Natural -> Int -> Natural
-shiftLNatural !(Natural !n !arr) !i
+shiftLNatural !nat@(Natural !n !arr) !i
+    | i <= 0 = nat
     | i < WORD_SIZE_IN_BITS =
             smallShiftLArray n arr (# i, WORD_SIZE_IN_BITS - i #)
     | otherwise = do
