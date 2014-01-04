@@ -1,7 +1,6 @@
 TARGETS = check-integer bench-integer new-bench-integer
 
 GHC = ghc
-GHCVER = $(shell $(GHC) --version | sed "s/.* //")
 GHCFLAGS = -Wall -fwarn-tabs -Werror -O3 $(PACKAGES) $(PRAGMAS)
 
 hsfiles = $(shell find Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
@@ -54,6 +53,10 @@ view-bench : new-bench-integer.html
 upload : new-bench-integer.html
 	scp -p $< mega-nerd.net:/home/www.mega-nerd.com/data/tmp/
 
+update :
+	rm -f Stamp/*
+	make Stamp/copy
+
 Stamp/update :
 	@if test ! -d integer-gmp ; then \
 		git clone http://git.haskell.org/packages/integer-gmp.git ; \
@@ -65,12 +68,7 @@ Stamp/update :
 	(cd integer-simple && git checkout master && git pull --rebase)
 	@touch $@
 
-Stamp/version-$(GHCVER) : Stamp/update
-	(cd integer-gmp && ../Scripts/git-branch-tag.sh ghc-$(GHCVER)-release && git checkout ghc-$(GHCVER)-release)
-	(cd integer-simple && ../Scripts/git-branch-tag.sh ghc-$(GHCVER)-release && git checkout ghc-$(GHCVER)-release)
-	@touch $@
-
-Stamp/copy : Stamp/version-$(GHCVER)
+Stamp/copy : Stamp/update
 	Scripts/copy_modify.sh integer-simple Simple
 	Scripts/copy_modify.sh integer-gmp GMP
 	@touch $@
