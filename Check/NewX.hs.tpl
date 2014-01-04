@@ -66,12 +66,14 @@ testNewInteger = do
     prop "Can take abs of an Integer." $ \ (GNP g s) ->
         show (X.absInteger s) `shouldBe` show (G.absInteger g)
 
-    it "Can shiftL Integers." $ do
+    it "Can shiftL known Integers." $ do
         let s = X.smallInteger 0x12345#
         show (X.shiftLInteger s 4#) `shouldBe` "+0x123450"
         show (X.shiftLInteger s 64#) `shouldBe` "+0x123450000000000000000"
         show (X.shiftLInteger s 68#) `shouldBe` "+0x1234500000000000000000"
         show (X.shiftLInteger (X.mkInteger False [0x7fffffff]) 127#) `shouldBe` "-0x3fffffff80000000000000000000000000000000"
+        let big = mkInteger True [ 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        show (X.shiftLInteger big 0#) `shouldBe` show big
 
     prop "Can shiftL Integers by up to 256 bits." $ \ (GNP g s, int) -> do
         let bits = unboxInt (int .&. 0x7f)
