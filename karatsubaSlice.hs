@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns, NoImplicitPrelude, ScopedTypeVariables #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 #include "MachDeps.h"
 
@@ -9,15 +10,15 @@ import Control.Monad.Primitive
 import Data.Primitive
 import GHC.Word (Word)
 import Test.Hspec
--- import Test.Hspec.QuickCheck
--- import Test.QuickCheck.Arbitrary
+import Test.Hspec.QuickCheck
+import Test.QuickCheck.Arbitrary
 import Unsafe.Coerce (unsafeCoerce)
 
 import New3.GHC.Integer.Type
 import New3.GHC.Integer.WordArray
 import New3.Integer ()
 
--- import Check.Helpers
+import Check.Helpers
 
 main :: IO ()
 main = hspec $ describe "Karatsuba functions:" testKaratsuba
@@ -29,20 +30,22 @@ testKaratsuba = do
         let nat = mkNatural [ 1, 0, 4 * 2, 0, 16 * 3, 0, 64 * 4, 0, 256 * 5, 0, 256 * 4 * 6 ]
             (hi, lo) = kSplit nat shift
         in show (plusNatural (shiftLNatural hi (shift * WORD_SIZE_IN_BITS)) lo) `shouldBe` show nat
-    it "A kShiftedAdd works with shift of zero." $ do
-        let (n1, n2, n3) = (mkNatural [1], mkNatural [2], mkNatural [3])
-        show (kShiftedAdd 0 n1 n2 n3) `shouldBe` "0x6"
-    it "A kShiftedAdd works without overlap." $ do
-        let (n1, n2, n3) = (mkNatural [1], mkNatural [2], mkNatural [3])
-        show (kShiftedAdd 1 n1 n2 n3) `shouldBe` "0x100000000000000020000000000000003"
-        show (kShiftedAdd 2 n1 n2 n3) `shouldBe` "0x10000000000000000000000000000000200000000000000000000000000000003"
+    prop "kShiftedAdd works without overlap." $ \n1 n2 n3 -> do
+        let shift = max (lengthNatrual n2) (lengthNatrual n3)
+        show (kShiftedAdd shift n1 n2 n3) `shouldBe` show (kShiftedAddSlow shift n1 n2 n3)
+        show (kShiftedAdd (shift + 1) n1 n2 n3) `shouldBe` show (kShiftedAddSlow (shift + 1) n1 n2 n3)
 
+
+kShiftedAddSlow :: Int -> Natural -> Natural -> Natural -> Natural
+kShiftedAddSlow shift n1 n2 n3 =
+    plusNatural (shiftLNatural n1 (2 * shift * WORD_SIZE_IN_BITS))
+        (plusNatural (shiftLNatural n2 (shift * WORD_SIZE_IN_BITS)) n3)
 
 kShiftedAdd :: Int -> Natural -> Natural -> Natural -> Natural
-kShiftedAdd !shift !a@(Natural !n3 !arr3) !b@(Natural !n2 !arr2) !c@(Natural !n1 !arr1)
-    | shift <= 0 = plusNatural a (plusNatural b c)
+kShiftedAdd !shift !(Natural !n3 !arr3) !(Natural !n2 !arr2) !(Natural !n1 !arr1)
+    | shift < 1 = error $ "kShiftedAdd with shift of " ++ show shift
     | otherwise = unsafeInlinePrim $ do
-        !marr <- newWordArray (succ (n1 + 2 * shift))
+        !marr <- newWordArray (succ (n3 + 2 * shift))
         !nlen <- loop_1 marr 0
         !narr <- unsafeFreezeWordArray marr
         returnNatural nlen narr
@@ -52,12 +55,12 @@ kShiftedAdd !shift !a@(Natural !n3 !arr3) !b@(Natural !n2 !arr2) !c@(Natural !n1
         -- | i = shift = loop_1_2 marr i carry
         | otherwise = do
             !x <- indexWordArrayM arr1 i
-            writeWordArray marr i x
+            debugWriteWordArray __LINE__ marr i x
             loop_1 marr (i + 1)
 
     loop_pre_2 !marr !i
         | i < shift = do
-            writeWordArray marr i 0
+            debugWriteWordArray __LINE__ marr i 0
             loop_pre_2 marr (i + 1)
         | otherwise = loop_2 marr i
 
@@ -65,12 +68,12 @@ kShiftedAdd !shift !a@(Natural !n3 !arr3) !b@(Natural !n2 !arr2) !c@(Natural !n1
         | i - shift >= n2 = loop_pre_3 marr i
         | otherwise  = do
             !x <- indexWordArrayM arr2 (i - shift)
-            writeWordArray marr i x
+            debugWriteWordArray __LINE__ marr i x
             loop_2 marr (i + 1)
 
     loop_pre_3 !marr !i
         | i < 2 * shift = do
-            writeWordArray marr i 0
+            debugWriteWordArray __LINE__ marr i 0
             loop_pre_3 marr (i + 1)
         | otherwise = loop_3 marr i
 
@@ -78,10 +81,17 @@ kShiftedAdd !shift !a@(Natural !n3 !arr3) !b@(Natural !n2 !arr2) !c@(Natural !n1
         | i - 2 * shift >= n3 = return i
         | otherwise = do
             !x <- indexWordArrayM arr3 (i - 2 * shift)
-            writeWordArray marr i x
-            loop_1 marr (i + 1)
+            debugWriteWordArray __LINE__ marr i x
+            loop_3 marr (i + 1)
 
-
+debugWriteWordArray :: Int -> MutableWordArray IO -> Int -> Word -> IO ()
+#if 1
+debugWriteWordArray _ = writeWordArray
+#else
+debugWriteWordArray line marr i x = do
+    putStrLn $ show line ++ " : writing " ++ hexShowW x ++ " at " ++ show i
+    writeWordArray marr i x
+#endif
 
 kSplit :: Natural -> Int -> (Natural, Natural)
 kSplit nat@(Natural n arr) i
@@ -103,3 +113,10 @@ sliceOfNatural !(Natural !n !(WA !arr)) !start !count
         in Natural (min (n - start) count) (unsafeCoerce newaddr)
 
 
+lengthNatrual :: Natural -> Int
+lengthNatrual (Natural n _) = n
+
+instance Arbitrary Natural where
+    arbitrary = do
+        wrds <- fmap (take 10 . positive32bits) arbitrary
+        return $ mkNatural wrds
