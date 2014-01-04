@@ -27,13 +27,15 @@ module GMP.GHC.Integer (
     plusInteger, minusInteger, timesInteger, negateInteger,
     eqInteger, neqInteger, absInteger, signumInteger,
     leInteger, gtInteger, ltInteger, geInteger, compareInteger,
+    eqInteger#, neqInteger#,
+    leInteger#, gtInteger#, ltInteger#, geInteger#,
     divModInteger, divInteger, modInteger,
     quotRemInteger, quotInteger, remInteger,
     encodeFloatInteger, floatFromInteger,
     encodeDoubleInteger, decodeDoubleInteger, doubleFromInteger,
     -- gcdInteger, lcmInteger,
     andInteger, orInteger, xorInteger, complementInteger,
-    shiftLInteger, shiftRInteger,
+    shiftLInteger, shiftRInteger, testBitInteger,
     hashInteger,
  ) where
 

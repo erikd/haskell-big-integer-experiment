@@ -1,6 +1,31 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module GMP.GHC.Integer.GMP.Internals (Integer(..), gcdInteger, lcmInteger) where
+-- | This modules provides access to the 'Integer' constructors and
+-- exposes some highly optimized GMP-operations.
+module GMP.GHC.Integer.GMP.Internals
+    ( -- * The 'Integer' type
+      Integer(..)
+
+      -- * Number theoretic functions
+    , gcdInt
+    , gcdInteger
+    , gcdExtInteger
+    , lcmInteger
+    , nextPrimeInteger
+    , testPrimeInteger
+
+      -- * Exponentiation functions
+    , powInteger
+    , powModInteger
+    , powModSecInteger
+    , recipModInteger
+
+    -- * Import/export functions
+    , sizeInBaseInteger
+    , importIntegerFromByteArray
+    , importIntegerFromAddr
+    , exportIntegerToMutableByteArray
+    , exportIntegerToAddr
+    ) where
 
 import GMP.GHC.Integer.Type
-

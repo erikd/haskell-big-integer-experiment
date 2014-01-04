@@ -1,6 +1,5 @@
-{-# LANGUAGE ForeignFunctionInterface, GHCForeignImportPrim, CPP,
-             MagicHash, UnboxedTuples, UnliftedFFITypes, BangPatterns #-}
-{-# OPTIONS_GHC -XNoImplicitPrelude #-}
+{-# LANGUAGE BangPatterns, CPP, MagicHash, NoImplicitPrelude, UnboxedTuples
+           , UnliftedFFITypes, GHCForeignImportPrim #-}
 {-# OPTIONS_HADDOCK hide #-}
 
 #include "MachDeps.h"
@@ -21,6 +20,7 @@ module GMP.GHC.Integer.GMP.Prim (
     divExactInteger#,
 
     gcdInteger#,
+    gcdExtInteger#,
     gcdIntegerInt#,
     gcdInt#,
 
@@ -37,8 +37,23 @@ module GMP.GHC.Integer.GMP.Prim (
     xorInteger#,
     complementInteger#,
 
+    testBitInteger#,
     mul2ExpInteger#,
     fdivQ2ExpInteger#,
+
+    powInteger#,
+    powModInteger#,
+    powModSecInteger#,
+    recipModInteger#,
+
+    nextPrimeInteger#,
+    testPrimeInteger#,
+
+    sizeInBaseInteger#,
+    importIntegerFromByteArray#,
+    importIntegerFromAddr#,
+    exportIntegerToMutableByteArray#,
+    exportIntegerToAddr#,
 
 #if WORD_SIZE_IN_BITS < 64
     int64ToInteger#,  integerToInt64#,
@@ -52,6 +67,7 @@ module GMP.GHC.Integer.GMP.Prim (
   ) where
 
 import GHC.Prim
+import GHC.Types
 
 -- Double isn't available yet, and we shouldn't be using defaults anyway:
 default ()
@@ -118,6 +134,11 @@ foreign import prim "integer_cmm_divExactIntegerzh" divExactInteger#
 foreign import prim "integer_cmm_gcdIntegerzh" gcdInteger#
   :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#, ByteArray# #)
 
+-- | Extended greatest common divisor.
+--
+foreign import prim "integer_cmm_gcdExtIntegerzh" gcdExtInteger#
+  :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#, ByteArray#, Int#, ByteArray# #)
+
 -- | Greatest common divisor, where second argument is an ordinary {\tt Int\#}.
 --
 foreign import prim "integer_cmm_gcdIntegerIntzh" gcdIntegerInt#
@@ -162,6 +183,11 @@ foreign import prim "integer_cmm_xorIntegerzh" xorInteger#
 
 -- |
 --
+foreign import prim "integer_cmm_testBitIntegerzh" testBitInteger#
+  :: Int# -> ByteArray# -> Int# -> Int#
+
+-- |
+--
 foreign import prim "integer_cmm_mul2ExpIntegerzh" mul2ExpInteger#
   :: Int# -> ByteArray# -> Int# -> (# Int#, ByteArray# #)
 
@@ -169,6 +195,61 @@ foreign import prim "integer_cmm_mul2ExpIntegerzh" mul2ExpInteger#
 --
 foreign import prim "integer_cmm_fdivQ2ExpIntegerzh" fdivQ2ExpInteger#
   :: Int# -> ByteArray# -> Int# -> (# Int#, ByteArray# #)
+
+-- |
+--
+foreign import prim "integer_cmm_powIntegerzh" powInteger#
+  :: Int# -> ByteArray# -> Word# -> (# Int#, ByteArray# #)
+
+-- |
+--
+foreign import prim "integer_cmm_powModIntegerzh" powModInteger#
+  :: Int# -> ByteArray# -> Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#, ByteArray# #)
+
+-- |
+--
+foreign import prim "integer_cmm_powModSecIntegerzh" powModSecInteger#
+  :: Int# -> ByteArray# -> Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#, ByteArray# #)
+
+-- |
+--
+foreign import prim "integer_cmm_recipModIntegerzh" recipModInteger#
+  :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#, ByteArray# #)
+
+-- |
+--
+foreign import prim "integer_cmm_nextPrimeIntegerzh" nextPrimeInteger#
+  :: Int# -> ByteArray# -> (# Int#, ByteArray# #)
+
+-- |
+--
+foreign import prim "integer_cmm_testPrimeIntegerzh" testPrimeInteger#
+  :: Int# -> ByteArray# -> Int# -> Int#
+
+-- |
+--
+foreign import prim "integer_cmm_sizeInBasezh" sizeInBaseInteger#
+  :: Int# -> ByteArray# -> Int# -> Word#
+
+-- |
+--
+foreign import prim "integer_cmm_importIntegerFromByteArrayzh" importIntegerFromByteArray#
+  :: ByteArray# -> Word# -> Word# -> Int# -> (# Int#, ByteArray# #)
+
+-- |
+--
+foreign import prim "integer_cmm_importIntegerFromAddrzh" importIntegerFromAddr#
+  :: Addr# -> Word# -> Int# -> State# s -> (# State# s, Int#, ByteArray# #)
+
+-- |
+--
+foreign import prim "integer_cmm_exportIntegerToMutableByteArrayzh" exportIntegerToMutableByteArray#
+  :: Int# -> ByteArray# -> MutableByteArray# s -> Word# -> Int# -> State# s -> (# State# s, Word# #)
+
+-- |
+--
+foreign import prim "integer_cmm_exportIntegerToAddrzh" exportIntegerToAddr#
+  :: Int# -> ByteArray# -> Addr# -> Int# -> State# s -> (# State# s, Word# #)
 
 -- |
 --
@@ -191,10 +272,10 @@ foreign import ccall unsafe "hs_integerToWord64"
 
 -- used to be primops:
 integer2Int# :: Int# -> ByteArray# -> Int#
-integer2Int# s d = if s ==# 0#
+integer2Int# s d = if isTrue# (s ==# 0#)
                        then 0#
                        else let !v = indexIntArray# d 0# in
-                            if s <# 0#
+                            if isTrue# (s <# 0#)
                                then negateInt# v
                                else v
 
