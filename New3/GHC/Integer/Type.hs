@@ -994,8 +994,9 @@ fromSmall !s !w
 
 {-# INLINE fromNatural #-}
 fromNatural :: Sign -> Natural -> Integer
-fromNatural !s !nat@(Natural n _)
+fromNatural !s !nat@(Natural n arr)
     | n == 0 = Zero
+    | n == 1 && indexWordArray arr 0 == 0 = Zero -- TODO: See if this can be removed.
     | s == Pos = Positive nat
     | otherwise = Negative nat
 

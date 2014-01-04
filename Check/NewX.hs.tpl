@@ -175,8 +175,10 @@ testNewInteger = do
         show (X.shiftRInteger (X.mkInteger False [0,0x2]) 1#) `shouldBe` "-0x80000000"
         show (X.shiftRInteger (X.mkInteger False [0x16a3153f,0xb08fa82]) 64#) `shouldBe` "-0x1"
         show (X.shiftRInteger (X.mkInteger False [0x7fffe63e,0x7ffff16e,0x122e,0x7ffff58f]) 155#) `shouldBe` "-0x1"
+        show (X.shiftRInteger (X.mkInteger True [0, 0, 0x594b]) 77#) `shouldBe` "0x0"
 
-    prop "Can shiftR Integers by up to 128 bits." $ \ (GNP g s, shift) -> do
+
+    prop "Can shiftR Integers by up to 256 bits." $ \ (GNP g s, shift) -> do
         let bits = shiftCount shift
         show (X.shiftRInteger s bits) `shouldBe` show (G.shiftRInteger g bits)
 
