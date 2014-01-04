@@ -47,8 +47,8 @@ to compete.
 </p>
 
 <p>
-These tests are being carried out with ghc-7.6.3 and the integer-gmp and
-integer-simple versions tagged in git as belonging to this version of GHC.
+These tests are being carried out with ghc from git HEAD (currently 7.7.20140103)
+and the git HEAD versions of integer-gmp and integer-simple.
 </p>
 
 <p>
