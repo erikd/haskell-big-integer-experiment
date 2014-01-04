@@ -4,7 +4,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Simple.GHC.Integer
--- Copyright   :  (c) Ian Lynagh 2007-2008
+-- Copyright   :  (c) Ian Lynagh 2007-2012
 -- License     :  BSD3
 --
 -- Maintainer  :  igloo@earth.li
@@ -27,12 +27,15 @@ module Simple.GHC.Integer (
     plusInteger, minusInteger, timesInteger, negateInteger,
     eqInteger, neqInteger, absInteger, signumInteger,
     leInteger, gtInteger, ltInteger, geInteger, compareInteger,
+    eqInteger#, neqInteger#,
+    leInteger#, gtInteger#, ltInteger#, geInteger#,
+    divInteger, modInteger,
     divModInteger, quotRemInteger, quotInteger, remInteger,
     encodeFloatInteger, decodeFloatInteger, floatFromInteger,
     encodeDoubleInteger, decodeDoubleInteger, doubleFromInteger,
     -- gcdInteger, lcmInteger, -- XXX
     andInteger, orInteger, xorInteger, complementInteger,
-    shiftLInteger, shiftRInteger,
+    shiftLInteger, shiftRInteger, testBitInteger,
     hashInteger,
  ) where
 
