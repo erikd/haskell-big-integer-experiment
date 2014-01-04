@@ -85,8 +85,8 @@ mkInteger nonNegative is =
 {-# NOINLINE smallInteger #-}
 smallInteger :: Int# -> Integer
 smallInteger i
-    | i ==# 0# = Positive (Small 0)
-    | i <# 0# = Negative (Small (W# (int2Word# (negateInt# i))))
+    | isTrue# (i ==# 0#) = Positive (Small 0)
+    | isTrue# (i <# 0#) = Negative (Small (W# (int2Word# (negateInt# i))))
     | otherwise = Positive (Small (W# (int2Word# i)))
 
 {-# NOINLINE wordToInteger #-}
@@ -303,10 +303,10 @@ shiftLNatural (Large !n !arr) b = shiftLArray n arr (I# b)
 shiftRInteger :: Integer -> Int# -> Integer
 shiftRInteger a 0# = a
 shiftRInteger (Positive (Small a)) b
-    | b >=# WORD_SIZE_IN_BITS# = Positive (Small 0)
+    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = Positive (Small 0)
     | otherwise = Positive (Small (shiftRWord a (I# b)))
 shiftRInteger (Negative (Small a)) b
-    | b >=# WORD_SIZE_IN_BITS# = Negative (Small 1)
+    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = Negative (Small 1)
     | otherwise = Negative (Small ((shiftRWord (a - 1) (I# b)) + 1))
 shiftRInteger (Positive (Large n arr)) b = Positive (shiftRArray n arr (I# b))
 shiftRInteger (Negative (Large n arr)) b = Negative $

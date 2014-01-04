@@ -9,8 +9,8 @@ module New1.GHC.Integer.Prim
     ) where
 
 import GHC.Prim
+import GHC.Types (isTrue#)
 import GHC.Word (Word (..))
-
 
 {-# INLINE plusWord2 #-}
 plusWord2 :: Word -> Word -> (# Word, Word #)
@@ -31,14 +31,14 @@ minusWord2 :: Word -> Word -> (Word, Word)
 minusWord2 !(W# a) !(W# b) =
     let !diff = minusWord# a b
         -- TODO : Really need a minusWord2# PrimOp.
-        !carry = if ltWord# a b then 1## else 0##
+        !carry = if isTrue# (ltWord# a b) then 1## else 0##
     in (W# carry, W# diff)
 
 {-# INLINE minusWord2C #-}
 minusWord2C :: Word -> Word -> Word -> (Word, Word)
 minusWord2C !(W# a) !(W# b) !(W# c) =
     let !diff = minusWord# a (plusWord# b c)
-        !carry = if ltWord# a b then 1## else 0##
+        !carry = if isTrue# (ltWord# a b) then 1## else 0##
     in (W# carry, W# diff)
 
 {-# INLINE timesWord2 #-}

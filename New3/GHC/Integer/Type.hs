@@ -94,8 +94,8 @@ mkNatural ws =
 {-# NOINLINE smallInteger #-}
 smallInteger :: Int# -> Integer
 smallInteger i
-    | i ==# 0# = Zero
-    | i <# 0# = SmallNeg (W# (int2Word# (negateInt# i)))
+    | isTrue# (i ==# 0#) = Zero
+    | isTrue# (i <# 0#) = SmallNeg (W# (int2Word# (negateInt# i)))
     | otherwise = SmallPos (W# (int2Word# i))
 
 {-# NOINLINE wordToInteger #-}
@@ -317,7 +317,7 @@ shiftLInteger !Zero _ = Zero
 shiftLInteger !a 0# = a
 shiftLInteger !(SmallPos !a) b
     | a == 0 = Zero
-    | b >=# WORD_SIZE_IN_BITS# = fromNatural Pos (shiftLNatural (mkSingletonNat a) (I# b))
+    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = fromNatural Pos (shiftLNatural (mkSingletonNat a) (I# b))
     | otherwise =
         let !lo = unsafeShiftL a (I# b)
             !hi = unsafeShiftR a (I# ( WORD_SIZE_IN_BITS# -# b))
@@ -401,10 +401,10 @@ shiftRInteger :: Integer -> Int# -> Integer
 shiftRInteger Zero _ = Zero
 shiftRInteger !a 0# = a
 shiftRInteger !(SmallPos !a) !b
-    | b >=# WORD_SIZE_IN_BITS# = Zero
+    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = Zero
     | otherwise = fromSmall Pos (shiftRWord a (I# b))
 shiftRInteger !(SmallNeg !a) !b
-    | b >=# WORD_SIZE_IN_BITS# = SmallNeg 1
+    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = SmallNeg 1
     | otherwise = fromSmall Neg ((shiftRWord (a - 1) (I# b)) + 1)
 
 shiftRInteger !(Positive !a) !b = fromNatural Pos (shiftRNatural a (I# b))

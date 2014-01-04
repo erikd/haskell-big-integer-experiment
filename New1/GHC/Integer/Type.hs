@@ -81,8 +81,8 @@ mkInteger nonNegative is =
 {-# NOINLINE smallInteger #-}
 smallInteger :: Int# -> Integer
 smallInteger i
-    | i ==# 0# = Small Pos 0
-    | i <# 0# = Small Neg (W# (int2Word# (negateInt# i)))
+    | isTrue# (i ==# 0#) = Small Pos 0
+    | isTrue# (i <# 0#) = Small Neg (W# (int2Word# (negateInt# i)))
     | otherwise = Small Pos (W# (int2Word# i))
 
 {-# NOINLINE wordToInteger #-}
