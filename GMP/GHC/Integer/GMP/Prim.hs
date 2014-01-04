@@ -8,8 +8,11 @@ module GMP.GHC.Integer.GMP.Prim (
     cmpIntegerInt#,
 
     plusInteger#,
+    plusIntegerInt#,
     minusInteger#,
+    minusIntegerInt#,
     timesInteger#,
+    timesIntegerInt#,
 
     quotRemInteger#,
     quotInteger#,
@@ -87,15 +90,30 @@ foreign import prim "integer_cmm_cmpIntegerIntzh" cmpIntegerInt#
 foreign import prim "integer_cmm_plusIntegerzh" plusInteger#
   :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#, ByteArray# #)
 
+-- | Optimized version of 'plusInteger#' for summing big-ints with small-ints
+--
+foreign import prim "integer_cmm_plusIntegerIntzh" plusIntegerInt#
+  :: Int# -> ByteArray# -> Int# -> (# Int#, ByteArray# #)
+
 -- |
 --
 foreign import prim "integer_cmm_minusIntegerzh" minusInteger#
   :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#, ByteArray# #)
 
+-- | Optimized version of 'minusInteger#' for substracting small-ints from big-ints
+--
+foreign import prim "integer_cmm_minusIntegerIntzh" minusIntegerInt#
+  :: Int# -> ByteArray# -> Int# -> (# Int#, ByteArray# #)
+
 -- |
 --
 foreign import prim "integer_cmm_timesIntegerzh" timesInteger#
   :: Int# -> ByteArray# -> Int# -> ByteArray# -> (# Int#, ByteArray# #)
+
+-- | Optimized version of 'timesInteger#' for multiplying big-ints with small-ints
+--
+foreign import prim "integer_cmm_timesIntegerIntzh" timesIntegerInt#
+  :: Int# -> ByteArray# -> Int# -> (# Int#, ByteArray# #)
 
 -- | Compute div and mod simultaneously, where div rounds towards negative
 -- infinity and\ @(q,r) = divModInteger#(x,y)@ implies
