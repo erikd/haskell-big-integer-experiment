@@ -35,6 +35,12 @@ main = do
         new2HugeList = map (\(b, l) -> N2.mkInteger b l) hugeList
         new3HugeList = map (\(b, l) -> N3.mkInteger b l) hugeList
 
+    hugeList2 <- mkLargeIntegerList 10 (200, 250)
+    let gmpHugeList2 = map (\(b, l) -> G.mkInteger b l) hugeList2
+        new1HugeList2 = map (\(b, l) -> N1.mkInteger b l) hugeList2
+        new2HugeList2 = map (\(b, l) -> N2.mkInteger b l) hugeList2
+        new3HugeList2 = map (\(b, l) -> N3.mkInteger b l) hugeList2
+
     let (gmpSmallPosList, smpSmallPosList, new1SmallPosList, new2SmallPosList, new3SmallPosList) =
                 ( map G.absInteger gmpSmallList
                 , map S.absInteger smpSmallList
@@ -96,14 +102,18 @@ main = do
             , C.bench "New2"    $ C.whnf (foldl1 N2.plusInteger) new2LargePosList
             , C.bench "New3"    $ C.whnf (foldl1 N3.plusInteger) new3LargePosList
             ]
-        , C.bgroup "Product of [1..10] (final result fits in a 64 bit Word)"
+        , C.bgroup
+                ( "Product of [1.." ++ show (length gmpFirstTen) ++ "] (final result fits in a 64 bit Word)"
+                )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpFirstTen
             , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpFirstTen
             , C.bench "New1"    $ C.whnf (foldl1 N1.timesInteger) new1FirstTen
             , C.bench "New2"    $ C.whnf (foldl1 N2.timesInteger) new2FirstTen
             , C.bench "New3"    $ C.whnf (foldl1 N3.timesInteger) new3FirstTen
             ]
-        , C.bgroup "Product of [1..100] (final result is >> a 64 bit Word)"
+        , C.bgroup
+                ( "Product of [1.." ++ show (length gmpFirstHundred) ++ "] (final result is >> a 64 bit Word)"
+                )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpFirstHundred
             , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpFirstHundred
             , C.bench "New1"    $ C.whnf (foldl1 N1.timesInteger) new1FirstHundred
@@ -116,9 +126,19 @@ main = do
                 )
             [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpHugeList
             , C.bench "Simple"  $ C.whnf (foldl1 S.timesInteger) smpHugeList
-            , C.bench "New1"     $ C.whnf (foldl1 N1.timesInteger) new1HugeList
-            , C.bench "New2"     $ C.whnf (foldl1 N2.timesInteger) new2HugeList
-            , C.bench "New3"     $ C.whnf (foldl1 N3.timesInteger) new3HugeList
+            , C.bench "New1"    $ C.whnf (foldl1 N1.timesInteger) new1HugeList
+            , C.bench "New2"    $ C.whnf (foldl1 N2.timesInteger) new2HugeList
+            , C.bench "New3"    $ C.whnf (foldl1 N3.timesInteger) new3HugeList
+            ]
+        , C.bgroup
+                ( "Product of " ++ show (length gmpHugeList2)
+                    ++ " huge (~2500 decimal digit) Integers (drop Simple)"
+                )
+            [ C.bench "GMP"     $ C.whnf (foldl1 G.timesInteger) gmpHugeList2
+            , C.bench ""        $ C.whnf id 'a'
+            , C.bench "New1"    $ C.whnf (foldl1 N1.timesInteger) new1HugeList2
+            , C.bench "New2"    $ C.whnf (foldl1 N2.timesInteger) new2HugeList2
+            , C.bench "New3"    $ C.whnf (foldl1 N3.timesInteger) new3HugeList2
             ]
         ]
 
