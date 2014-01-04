@@ -1,10 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, MagicHash #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
--- *All* of this code was ripped from the GHC sources.
--- We need this because the Integer we are compiling and testing is *not* the
--- same as the Integer GHC already knows about.
-
 module New3.Integer
     ( module New3.GHC.Integer
     , hexShow
