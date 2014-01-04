@@ -43,3 +43,13 @@ shiftCount w =
 
 readInteger :: String -> Integer
 readInteger = read
+
+
+fromString :: String -> [Int]
+fromString s =
+    decompose $ readInteger s
+  where
+    decompose x
+        | x <= 0 = []
+        | otherwise =
+            fromIntegral (x .&. 0x7fffffff) : decompose (x `shiftR` 31)
