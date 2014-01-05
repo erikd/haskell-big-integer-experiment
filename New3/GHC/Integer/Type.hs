@@ -501,8 +501,8 @@ plusMinusNatural :: Natural -> Natural -> Integer
 plusMinusNatural !a !b =
     case compareNatural a b of
         EQ -> Zero
-        GT -> Positive (minusNatural a b)
-        LT -> Negative (minusNatural b a)
+        GT -> fromNatural Pos (minusNatural a b)
+        LT -> fromNatural Neg (minusNatural b a)
 
 {-# INLINE safePlusWord #-}
 safePlusWord :: Sign -> Word -> Word -> Integer
@@ -645,11 +645,11 @@ minusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
 minusNatural :: Natural -> Natural -> Natural
 minusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = plusNatural b a
-    | otherwise = unsafeInlinePrim $ do --
+    | otherwise = unsafeInlinePrim $ do
         !marr <- newWordArray (succ n1)
         !nlen <- loop1 marr 0 0
         !narr <- unsafeFreezeWordArray marr
-        returnNatural nlen narr
+        finalizeNatural nlen narr
   where
     loop1 !marr !i !carry
         | i < n2 = do
@@ -756,7 +756,6 @@ timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
         | otherwise =
             returnNatural psumLen psum
 
-    -- innerLoop :: MutableWordArray IO -> Int -> WordArray -> Int -> Int -> Word -> Word -> IO Int
     innerLoop !marr !pn !psum !s1 !s2 !hw !carry
         | s1 + s2 < pn && s1 < n1 = do
             !ps <- indexWordArrayM psum (s1 + s2)
@@ -772,7 +771,7 @@ timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
         | carry /= 0 = do
             writeWordArray marr (s1 + s2) carry
             return (s1 + s2 + 1)
-        | otherwise = return (s1 + s2 + 1)
+        | otherwise = return (s1 + s2)
 
 
 
@@ -1036,12 +1035,6 @@ finalizeNatural !nin !arr = do
             then Natural 0 arr
             else Natural len arr
 
-{-# INLINE returnNatural #-}
-returnNatural :: Int -> WordArray -> IO Natural
-returnNatural !0 !arr = return (Natural 0 arr)
-returnNatural !n !arr = return (Natural n arr)
-
-
 nonZeroLen :: Int -> WordArray -> Int
 nonZeroLen !len !arr
     | len <= 1 = 0
@@ -1051,6 +1044,12 @@ nonZeroLen !len !arr
                 | indexWordArray arr i == 0 = trim (i - 1)
                 | otherwise = i + 1
         in trim (len - 1)
+
+
+{-# INLINE returnNatural #-}
+returnNatural :: Int -> WordArray -> IO Natural
+returnNatural !0 !arr = return (Natural 0 arr)
+returnNatural !n !arr = return (Natural n arr)
 
 
 oneInteger, minusOneInteger :: Integer
