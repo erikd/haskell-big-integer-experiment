@@ -79,6 +79,11 @@ testNewInteger = do
         let bits = unboxInt (int .&. 0x7f)
         show (X.shiftLInteger s bits) `shouldBe` show (G.shiftLInteger g bits)
 
+    prop "Can compare two Integers equal." $ \ (GNP ga sa, GNP gb sb) ->
+        (X.eqInteger sa sb, X.eqInteger sa sa) `shouldBe` (G.eqInteger ga gb, G.eqInteger ga ga)
+    prop "Can compare two Integers not equal." $ \ (GNP ga sa, GNP gb sb) ->
+        (X.neqInteger sa sb, X.neqInteger sa sa) `shouldBe` (G.neqInteger ga gb, G.neqInteger ga ga)
+
     prop "Can compare > two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         X.gtInteger sa sb `shouldBe` G.gtInteger ga gb
     prop "Can compare < two Integers." $ \ (GNP ga sa, GNP gb sb) ->
