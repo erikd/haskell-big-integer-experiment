@@ -908,9 +908,11 @@ finalizeLarge !s !nin !arr = do
     let !len = nonZeroLen nin arr
     !x <-indexWordArrayM arr 0
     return $
-        if len == 0 || (len == 1 && x == 0)
+        if len <= 0 || (len == 1 && x == 0)
             then Small Pos 0
-            else Large s len arr
+            else if len == 1
+                then Small s x
+                else Large s len arr
 
 nonZeroLen :: Int -> ByteArray -> Int
 nonZeroLen !len !arr
