@@ -5,6 +5,8 @@ GHCFLAGS = -Wall -fwarn-tabs -Werror -O3 $(PACKAGES) $(PRAGMAS)
 
 hsfiles = $(shell find Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
 
+gmp_cmm_files = -IGMP GMP/gmp-wrappers.cmm
+
 checkfiles = Check/New1.hs Check/New2.hs Check/New3.hs
 
 PRAGMAS = -XCPP -XMagicHash -XUnboxedTuples -XUnliftedFFITypes
@@ -16,13 +18,14 @@ check : check-integer
 	./check-integer # | tee check.log
 
 check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs
-	$(GHC) $(GHCFLAGS) --make $< -o $@
+	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
+	# $(GHC) $(GHCFLAGS) --make $< -o $@
 
 bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
 
 new-bench-integer : new-bench-integer.hs Stamp/copy $(hsfiles)
-	$(GHC) $(GHCFLAGS) --make $< -o $@
+	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
 
 int-bench : int-bench.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
@@ -30,8 +33,11 @@ int-bench : int-bench.hs Stamp/copy $(hsfiles)
 karatsubaSlice : karatsubaSlice.hs $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
 
-kslice : karatsubaSlice
-	./karatsubaSlice
+karatsubaSlice2 : karatsubaSlice2.hs $(hsfiles)
+	$(GHC) $(GHCFLAGS) --make $< -o $@
+
+kslice : karatsubaSlice2
+	./$+
 
 new-bench : new-bench-integer
 	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
