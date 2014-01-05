@@ -3,12 +3,13 @@
 bench-integer
 check-integer
 check.log
+Check/New*.hs
 half-test
 int-bench
 integer-gmp
 integer-simple
 karatsubaSlice
+karatsubaSlice2
 new-bench-integer
 sanity-test
-Check/New*.hs
 Stamp
