@@ -977,4 +977,12 @@ debugPutStrLn :: String -> IO ()
 debugPutStrLn = putStrLn
 -- debugPutStrLn _ = return ()
 
+
+isMinimal :: Integer -> Bool
+isMinimal i =
+    case i of
+        Small _ _ -> True
+        Large _ n arr -> indexWordArray arr (n - 1) /= 0
+
+
 #endif

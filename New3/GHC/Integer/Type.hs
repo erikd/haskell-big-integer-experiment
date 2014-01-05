@@ -1133,4 +1133,16 @@ traceNatural linenum nat@(Natural n arr) =
 errorLine :: Int -> String -> a
 errorLine linenum s = error $ "Line " ++ show linenum ++ ": " ++ s
 
+isMinimal :: Integer -> Bool
+isMinimal i =
+    case i of
+        Zero -> True
+        SmallPos a -> a /= 0
+        SmallNeg a -> a /= 0
+        Positive a -> isMinimalNatural a
+        Negative a -> isMinimalNatural a
+  where
+    isMinimalNatural (Natural 0 _) = False
+    isMinimalNatural (Natural n arr) = indexWordArray arr (n - 1) /= 0
+
 #endif

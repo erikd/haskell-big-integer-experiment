@@ -943,4 +943,14 @@ debugPutStrLn :: String -> IO ()
 debugPutStrLn = putStrLn
 -- debugPutStrLn _ = return ()
 
+isMinimal :: Integer -> Bool
+isMinimal i =
+    case i of
+        Positive a -> isMinimalNatural a
+        Negative a -> isMinimalNatural a
+  where
+    isMinimalNatural (Small _) = True
+    isMinimalNatural (Large n arr) = indexWordArray arr (n - 1) /= 0
+
+
 #endif
