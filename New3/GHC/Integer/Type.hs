@@ -804,7 +804,7 @@ eqInteger !Zero !Zero = True
 eqInteger !(SmallPos !a) !(SmallPos !b) = a == b
 eqInteger !(SmallNeg !a) !(SmallNeg !b) = b == a
 eqInteger !(Positive !a) !(Positive !b) = eqNatural a b
-eqInteger !(Negative !a) !(Negative !b) = eqNatural b a
+eqInteger !(Negative !a) !(Negative !b) = eqNatural a b
 
 eqInteger !(SmallPos _) !Zero = False
 eqInteger !(SmallPos _) !(SmallNeg _) = False
@@ -828,7 +828,7 @@ eqNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2)
         let eqArray !idx
                 | idx < 0 = True
                 | indexWordArray arr1 idx /= indexWordArray arr2 idx = False
-                | otherwise = eqArray (idx + 1)
+                | otherwise = eqArray (idx - 1)
         in eqArray (n1 - 1)
 
 compareNatural :: Natural -> Natural -> Ordering

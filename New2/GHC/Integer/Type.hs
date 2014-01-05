@@ -632,8 +632,8 @@ eqNatural (Large n1 arr1) (Large n2 arr2)
         let eqArray idx
                 | idx < 0 = True
                 | indexWordArray arr1 idx /= indexWordArray arr2 idx = False
-                | otherwise = eqArray (idx + 1)
-        in eqArray n1
+                | otherwise = eqArray (idx - 1)
+        in eqArray (n1 - 1)
 
 {-# NOINLINE neqInteger #-}
 neqInteger :: Integer -> Integer -> Bool
