@@ -31,6 +31,10 @@ unboxInt (I# i) = i
 boxIntHash :: Int# -> Int
 boxIntHash i = I# i
 
+{-# INLINE unboxWord #-}
+unboxWord :: Word -> Word#
+unboxWord !(W# !w) = w
+
 -- The mkInteger functions expect values in range [0, 0x7fffffff].
 positive32bits :: [Int] -> [Int]
 positive32bits = map (\i -> (abs i) .&. 0x7fffffff)

@@ -16,10 +16,10 @@ import Test.QuickCheck.Arbitrary
 
 
 import qualified GMP.Integer as G
+import qualified NewX.GHC.Integer.Type as X
 import qualified NewX.Integer as X
 
 import NewX.GHC.Integer.Prim
-import NewX.GHC.Integer.Type
 
 import Check.Helpers
 
@@ -72,7 +72,7 @@ testNewInteger = do
         show (X.shiftLInteger s 64#) `shouldBe` "+0x123450000000000000000"
         show (X.shiftLInteger s 68#) `shouldBe` "+0x1234500000000000000000"
         show (X.shiftLInteger (X.mkInteger False [0x7fffffff]) 127#) `shouldBe` "-0x3fffffff80000000000000000000000000000000"
-        let big = mkInteger True [ 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        let big = X.mkInteger True [ 1, 1, 1, 1, 1, 1, 1, 1, 1]
         show (X.shiftLInteger big 0#) `shouldBe` show big
 
     prop "Can shiftL Integers by up to 256 bits." $ \ (GNP g s, int) -> do
@@ -188,9 +188,9 @@ testNewInteger = do
         show (X.shiftRInteger s bits) `shouldBe` show (G.shiftRInteger g bits)
 
     it "Get correct result at boundaries." $ do
-        let maxSmall = wordToInteger (unboxWord 0xffffffffffffffff)
-            oneSmall = wordToInteger (unboxWord 1)
-            twoSmall = wordToInteger (unboxWord 2)
+        let maxSmall = X.wordToInteger (unboxWord 0xffffffffffffffff)
+            oneSmall = X.wordToInteger (unboxWord 1)
+            twoSmall = X.wordToInteger (unboxWord 2)
         show (X.plusInteger maxSmall oneSmall) `shouldBe` "+0x10000000000000000"
         show (X.plusInteger oneSmall maxSmall) `shouldBe` "+0x10000000000000000"
         show (X.timesInteger maxSmall twoSmall) `shouldBe` "+0x1fffffffffffffffe"
@@ -205,6 +205,10 @@ testNewInteger = do
 
         show (X.mkInteger True [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1]) `shouldBe` show (G.mkInteger True [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1])
 
+    prop "Addition results are minimal." $ \ (GNP _ a, GNP _ b) ->
+        X.isMinimal (X.plusInteger a b) `shouldBe` True
+    prop "Muliplication results are minimal." $ \ (GNP _ a, GNP _ b) ->
+        X.isMinimal (X.timesInteger a b) `shouldBe` True
 
 --------------------------------------------------------------------------------
 
