@@ -34,20 +34,34 @@ testKaratsuba = do
             (hi, lo) = kSplit nat shift
         in show (plusNatural (shiftLNatural hi (shift * WORD_SIZE_IN_BITS)) lo) `shouldBe` show nat
 
+    prop "kShiftedAdd is equivalent to kShiftedAddSlow." $ \ n2 n1 n0 wshift -> do
+        let shift = 1 + ((abs wshift) `mod` 16)
+        show (kShiftedAdd shift n2 n1 n0) `shouldBe` show (kShiftedAddSlow shift n2 n1 n0)
+
     it "A kSplitSlow Natural can be recombined correctly." $ forM_ [0 .. 10] $ \shift -> do
         let nat = mkNatural [ 1, 0, 4 * 2, 0, 16 * 3, 0, 64 * 4, 0, 256 * 5, 0, 256 * 4 * 6 ]
             (hi, lo) = kSplitSlow nat shift
         show (plusNatural (shiftLNatural hi (shift * WORD_SIZE_IN_BITS)) lo) `shouldBe` show nat
 
-    prop "kShiftedAdd works arbitrary overlap." $ \ n2 n1 n0 wshift -> do
-        let shift = 1 + ((abs wshift) `mod` 8)
-        show (kShiftedAdd shift n2 n1 n0) `shouldBe` show (kShiftedAddSlow shift n2 n1 n0)
+    it "A kSplit Natural can be recombined correctly." $ forM_ [0 .. 10] $ \shift -> do
+        let nat = mkNatural [ 1, 0, 4 * 2, 0, 16 * 3, 0, 64 * 4, 0, 256 * 5, 0, 256 * 4 * 6 ]
+            (hi, lo) = kSplit nat shift
+        show (plusNatural (shiftLNatural hi (shift * WORD_SIZE_IN_BITS)) lo) `shouldBe` show nat
 
-    prop "Slow multiply works." $ \ n1 n2 -> do
-        show (karatsuba n1 n2) `shouldBe` show (timesNatural n1 n2)
+    prop "karatsubaSlow multiply works without recursion." $ \ n1 n2 -> do
+        show (karatsubaSlow False n1 n2) `shouldBe` show (timesNatural n1 n2)
 
+    prop "karatsubaSlow multiply works with recursion." $ \ n1 n2 -> do
+        show (karatsubaSlow True n1 n2) `shouldBe` show (timesNatural n1 n2)
+
+
+    prop "karatsuba multiply works without recursion." $ \ n1 n2 -> do
+        show (karatsuba False n1 n2) `shouldBe` show (timesNatural n1 n2)
 
     {-
+    prop "karatsuba multiply works with recursion." $ \ n1 n2 -> do
+        show (karatsuba True n1 n2) `shouldBe` show (timesNatural n1 n2)
+
     prop "kSPlit and kSplitSlow give the same result." $ \ nat wshift -> do
         let split = (abs wshift) `mod` 16
         show (kSplit nat split) `shouldBe` show (kSplitSlow nat split)
@@ -55,11 +69,26 @@ testKaratsuba = do
 
 
 
-karatsuba :: Natural -> Natural -> Natural
-karatsuba num1@(Natural n1 _) num2@(Natural n2 _)
+karatsuba :: Bool -> Natural -> Natural -> Natural
+karatsuba recursive !num1@(Natural !n1 _) !num2@(Natural !n2 _)
     | n1 < 3 || n2 < 3 = timesNatural num1 num2
     | otherwise =
-        let multiply = if True then karatsuba else checkedMultiply
+        let !multiply = if recursive then karatsuba recursive else timesNatural
+            !m2 = (max n1 n2) `div` 2
+            (!hi1, !lo1) = kSplitSlow num1 m2
+            (!hi2, !lo2) = kSplitSlow num2 m2
+            !z0 = multiply lo1 lo2
+            !z1 = multiply (plusNatural lo1 hi1) (plusNatural lo2 hi2)
+            !z2 = multiply hi1 hi2
+            !middle = minusNatural z1 (plusNatural z2 z0)
+        in kShiftedAdd m2 z2 middle z0
+
+
+karatsubaSlow :: Bool -> Natural -> Natural -> Natural
+karatsubaSlow recursive num1@(Natural n1 _) num2@(Natural n2 _)
+    | n1 < 3 || n2 < 3 = timesNatural num1 num2
+    | otherwise =
+        let multiply = if recursive then karatsubaSlow recursive else timesNatural
             m2 = (max n1 n2) `div` 2
             (hi1, lo1) = kSplitSlow num1 m2
             (hi2, lo2) = kSplitSlow num2 m2
@@ -70,13 +99,6 @@ karatsuba num1@(Natural n1 _) num2@(Natural n2 _)
         in kShiftedAddSlow m2 z2 middle z0
 
 
-checkedMultiply :: Natural -> Natural -> Natural
-checkedMultiply a b =
-    let correct = timesNatural a b
-        check = karatsuba a b
-    in if not (eqNatural correct check)
-        then error $ show a ++ " * " ++ show b ++ "\n should be " ++ show correct ++ " ft(" ++ show (lengthNatural correct) ++ ")\n    but is " ++ show check ++ " (" ++ show (lengthNatural check) ++ ")"
-        else correct
 
 
 kSplit :: Natural -> Int -> (Natural, Natural)
@@ -140,47 +162,43 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
         returnNatural nlen narr
   where
     loop_1 !marr !i !carry
-        | i < succ (max n0 (max (n1 + shift) (n2 + 2 * shift))) = do
-                (c0, s0) <-
+        | i < max n0 (max (n1 + shift) (n2 + 2 * shift)) = do
+                (!c0, !s0) <-
                     if i < n0
                         then do
-                            x <- indexWordArrayM arr0 i
-                            debugPrint __LINE__ $ "read " ++ hexShowW x ++ " from arr0"
+                            !x <- indexWordArrayM arr0 i
                             let (# c, s #) = plusWord2 x carry
                             return (c, s)
                         else return (0, carry)
-                (c1, s1) <-
+                (!c1, !s1) <-
                     if i >= shift && i - shift < n1
                         then do
-                            y <- indexWordArrayM arr1 (i - shift)
-                            debugPrint __LINE__ $ "read " ++ hexShowW y ++ " from arr1"
+                            !y <- indexWordArrayM arr1 (i - shift)
                             let (# c, s #) = plusWord2 s0 y
                             return $ (c, s)
                         else return (c0, s0)
-                (c2, s2) <-
+                (!c2, !s2) <-
                     if i >= 2 * shift && i - 2 * shift < n2
                         then do
-                            z <- indexWordArrayM arr2 (i - 2 * shift)
-                            debugPrint __LINE__ $ "read " ++ hexShowW z ++ " from arr2"
+                            !z <- indexWordArrayM arr2 (i - 2 * shift)
                             let (# c, s #) = plusWord2 s1 z
                             return (c + c1, s)
                         else return (c1, s1)
-                debugWriteWordArray __LINE__ marr i s2
+                writeWordArray marr i s2
                 loop_1 marr (i + 1) c2
         | carry /= 0 = do
-                debugWriteWordArray __LINE__ marr i carry
-                debugPrint __LINE__ $ "returning " ++ show (i + 1)
+                writeWordArray marr i carry
                 return (i + 1)
-        | otherwise = do
-                debugPrint __LINE__ $ "returning " ++ show i
-                return i
+        | otherwise = return i
 
 --------------------------------------------------------------------------------
 
+{-
 debugWriteWordArray :: Int -> MutableWordArray IO -> Int -> Word -> IO ()
 debugWriteWordArray line marr i x = do
     debugPrint line $ "writing " ++ hexShowW x ++ " at " ++ show i
     writeWordArray marr i x
+-}
 
 debugPrint :: Int -> String -> IO ()
 #if 1
@@ -194,11 +212,10 @@ debugPrint line str =
 #endif
 
 
-lengthNatural :: Natural -> Int
-lengthNatural (Natural n _) = n
-
 instance Arbitrary Natural where
     arbitrary = do
         randLen <- choose (8, 100)
         wrds <- fmap positive32bits $ vectorOf randLen arbitrary
         return $ mkNatural wrds
+
+    shrink (Natural n arr) = map (\x -> Natural x arr) [1 .. (n - 1)]
