@@ -77,6 +77,7 @@ Stamp/update :
 Stamp/copy : Stamp/update
 	Scripts/copy_modify.sh integer-simple Simple
 	Scripts/copy_modify.sh integer-gmp GMP
+	cp integer-gmp/cbits/gmp-wrappers.cmm GMP/
 	@touch $@
 
 clean :
