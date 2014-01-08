@@ -57,6 +57,8 @@ testKaratsuba = do
 
     prop "karatsuba multiply works without recursion." $ \ n1 n2 -> do
         show (karatsuba False n1 n2) `shouldBe` show (timesNatural n1 n2)
+    prop "karatsuba multiply works with recursion." $ \ n1 n2 -> do
+        show (karatsuba True n1 n2) `shouldBe` show (timesNatural n1 n2)
 
     {-
     prop "karatsuba multiply works with recursion." $ \ n1 n2 -> do
@@ -75,8 +77,8 @@ karatsuba recursive !num1@(Natural !n1 _) !num2@(Natural !n2 _)
     | otherwise =
         let !multiply = if recursive then karatsuba recursive else timesNatural
             !m2 = (max n1 n2) `div` 2
-            (!hi1, !lo1) = kSplitSlow num1 m2
-            (!hi2, !lo2) = kSplitSlow num2 m2
+            (!hi1, !lo1) = kSplit num1 m2
+            (!hi2, !lo2) = kSplit num2 m2
             !z0 = multiply lo1 lo2
             !z1 = multiply (plusNatural lo1 hi1) (plusNatural lo2 hi2)
             !z2 = multiply hi1 hi2
