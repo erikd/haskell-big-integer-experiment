@@ -13,12 +13,12 @@ newtype MutableWordArray m = MWA (MutableByteArray (PrimState m))
 {-# INLINE newWordArray #-}
 newWordArray :: PrimMonad m => Int -> m (MutableWordArray m)
 newWordArray !len = do
-    !marr <- newByteArray (len * sizeOf (0 :: Word))
+    !marr <- newPinnedByteArray (len * sizeOf (0 :: Word))
     return $ MWA marr
 
 newWordArrayCleared :: PrimMonad m => Int -> m (MutableWordArray m)
 newWordArrayCleared !len = do
-    !marr <- newByteArray (len * sizeOf (0 :: Word))
+    !marr <- newPinnedByteArray (len * sizeOf (0 :: Word))
     setByteArray marr 0 len (0 :: Word)
     return $ MWA marr
 
@@ -27,12 +27,12 @@ newWordArrayCleared !len = do
 -- nothing is written to it os it will actually contain junk data.
 newPlaceholderWordArray :: PrimMonad m => m WordArray
 newPlaceholderWordArray = do
-    !marr <- newByteArray (sizeOf (0 :: Word))
+    !marr <- newPinnedByteArray (sizeOf (0 :: Word))
     unsafeFreezeWordArray (MWA marr)
 
 cloneWordArrayExtend :: PrimMonad m=> Int -> WordArray -> Int -> m (MutableWordArray m)
 cloneWordArrayExtend !oldLen !(WA !arr) !newLen = do
-    !marr <- newByteArray (newLen * sizeOf (0 :: Word))
+    !marr <- newPinnedByteArray (newLen * sizeOf (0 :: Word))
     if oldLen > 0
         then copyByteArray marr 0 arr 0 ((min oldLen newLen) * sizeOf (0 :: Word))
         else return ()
