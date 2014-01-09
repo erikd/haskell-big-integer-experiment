@@ -490,9 +490,9 @@ minusArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray s n2 arr2 n1 arr1
     | otherwise = unsafeInlinePrim $ do --
         !marr <- newWordArray (succ n1)
-        loop1 marr 0 0
+        !nlen <- loop1 marr 0 0
         !narr <- unsafeFreezeWordArray marr
-        finalizeLarge s (succ n1) narr
+        finalizeLarge s nlen narr
   where
     loop1 !marr !i !carry
         | i < n2 = do
@@ -511,18 +511,13 @@ minusArray !s !n1 !arr1 !n2 !arr2
             loop2 marr (i + 1) c
         | otherwise = do
             writeWordArray marr i carry
-            loop4 marr (i + 1)
+            return (i + 1)
     loop3 !marr !i
         | i < n1 = do
             !x <- indexWordArrayM arr1 i
             writeWordArray marr i x
             loop3 marr (i + 1)
-        | otherwise = loop4 marr i
-    loop4 !marr !i
-        | i <= n1 = do
-            writeWordArray marr i 0
-            loop4 marr (i + 1)
-        | otherwise = return ()
+        | otherwise = return i
 
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
@@ -916,13 +911,13 @@ finalizeLarge !s !nin !arr = do
 
 nonZeroLen :: Int -> ByteArray -> Int
 nonZeroLen !len !arr
-    | len <= 1 = 1
+    | len < 1 = 0
     | otherwise =
-        let trim n
-                | n <= 1 = 1
-                | indexWordArray arr n == 0 = trim (n - 1)
-                | otherwise = n
-        in trim (len - 1) + 1
+        let trim i
+                | i < 0 = 0
+                | indexWordArray arr i == 0 = trim (i - 1)
+                | otherwise = i + 1
+        in trim (len - 1)
 
 
 oneInteger, minusOneInteger :: Integer
@@ -975,9 +970,9 @@ signShow Neg = "Neg"
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
 
-debugPutStrLn :: String -> IO ()
-debugPutStrLn = putStrLn
--- debugPutStrLn _ = return ()
+debugPutStrLn :: Int -> String -> IO ()
+-- debugPutStrLn line s = putStrLn $ show line ++ " : " ++ s
+debugPutStrLn _ _ = return ()
 
 
 isMinimal :: Integer -> Bool
