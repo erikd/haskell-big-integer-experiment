@@ -207,8 +207,15 @@ testNewInteger = do
 
     prop "Addition results are minimal." $ \ (GNP _ a, GNP _ b) ->
         X.isMinimal (X.plusInteger a b) `shouldBe` True
+
     prop "Muliplication results are minimal." $ \ (GNP _ a, GNP _ b) ->
         X.isMinimal (X.timesInteger a b) `shouldBe` True
+
+    prop "ShiftL results are minimal." $ \ (GNP _ s, int) -> do
+        let bits = unboxInt (int .&. 0x7f)
+        X.isMinimal (X.shiftLInteger s bits) `shouldBe` True
+
+
 
 --------------------------------------------------------------------------------
 
