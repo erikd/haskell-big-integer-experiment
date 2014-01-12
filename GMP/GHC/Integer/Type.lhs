@@ -221,7 +221,7 @@ Just using smartJ# in this way has good results:
 
 {-# NOINLINE quotRemInteger #-}
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
-quotRemInteger (S# INT_MINBOUND) b = quotRemInteger minIntAsBig b
+quotRemInteger a@(S# INT_MINBOUND) b = quotRemInteger (toBig a) b
 quotRemInteger (S# i) (S# j) = case quotRemInt# i j of
                                    (# q, r #) -> (# S# q, S# r #)
 quotRemInteger (J# s1 d1) (S# b) | isTrue# (b <# 0#)
