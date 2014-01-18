@@ -36,7 +36,16 @@ karatsubaSlice : karatsubaSlice.hs $(hsfiles)
 karatsubaSlice2 : karatsubaSlice2.hs $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
 
-kslice : karatsubaSlice2
+karatsubaSlice3 : karatsubaSlice3.hs $(hsfiles)
+	$(GHC) -DDEBUG=0 $(GHCFLAGS) --make $< -o $@
+
+karatsubaSlice3D : karatsubaSlice3.hs $(hsfiles)
+	$(GHC) -DDEBUG=1 $(GHCFLAGS) --make $< -o $@
+
+kslice : karatsubaSlice3
+	./$+
+
+ksliced : karatsubaSlice3D
 	./$+
 
 new-bench : new-bench-integer

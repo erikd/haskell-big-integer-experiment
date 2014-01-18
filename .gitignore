@@ -10,6 +10,8 @@ integer-gmp
 integer-simple
 karatsubaSlice
 karatsubaSlice2
+karatsubaSlice3
+karatsubaSlice3D
 new-bench-integer
 sanity-test
 Stamp
