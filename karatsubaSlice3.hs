@@ -5,14 +5,11 @@
 
 import Prelude hiding (Integer)
 
-import Control.Monad (forM_)
 import Control.Monad.Primitive
-import Data.Primitive
 import GHC.Word (Word)
 import Test.Hspec
-import Test.Hspec.QuickCheck
+-- import Test.Hspec.QuickCheck
 import Test.QuickCheck.Arbitrary
-import Unsafe.Coerce (unsafeCoerce)
 
 import New3.GHC.Integer.Prim
 import New3.GHC.Integer.Type
@@ -27,46 +24,46 @@ main = hspec $ describe "Karatsuba Shifted Add:" testKaratsuba
 
 testKaratsuba :: Spec
 testKaratsuba = do
-    it "A kSplit Natural can be recombined correctly." $ forM_ [0 .. 10] $ \shift ->
-        let nat = mkNatural [ 1, 0, 4 * 2, 0, 16 * 3, 0, 64 * 4, 0, 256 * 5, 0, 256 * 4 * 6 ]
-            (hi, lo) = kSplit nat shift
-        in show (plusNatural (shiftLNatural hi (shift * WORD_SIZE_IN_BITS)) lo) `shouldBe` show nat
-    prop "kShiftedAdd works without overlap." $ \ n2 n1 n0 -> do
-        let shift = max (lengthNatrual n1) (lengthNatrual n0)
-        show (kShiftedAdd shift n2 n1 n0) `shouldBe` show (kShiftedAddSlow shift n2 n1 n0)
-        show (kShiftedAdd (shift + 1) n2 n1 n0) `shouldBe` show (kShiftedAddSlow (shift + 1) n2 n1 n0)
-    prop "kShiftedAdd works with overlap of lower two." $ \ n1 n0@(Natural _ arr) wshift -> do
-        let n2 = Natural 0 arr
-            shift = 1 + ((abs wshift) `mod` 8)
-        show (kShiftedAdd shift n2 n1 n0) `shouldBe` show (kShiftedAddSlow shift n2 n1 n0)
+    it "kShiftedAdd #1." $ do
+        let n2 = mkNatural (fromString "0x1")
+            n1 = mkNatural (fromString "0x2")
+            n0 = mkNatural (fromString "0x4")
+        show (kShiftedAdd 1 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 1 n2 n1 n0)
+        show (kShiftedAdd 2 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 2 n2 n1 n0)
+        show (kShiftedAdd 3 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 3 n2 n1 n0)
 
-    prop "kShiftedAdd works with overlap of upper two." $ \ n1@(Natural _ arr) n0 wshift -> do
-        let n2 = Natural 0 arr
-            shift = 1 + ((abs wshift) `mod` 8)
-        show (kShiftedAdd shift n2 n1 n0) `shouldBe` show (kShiftedAddSlow shift n2 n1 n0)
-
-    it "kShiftedAdd works arbitrary overlap #1." $ do
+    it "kShiftedAdd #2." $ do
         let n2 = mkNatural (fromString "0x1")
             n1 = mkNatural (fromString "0x0")
             n0 = mkNatural (fromString "0x0")
         show (kShiftedAdd 1 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 1 n2 n1 n0)
-        show (kShiftedAdd 2 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 2 n2 n1 n0)
+        show (kShiftedAdd 1 n1 n0 n2) `shouldBe` show (kShiftedAddSlow 1 n1 n0 n2)
+        show (kShiftedAdd 1 n0 n2 n1) `shouldBe` show (kShiftedAddSlow 1 n0 n2 n1)
 
-    it "kShiftedAdd works arbitrary overlap #2." $ do
-        let n2 = mkNatural (fromString "0x1")
-            n1 = mkNatural (fromString "0x20")
-            n0 = mkNatural (fromString "0x300")
-        show (kShiftedAdd 1 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 1 n2 n1 n0)
-        show (kShiftedAdd 2 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 2 n2 n1 n0)
-
-    it "kShiftedAdd works arbitrary overlap #3." $ do
+    it "kShiftedAdd #3." $ do
         let n2 = mkNatural (fromString "0x0")
-            n1 = mkNatural (fromString "0x200000000000000020")
-            n0 = mkNatural (fromString "0x3000000000000000300")
+            n1 = mkNatural (fromString "0x20000000000000002")
+            n0 = mkNatural (fromString "0x40000000000000004")
         show (kShiftedAdd 1 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 1 n2 n1 n0)
         show (kShiftedAdd 2 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 2 n2 n1 n0)
 
-#define DEBUG 1
+    it "kShiftedAdd #4." $ do
+        let n2 = mkNatural (fromString "0x10000000000000001")
+            n1 = mkNatural (fromString "0x20000000000000002")
+            n0 = mkNatural (fromString "0x40000000000000004")
+        show (kShiftedAdd 1 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 1 n2 n1 n0)
+        show (kShiftedAdd 2 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 2 n2 n1 n0)
+
+{-
+
+
+    it "kShiftedAdd #4." $ do
+        let n2 = mkNatural (fromString "0x10000000000000001")
+            n1 = mkNatural (fromString "0x20000000000000002")
+            n0 = mkNatural (fromString "0x40000000000000004")
+        show (kShiftedAdd 1 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 1 n2 n1 n0)
+        show (kShiftedAdd 2 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 2 n2 n1 n0)
+-}
 
 {-
     prop "kShiftedAdd works arbitrary overlap." $ \ n2 n1 n0 wshift -> do
@@ -81,6 +78,7 @@ kShiftedAddSlow shift n2 n1 n0 =
     plusNatural (shiftLNatural n2 (2 * shift * WORD_SIZE_IN_BITS))
         (plusNatural (shiftLNatural n1 (shift * WORD_SIZE_IN_BITS)) n0)
 
+
 kShiftedAdd :: Int -> Natural -> Natural -> Natural -> Natural
 kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0)
     | shift < 1 = error $ "kShiftedAdd with shift of " ++ show shift
@@ -89,18 +87,19 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
         debugPrint __LINE__ $ "length is " ++ show len
         !marr <- newWordArray len
         setWordArray marr 0 len (0xaeaeaeaaeaeaeaea :: Word)
-        !nlen <- loop_1 marr 0
+        !nlen <- dispatch marr
         if nlen > len
             then error "Bad length"
             else return ()
         !narr <- unsafeFreezeWordArray marr
         returnNatural nlen narr
   where
+    dispatch !marr
+        | n0 <= shift && n1 <= shift = noOverlapA marr 0
+        | otherwise = loop_1 marr 0
+
     loop_1 !marr !i
-        | i >= n0 = do
-            debugPrint __LINE__ $ "goto loop_pre_2 " ++ show i
-            loop_pre_2 marr i
-        | i < shift = do
+        | i < n0 && i < shift = do
             !x <- indexWordArrayM arr0 i
             debugWriteWordArray __LINE__ marr i x
             loop_1 marr (i + 1)
@@ -109,46 +108,26 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
             loop_1_2 marr i 0
 
     loop_1_2 !marr !i !carry
-        | i < n0 && i - shift < n1 = do
+        | i < shift = do
+            debugWriteWordArray __LINE__ marr i 0
+            loop_1_2 marr (i + 1) 0
+        | i < n0 && i - shift < n1 && i < 2 * shift = do
             !x <- indexWordArrayM arr0 i
             !y <- indexWordArrayM arr1 (i - shift)
             let (# !cry, !sm #) = plusWord2C x y carry
             debugWriteWordArray __LINE__ marr i sm
             debugPrint __LINE__ $ "Carry is " ++ show cry
             loop_1_2 marr (i + 1) cry
-        | i - shift < n1 = do
+        | i - shift < n1 && i < 2 * shift = do
             !y <- indexWordArrayM arr1 (i - shift)
             let (# !cry, !sm #) = plusWord2 y carry
             debugWriteWordArray __LINE__ marr i sm
             loop_1_2 marr (i + 1) cry
 
 
-{-
-        | i < n0 && i - 2 * shift < n2 = do
-            !y <- indexWordArrayM arr1 (i - shift)
-            !z <- indexWordArrayM arr2 (i - 2 * shift)
-            let (# !cry, !sm #) = plusWord2C y z carry
-            debugWriteWordArray __LINE__ marr i sm
-            loop_1_2 marr (i + 1) cry
--}
-
-
-        | i < n0 = do
-            !x <- indexWordArrayM arr0 i
-            let (# !cry, !sm #) = plusWord2 x carry
-            debugWriteWordArray __LINE__ marr i sm
-            loop_1_2 marr (i + 1) cry
         | otherwise = do
             debugPrint __LINE__ $ "goto loop_2 " ++ show i
             loop_2 marr i carry
-
-    loop_pre_2 !marr !i
-        | i < shift = do
-            debugWriteWordArray __LINE__ marr i 0
-            loop_pre_2 marr (i + 1)
-        | otherwise = do
-            debugPrint __LINE__ $ "goto loop_2 " ++ show i
-            loop_2 marr i 0
 
     loop_2 marr !i !carry
         | i - shift < n1 = do
@@ -186,6 +165,63 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
             debugPrint __LINE__ $ "returning length " ++ show i
             return i
 
+    noOverlapA !marr !i
+        | i < n0 = do
+            !x <- indexWordArrayM arr0 i
+            debugWriteWordArray __LINE__ marr i x
+            noOverlapA marr (i + 1)
+        | i < shift = noOverlapB marr i
+        | otherwise = noOverlapC marr i
+
+    noOverlapB !marr !i
+        | i < shift = do
+            debugWriteWordArray __LINE__ marr i 0
+            noOverlapB marr (i + 1)
+        | otherwise = noOverlapC marr i
+
+    noOverlapC !marr !i
+        | i - shift < n1 = do
+            !x <- indexWordArrayM arr1 (i - shift)
+            debugWriteWordArray __LINE__ marr i x
+            noOverlapC marr (i + 1)
+        | i < 2 * shift = noOverlapD marr i
+        | otherwise = noOverlapE marr i
+
+    noOverlapD !marr !i
+        | i < 2 * shift = do
+            debugWriteWordArray __LINE__ marr i 0
+            noOverlapD marr (i + 1)
+        | otherwise = noOverlapE marr i
+
+    noOverlapE !marr !i
+        | i - 2 * shift < n2 = do
+            !x <- indexWordArrayM arr2 (i - 2 * shift)
+            debugWriteWordArray __LINE__ marr i x
+            noOverlapE marr (i + 1)
+        | otherwise = return i
+
+
+
+{-
+                      1
+                     2
+                    4
+
+                    111
+                   222
+                  444
+
+                    111
+                     2
+                   44
+
+                      1
+                  2222
+                   44
+
+-}
+
+
 --------------------------------------------------------------------------------
 
 debugWriteWordArray :: Int -> MutableWordArray IO -> Int -> Word -> IO ()
@@ -204,29 +240,6 @@ debugPrint line str =
 debugPrint _ _ = return ()
 #endif
 
-
-kSplit :: Natural -> Int -> (Natural, Natural)
-kSplit nat@(Natural n arr) i
-    | i <= 0 = ( nat, Natural 0 arr)
-    | i > n = ( Natural 0 arr, nat )
-    | otherwise = ( sliceOfNatural nat i (n - i), sliceOfNatural nat 0 i )
-
-
--- | sliceOfNatural : Potentially dangerous. The returned Natural should only
--- be accessed while the Natural it is a slice of is in scope.
-sliceOfNatural :: Natural -> Int -> Int -> Natural
-sliceOfNatural !(Natural !n !(WA !arr)) !start !count
-    | count < 0 = Natural 0 (WA arr)
-    | start + count > n = Natural 0 (WA arr)
-    | start == 0 = Natural count (WA arr)
-    | otherwise =
-        let !addr = unsafeCoerce arr :: Addr
-            !newaddr = plusAddr addr ((max 0 start) * sizeOf (0:: Word))
-        in Natural (min (n - start) count) (unsafeCoerce newaddr)
-
-
-lengthNatrual :: Natural -> Int
-lengthNatrual (Natural n _) = n
 
 instance Arbitrary Natural where
     arbitrary = do
