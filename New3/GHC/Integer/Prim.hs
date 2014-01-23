@@ -1,9 +1,9 @@
-{-# LANGUAGE BangPatterns, CPP, MagicHash, NoImplicitPrelude #-}
+{-# LANGUAGE BangPatterns, CPP, MagicHash, NoImplicitPrelude, UnboxedTuples #-}
 
 #include "MachDeps.h"
 
 module New3.GHC.Integer.Prim
-    ( plusWord2, plusWord2C
+    ( plusWord2, plusWord2C, plusWord3C
     , minusWord2, minusWord2C
     , timesWord2, timesWord2C, timesWord2CC
     , shiftRWord
@@ -27,6 +27,16 @@ plusWord2C !(W# a) !(W# b) !(W# c) =
         (# c2, s2 #) = plusWord2# s1 c
         !carry = plusWord# c1 c2
     in (# W# carry, W# s2 #)
+
+{-# INLINE plusWord3C #-}
+plusWord3C :: Word -> Word -> Word -> Word -> (# Word, Word #)
+plusWord3C !(W# a) !(W# b) !(W# c) !(W# d) =
+    let (# c1, s1 #) = plusWord2# a b
+        (# c2, s2 #) = plusWord2# c d
+        (# c3, s3 #) = plusWord2# s1 s2
+        !c4 = plusWord# c1 c2
+        !carry = plusWord# c3 c4
+    in (# W# carry, W# s3 #)
 
 {-# INLINE minusWord2 #-}
 minusWord2 :: Word -> Word -> (# Word, Word #)
