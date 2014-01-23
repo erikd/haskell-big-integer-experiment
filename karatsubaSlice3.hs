@@ -109,8 +109,8 @@ testKaratsuba = do
 
     it "kShiftedAdd #10." $ do
         let n2 = mkNatural (fromString "0x1")
-            n1 = mkNatural (fromString "0x1000000000000000100000000000000010000000000000001000000000000000")
-            n0 = mkNatural (fromString "0x2000000000000000200000000000000020000000000000002")
+            n1 = mkNatural (fromString "0x1000000000000000100000000000000010000000000000001")
+            n0 = mkNatural (fromString "0x200000000000000020000000000000002")
         show (kShiftedAdd 1 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 1 n2 n1 n0)
         -- show (kShiftedAdd 2 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 2 n2 n1 n0)
         -- show (kShiftedAdd 3 n2 n1 n0) `shouldBe` show (kShiftedAddSlow 3 n2 n1 n0)
@@ -155,22 +155,20 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
         | n0 <= shift = stage0short0 marr 0
         | otherwise = stage0long0 marr 0
 
+    -- Stage 0.
     stage0short0 !marr !i
         | i < n0 = do
             !x <- indexWordArrayM arr0 i
             debugWriteWordArray __LINE__ marr i x
             stage0short0 marr (i + 1)
-        | i <= shift = stage0short0fill marr i
-
-        | n1 <= shift = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-        | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
+        | otherwise = stage0short0fill marr i
 
     stage0short0fill !marr !i
         | i < shift = do
             debugWriteWordArray __LINE__ marr i 0
             stage0short0fill marr (i + 1)
-        | n1 <= shift = stage1short1 marr i
-        | otherwise = stage1long1 marr i
+        | n1 <= shift = stage1do1 marr i
+        | otherwise = stage1copy1 marr i
 
     stage0long0 !marr !i
         | i < shift = do
@@ -179,66 +177,55 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
             stage0long0 marr (i + 1)
         | n0 - shift > n1 =
             if n1 < shift
-                then stage1short0 marr i 0
-                else stage1long0 marr i 0
+                then stage1do01 marr i 0
+                else stage1long01 marr i 0
         | n1 > shift =
             if n0 < 2 * shift
-                then stage1short0long1 marr i 0
+                then stage1do01 marr i 0
                 else stage1long01 marr i 0
         | n0 < 2 * shift =
             if n1 < n0 - shift
                 then do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-                else stage1short01 marr i 0
-        | otherwise = stage1long0 marr i 0
+                else stage1do01 marr i 0
+        | otherwise = stage1long01 marr i 0
 
-    stage1short1 !marr !i
+    -- Stage 1.
+    stage1do1 !marr !i
         | i - shift < n1 = do
             !x <- indexWordArrayM arr1 (i - shift)
             debugWriteWordArray __LINE__ marr i x
-            stage1short1 marr (i + 1)
-        | otherwise = stage1short1fill marr i
+            stage1do1 marr (i + 1)
+        | i < 2 * shift = stage1fill marr i
+        | n1 - shift < n2 = stage2do12 marr i 0
+        | otherwise = stage2do21 marr i 0
 
-    stage1short1fill !marr !i
-        | i < 2 * shift = do
-            debugWriteWordArray __LINE__ marr i 0
-            stage1short1fill marr (i + 1)
-        | otherwise = stage2final2 marr i
-
-    stage1long1 !marr !i
+    stage1copy1 !marr !i
         | i < 2 * shift = do
             !x <- indexWordArrayM arr1 (i - shift)
             debugWriteWordArray __LINE__ marr i x
-            stage1long1 marr (i + 1)
-        | n1 - shift < n2 = stage2short1 marr i 0
-        | otherwise = stage2short2 marr i 0
+            stage1copy1 marr (i + 1)
+        | n1 - shift < n2 = stage2do12 marr i 0
+        | otherwise = stage2do21 marr i 0
 
-    stage1short01 !marr !i !carry
+    stage1do01 !marr !i !carry
         | i < n0 = do
             !x <- indexWordArrayM arr0 i
             !y <- indexWordArrayM arr1 (i - shift)
             let (# !cry, !sm #) = plusWord2C x y carry
             debugWriteWordArray __LINE__ marr i sm
-            stage1short01 marr (i + 1) cry
-        | otherwise = stage1short01c marr i carry
+            stage1do01 marr (i + 1) cry
+        | n1 > shift =
+            if carry == 0
+                then stage1copy1 marr i
+                else stage1add1 marr i carry
+        | otherwise = stage1final1c marr i carry
 
-    stage1short0 !marr !i !carry
-        | i < n0 = do
-            !x <- indexWordArrayM arr0 i
-            !y <- indexWordArrayM arr1 (i - shift)
-            let (# !cry, !sm #) = plusWord2C x y carry
-            debugWriteWordArray __LINE__ marr i sm
-            stage1short0 marr (i + 1) cry
-
-        | n1 > shift = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-        | carry /= 0 = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-        | otherwise = stage1short01 marr i 0
-
-    stage1short01c !marr !i !carry
+    stage1final1c !marr !i !carry
         | i - shift < n1 = do
             !x <- indexWordArrayM arr1 (i - shift)
             let (# !cry, !sm #) = plusWord2 x carry
             debugWriteWordArray __LINE__ marr i sm
-            stage1short01c marr (i + 1) cry
+            stage1final1c marr (i + 1) cry
         | carry /= 0 = do
             debugWriteWordArray __LINE__ marr i carry
             stage1fill marr (i + 1)
@@ -250,19 +237,6 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
             stage1fill marr (i + 1)
         | otherwise = stage2final2 marr i
 
-    stage1short0long1 !marr !i !carry
-        | i < n0 = do
-            !x <- indexWordArrayM arr0 i
-            !y <- indexWordArrayM arr1 (i - shift)
-            let (# !cry, !sm #) = plusWord2C x y carry
-            debugWriteWordArray __LINE__ marr i sm
-            stage1short0long1 marr (i + 1) cry
-        | n1 > shift =
-            if carry == 0
-                then stage1copy1 marr i
-                else stage1add1 marr i carry
-        | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-
     stage1add1 !marr !i !carry
         | i < 2 * shift = do
             !x <- indexWordArrayM arr1 (i - shift)
@@ -273,24 +247,6 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
                 else stage1add1 marr (i + 1) cry
         | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
 
-    stage1copy1 marr i
-        | i < 2 * shift = do
-            !x <- indexWordArrayM arr1 (i - shift)
-            debugWriteWordArray __LINE__ marr i x
-            stage1copy1 marr (i + 1)
-        | n1 - shift < n2 = stage2long2 marr i 0
-        | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-
-    stage2long2 !marr !i !carry
-        | i - shift < n1 = do
-            !x <- indexWordArrayM arr1 (i - shift)
-            !y <- indexWordArrayM arr2 (i - 2 * shift)
-            let (# !cry, !sm #) = plusWord2C x y carry
-            debugWriteWordArray __LINE__ marr i sm
-            stage2long2 marr (i + 1) cry
-        | carry == 0 = stage2final2 marr i
-        | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-
     stage1long01 !marr !i !carry
         | i < 2 * shift = do
             !x <- indexWordArrayM arr0 i
@@ -298,102 +254,19 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
             let (# !cry, !sm #) = plusWord2C x y carry
             debugWriteWordArray __LINE__ marr i sm
             stage1long01 marr (i + 1) cry
+
         | n0 <= 2 * shift =
             if n1 <= shift
-                then do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
+                then stage2final2c marr i carry
                 else if n2 < n1 - shift
                         then do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-                        else do
-                            debugPrint __LINE__ $ show (i, (n2, n1, n0), shift)
-                            stage2short1 marr i carry
+                        else stage2do12 marr i carry
+
         | n0 - 2 * shift < n1 - shift && n0 - 2 * shift < n2 =
-            stage12short0 marr i carry
-        | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-
-    stage12short0 !marr !i !carry
-        | i < n0 = do
-            !x <- indexWordArrayM arr0 i
-            !y <- indexWordArrayM arr1 (i - shift)
-            !z <- indexWordArrayM arr2 (i - 2 * shift)
-            let (# !cry1, !sm1 #) = plusWord2C x y z
-            let (# !cry, !sm #) = plusWord2C sm1 cry1 carry
-            debugWriteWordArray __LINE__ marr i sm
-            stage12short0 marr (i + 1) cry
-        | n1 - shift < n2 = stage2short1 marr i carry
-        | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-
-    stage2short2 !marr !i !carry
-        | i - 2 * shift < n2 = do
-            !x <- indexWordArrayM arr1 (i - shift)
-            !y <- indexWordArrayM arr2 (i - 2 * shift)
-            let (# !cry, !sm #) = plusWord2C x y carry
-            debugWriteWordArray __LINE__ marr i sm
-            stage2short2 marr (i + 1) cry
-        | carry == 0 = final1 marr i
-        | otherwise = final1c marr i carry
-
-    stage2short1 !marr !i !carry
-        | i - shift < n1 = do
-            !x <- indexWordArrayM arr1 (i - shift)
-            !y <- indexWordArrayM arr2 (i - 2 * shift)
-            let (# !cry, !sm #) = plusWord2C x y carry
-            debugWriteWordArray __LINE__ marr i sm
-            stage2short1 marr (i + 1) cry
-        | i - 2 * shift < n2 =
-            if carry /= 0
-                then stage2final2c marr i carry
-                else stage2final2 marr i
-        | carry == 0 = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-        | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-
-    final1 !marr !i
-        | i - shift < n1 = do
-            !x <- indexWordArrayM arr1 (i - shift)
-            debugWriteWordArray __LINE__ marr i x
-            final1 marr (i + 1)
-        | otherwise = return i
-
-    final1c marr i carry
-        | i - shift < n1 = do
-            !x <- indexWordArrayM arr2 (i - shift)
-            let (# !cry, !sm #) = plusWord2 x carry
-            debugWriteWordArray __LINE__ marr i sm
-            if carry == 0
-                then final1 marr (i + 1)
-                else final1c marr i cry
-        | otherwise = do
-            debugWriteWordArray __LINE__ marr i carry
-            return (i + 1)
+            stage2short0 marr i carry
 
 
-    stage2final2 !marr !i
-        | i - 2 * shift < n2 = do
-            !x <- indexWordArrayM arr2 (i - 2 * shift)
-            debugWriteWordArray __LINE__ marr i x
-            stage2final2 marr (i + 1)
-        | otherwise = return i
-
-    stage2final2c !marr !i !carry
-        | i - 2 * shift < n2 = do
-            !x <- indexWordArrayM arr2 (i - 2 * shift)
-            let (# !cry, !sm #) = plusWord2 x carry
-            debugWriteWordArray __LINE__ marr i sm
-            if carry == 0
-                then stage2final2 marr (i + 1)
-                else stage2final2c marr i cry
-        | otherwise = do
-            debugWriteWordArray __LINE__ marr i carry
-            return (i + 1)
-
-    stage1long0 !marr !i !carry
-        | i < 2 * shift = do
-            !x <- indexWordArrayM arr0 i
-            !y <- indexWordArrayM arr1 (i - shift)
-            let (# !cry, !sm #) = plusWord2C x y carry
-            debugWriteWordArray __LINE__ marr i sm
-            stage1long0 marr (i + 1) cry
-
-        | i - shift < n1 && i - 2 * shift < n0 =
+        | n1 > shift && n0 > 2 * shift =
             if n2 < n1 - shift
                 then if n2 < n0 - 2 * shift
                         then do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
@@ -402,11 +275,9 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
                         then do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
                         else stage12short1 marr i carry
 
-        | i - 2 * shift < n0 = do
-                if carry /= 0
-                    then stage1long0restc marr i carry
-                    else stage1long0rest marr i
-        | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
+        | carry /= 0 = stage1long0restc marr i carry
+        | otherwise = stage1long0rest marr i
+
 
     stage1long0restc !marr !i !carry
         | i < 2 * shift = do
@@ -424,16 +295,54 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
             !x <- indexWordArrayM arr0 i
             debugWriteWordArray __LINE__ marr i x
             stage1long0rest marr (i + 1)
-        | n0 - 2 * shift < n2 = loverlap02short0 marr i 0
-        | otherwise = overlap02short2 marr i 0
+        | n0 - 2 * shift < n2 = stage2do02 marr i 0
+        | otherwise = stage2with20 marr i 0
 
-    loverlap02short0 !marr !i !carry
+    stage2short0 !marr !i !carry
+        | i < n0 = do
+            !x <- indexWordArrayM arr0 i
+            !y <- indexWordArrayM arr1 (i - shift)
+            !z <- indexWordArrayM arr2 (i - 2 * shift)
+            let (# !cry1, !sm1 #) = plusWord2C x y z
+            let (# !cry, !sm #) = plusWord2C sm1 cry1 carry
+            debugWriteWordArray __LINE__ marr i sm
+            stage2short0 marr (i + 1) cry
+        | n1 - shift < n2 = stage2do12 marr i carry
+        | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
+
+    -- Stage 2.
+    stage2do21 !marr !i !carry
+        | i - 2 * shift < n2 = do
+            !x <- indexWordArrayM arr1 (i - shift)
+            !y <- indexWordArrayM arr2 (i - 2 * shift)
+            let (# !cry, !sm #) = plusWord2C x y carry
+            debugWriteWordArray __LINE__ marr i sm
+            stage2do21 marr (i + 1) cry
+        | carry == 0 = stage2final1 marr i
+        | otherwise = stage2final1c marr i carry
+
+    stage2do12 !marr !i !carry
+        | i - shift < n1 = do
+            !x <- indexWordArrayM arr1 (i - shift)
+            !y <- indexWordArrayM arr2 (i - 2 * shift)
+            let (# !cry, !sm #) = plusWord2C x y carry
+            debugWriteWordArray __LINE__ marr i sm
+            stage2do12 marr (i + 1) cry
+        | i - 2 * shift < n2 =
+            if carry /= 0
+                then stage2final2c marr i carry
+                else stage2final2 marr i
+        | carry == 0 = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
+        | otherwise = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
+
+
+    stage2do02 !marr !i !carry
         | i < n0 = do
             !x <- indexWordArrayM arr0 i
             !y <- indexWordArrayM arr2 (i - 2 * shift)
             let (# !cry, !sm #) = plusWord2C x y carry
             debugWriteWordArray __LINE__ marr i sm
-            loverlap02short0 marr (i + 1) cry
+            stage2do02 marr (i + 1) cry
         | carry /= 0 = stage2final2c marr i carry
         | otherwise = stage2final2 marr i
 
@@ -447,34 +356,72 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
             debugWriteWordArray __LINE__ marr i sm
             stage12short1 marr (i + 1) cry
         | n0 - 2 * shift <= n2 = do { debugPrint __LINE__ $ show (i, (n2, n1, n0), shift) ; return i }
-        | otherwise = overlap02short2 marr i carry
+        | otherwise = stage2with20 marr i carry
 
-    overlap02short2 marr i carry
+    stage2with20 marr i carry
         | i - 2 * shift < n2 = do
             !x <- indexWordArrayM arr0 i
             !y <- indexWordArrayM arr2 (i - 2 * shift)
             let (# !cry, !sm #) = plusWord2C x y carry
             debugWriteWordArray __LINE__ marr i sm
-            overlap02short2 marr (i + 1) cry
-        | carry /= 0 = final0c marr i carry
-        | otherwise = final0 marr i
+            stage2with20 marr (i + 1) cry
+        | carry /= 0 = stage2final0c marr i carry
+        | otherwise = stage2final0 marr i
 
-
-    final0 !marr !i
+    -- Stage 2 with last element.
+    stage2final0 !marr !i
         | i < n0 = do
             !x <- indexWordArrayM arr0 i
             debugWriteWordArray __LINE__ marr i x
-            final0 marr (i + 1)
+            stage2final0 marr (i + 1)
         | otherwise = return i
 
-    final0c !marr !i !carry
+    stage2final0c !marr !i !carry
         | i < n0 = do
             !x <- indexWordArrayM arr0 i
             let (# !cry, !sm #) = plusWord2 x carry
             debugWriteWordArray __LINE__ marr i sm
             if carry == 0
-                then final0 marr (i + 1)
-                else final0c marr i cry
+                then stage2final0 marr (i + 1)
+                else stage2final0c marr i cry
+        | otherwise = do
+            debugWriteWordArray __LINE__ marr i carry
+            return (i + 1)
+
+    stage2final1 !marr !i
+        | i - shift < n1 = do
+            !x <- indexWordArrayM arr1 (i - shift)
+            debugWriteWordArray __LINE__ marr i x
+            stage2final1 marr (i + 1)
+        | otherwise = return i
+
+    stage2final1c marr i carry
+        | i - shift < n1 = do
+            !x <- indexWordArrayM arr2 (i - shift)
+            let (# !cry, !sm #) = plusWord2 x carry
+            debugWriteWordArray __LINE__ marr i sm
+            if carry == 0
+                then stage2final1 marr (i + 1)
+                else stage2final1c marr i cry
+        | otherwise = do
+            debugWriteWordArray __LINE__ marr i carry
+            return (i + 1)
+
+    stage2final2 !marr !i
+        | i - 2 * shift < n2 = do
+            !x <- indexWordArrayM arr2 (i - 2 * shift)
+            debugWriteWordArray __LINE__ marr i x
+            stage2final2 marr (i + 1)
+        | otherwise = return i
+
+    stage2final2c !marr !i !carry
+        | i - 2 * shift < n2 = do
+            !x <- indexWordArrayM arr2 (i - 2 * shift)
+            let (# !cry, !sm #) = plusWord2 x carry
+            debugWriteWordArray __LINE__ marr i sm
+            if carry == 0
+                then stage2final2 marr (i + 1)
+                else stage2final2c marr i cry
         | otherwise = do
             debugWriteWordArray __LINE__ marr i carry
             return (i + 1)
