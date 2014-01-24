@@ -58,9 +58,9 @@ testKaratsuba = do
         show (karatsubaSlow True n1 n2) `shouldBe` show (timesNatural n1 n2)
 
     prop "karatsuba multiply works without recursion." $ \ n1 n2 -> do
-        show (karatsuba False n1 n2) `shouldBe` show (karatsubaSlow False n1 n2)
+        show (karatsuba False n1 n2) `shouldBe` show (timesNatural n1 n2)
     prop "karatsuba multiply works with recursion." $ \ n1 n2 -> do
-        show (karatsuba True n1 n2) `shouldBe` show (karatsubaSlow True n1 n2)
+        show (karatsuba True n1 n2) `shouldBe` show (timesNatural n1 n2)
 
 
 
@@ -68,7 +68,7 @@ testKaratsuba = do
 karatsuba :: Bool -> Natural -> Natural -> Natural
 karatsuba recursive !num1@(Natural !n1 _) !num2@(Natural !n2 _)
     | n1 < 4 || n2 < 4 = timesNatural num1 num2
-    | otherwise =
+    | otherwise = do
         let fmultiply = if recursive then karatsuba recursive else timesNatural
             m2 = (max n1 n2) `div` 2
             (hi1, lo1) = kSplit num1 m2
@@ -77,7 +77,7 @@ karatsuba recursive !num1@(Natural !n1 _) !num2@(Natural !n2 _)
             z1 = fmultiply (plusNatural lo1 hi1) (plusNatural lo2 hi2)
             z2 = fmultiply hi1 hi2
             middle = minusNatural z1 (plusNatural z2 z0)
-        in kShiftedAdd m2 z2 middle z0
+        kShiftedAdd m2 z2 middle z0
 
 
 karatsubaSlow :: Bool -> Natural -> Natural -> Natural
@@ -135,8 +135,6 @@ sliceOfNatural !(Natural !n !(WA !arr)) !start !count
         in Natural (min (n - start) count) (unsafeCoerce newaddr)
 
 
-
-
 kShiftedAddSlow :: Int -> Natural -> Natural -> Natural -> Natural
 kShiftedAddSlow shift n2 n1 n0 =
     plusNatural (shiftLNatural n2 (2 * shift * WORD_SIZE_IN_BITS))
@@ -147,7 +145,7 @@ kShiftedAdd :: Int -> Natural -> Natural -> Natural -> Natural
 kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0)
     | shift < 1 = error $ "kShiftedAdd with shift of " ++ show shift
     | otherwise = unsafeInlinePrim $ do
-        len <- return . succ $ max n0 (max (n1 + shift) (n2 + 2 * shift))
+        let !len = succ $ max n0 (max (n1 + shift) (n2 + 2 * shift))
         debugPrint __LINE__ $ "length is " ++ show len ++ " " ++ show (0 :: Int, (n2, n1, n0), shift)
         !marr <- newWordArray len
         setWordArray marr 0 len (0xaeaeaeaaeaeaeaea :: Word)
@@ -156,7 +154,7 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
             then error "Bad length"
             else return ()
         !narr <- unsafeFreezeWordArray marr
-        returnNatural nlen narr
+        finalizeNatural nlen narr
   where
     start !marr
         | n0 <= shift = stage0short0 marr 0
