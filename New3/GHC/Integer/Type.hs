@@ -750,24 +750,27 @@ timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
                 else do
                     let !newPsumLen = succ (max psumLen (n1 + succ s2))
                     !marr <- cloneWordArrayExtend psumLen psum newPsumLen
-                    !possLen <- innerLoop marr psumLen psum 0 s2 w 0
+                    !possLen <- innerLoop1 marr psumLen psum 0 s2 w 0
                     !narr <- unsafeFreezeWordArray marr
                     outerLoop possLen narr (succ s2)
         | otherwise =
             returnNatural psumLen psum
 
-    innerLoop !marr !pn !psum !s1 !s2 !hw !carry
-        | s1 + s2 < pn && s1 < n1 = do
+    innerLoop1 !marr !pn !psum !s1 !s2 !hw !carry
+        | s1 + s2 < pn = do
             !ps <- indexWordArrayM psum (s1 + s2)
             !x <- indexWordArrayM arr1 s1
             let (# !hc, !hp #) = timesWord2CC x hw carry ps
             writeWordArray marr (s1 + s2) hp
-            innerLoop marr pn psum (s1 + 1) s2 hw hc
+            innerLoop1 marr pn psum (s1 + 1) s2 hw hc
+        | otherwise = innerLoop2 marr pn psum s1 s2 hw carry
+
+    innerLoop2 !marr !pn !psum !s1 !s2 !hw !carry
         | s1 < n1 = do
             !x <- indexWordArrayM arr1 s1
             let (# !hc, !hp #) = timesWord2C x hw carry
             writeWordArray marr (s1 + s2) hp
-            innerLoop marr pn psum (s1 + 1) s2 hw hc
+            innerLoop2 marr pn psum (s1 + 1) s2 hw hc
         | carry /= 0 = do
             writeWordArray marr (s1 + s2) carry
             return (s1 + s2 + 1)
