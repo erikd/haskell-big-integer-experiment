@@ -42,6 +42,9 @@ karatsubaSlice3 : karatsubaSlice3.hs $(hsfiles)
 karatsubaSlice3D : karatsubaSlice3.hs $(hsfiles)
 	$(GHC) -DDEBUG=1 $(GHCFLAGS) --make $< -o $@
 
+kslice2 : karatsubaSlice2
+	./$+
+
 kslice : karatsubaSlice3
 	./$+
 
