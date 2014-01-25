@@ -105,7 +105,7 @@ Stamp/copy : Stamp/update
 
 clean :
 	@rm -f $(TARGETS) Check/New*.hs
-	@find . -name \*.o -o -name \*.hi | xargs rm -f
+	@find . -name \*.o -o -name \*.hi -o -name \*.s -o -name \*.ll -o -name \*.hcr | xargs rm -f
 
 realclean :
 	@rm -f Stamp/*

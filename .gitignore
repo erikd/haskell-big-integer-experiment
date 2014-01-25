@@ -1,5 +1,8 @@
 .geany
+*.hcr
 *.html
+*.ll
+*.s
 bench-integer
 check-integer
 check.log
