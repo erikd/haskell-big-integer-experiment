@@ -1,5 +1,4 @@
-
-{-# LANGUAGE CPP, MagicHash, NoImplicitPrelude #-}
+{-# LANGUAGE CPP,  NoImplicitPrelude #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -34,7 +33,11 @@ module New3.GHC.Integer (
     andInteger, orInteger, xorInteger, complementInteger,
     shiftLInteger, shiftRInteger,
     hashInteger,
+
+#if TESTING
+    isMinimal
+#endif
     ) where
 
+import New3.GHC.Integer.Internals
 import New3.GHC.Integer.Type
-

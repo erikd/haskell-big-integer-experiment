@@ -11,6 +11,7 @@ import Prelude hiding (Integer)
 import Numeric
 
 import New3.GHC.Integer
+import New3.GHC.Integer.Internals
 import New3.GHC.Integer.Type
 
 

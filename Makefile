@@ -1,7 +1,7 @@
 TARGETS = check-integer bench-integer new-bench-integer
 
 GHC = ghc
-GHCFLAGS = -Wall -fwarn-tabs -Werror -O3 $(PACKAGES) $(PRAGMAS)
+GHCFLAGS = -Wall -fwarn-tabs -Werror -O3 $(PRAGMAS)
 
 hsfiles = $(shell find Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
 
@@ -18,7 +18,7 @@ check : check-integer
 	./check-integer # | tee check.log
 
 check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs
-	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
+	$(GHC) $(GHCFLAGS) -DTESTING --make $< $(gmp_cmm_files) -o $@
 	# $(GHC) $(GHCFLAGS) --make $< -o $@
 
 bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
