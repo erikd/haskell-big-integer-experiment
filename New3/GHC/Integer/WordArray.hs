@@ -30,7 +30,7 @@ newPlaceholderWordArray = do
     !marr <- newPinnedByteArray (sizeOf (0 :: Word))
     unsafeFreezeWordArray (MWA marr)
 
-cloneWordArrayExtend :: PrimMonad m=> Int -> WordArray -> Int -> m (MutableWordArray m)
+cloneWordArrayExtend :: PrimMonad m => Int -> WordArray -> Int -> m (MutableWordArray m)
 cloneWordArrayExtend !oldLen !(WA !arr) !newLen = do
     !marr <- newPinnedByteArray (newLen * sizeOf (0 :: Word))
     if oldLen > 0
@@ -38,6 +38,10 @@ cloneWordArrayExtend !oldLen !(WA !arr) !newLen = do
         else return ()
     setByteArray marr oldLen (max 0 (newLen - oldLen)) (0 :: Word)
     return $ MWA marr
+
+{-# INLINE readWordArray #-}
+readWordArray :: PrimMonad m => MutableWordArray m -> Int -> m Word
+readWordArray !(MWA !marr) i = readByteArray marr i
 
 {-# INLINE unsafeFreezeWordArray #-}
 unsafeFreezeWordArray :: PrimMonad m => MutableWordArray m -> m WordArray
