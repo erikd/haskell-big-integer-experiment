@@ -711,8 +711,7 @@ timesNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
     !marr <- newWordArrayCleared (succ n)
     !nlen <- loop marr 0 0
     !narr <- unsafeFreezeWordArray marr
-    -- TODO : Should be able to just returnNatural here, but its slower! WTF?
-    finalizeNatural nlen narr
+    returnNatural nlen narr
   where
     loop !marr !i !carry
         | i < n = do
@@ -720,9 +719,10 @@ timesNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
             let (# !c, !p #) = timesWord2C x w carry
             writeWordArray marr i p
             loop marr (i + 1) c
-        | otherwise = do
+        | carry /= 0 = do
             writeWordArray marr i carry
             return (i + 1)
+        | otherwise = return i
 
 {-# NOINLINE timesNatural #-}
 timesNatural :: Natural -> Natural -> Natural
