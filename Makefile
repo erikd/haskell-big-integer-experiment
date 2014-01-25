@@ -17,6 +17,17 @@ all : $(TARGETS)
 check : check-integer
 	./check-integer # | tee check.log
 
+core3 :
+	ghc-core New3/GHC/Integer/Internals.hs
+
+asm3 :
+	$(GHC) $(GHCFLAGS) -DTESTING -keep-s-files New3/GHC/Integer/Internals.hs
+	less New3/GHC/Integer/Internals.s
+
+llvm3 :
+	$(GHC) $(GHCFLAGS) -DTESTING -fllvm -keep-llvm-files New3/GHC/Integer/Internals.hs
+	less New3/GHC/Integer/Internals.ll
+
 check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs
 	$(GHC) $(GHCFLAGS) -DTESTING --make $< $(gmp_cmm_files) -o $@
 	# $(GHC) $(GHCFLAGS) --make $< -o $@
