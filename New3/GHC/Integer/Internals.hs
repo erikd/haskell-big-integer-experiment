@@ -708,7 +708,7 @@ safeTimesWord !sign !w1 !w2 =
 {-# NOINLINE timesNaturalW #-}
 timesNaturalW :: Natural -> Word -> Natural
 timesNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
-    !marr <- newWordArrayCleared (succ n)
+    !marr <- newWordArray (succ n)
     !nlen <- loop marr 0 0
     !narr <- unsafeFreezeWordArray marr
     returnNatural nlen narr
