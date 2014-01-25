@@ -137,6 +137,9 @@ testNewInteger = do
         let a4 = [0x7ffffc3d,0x7ffffdc4,0x7ffffeab]
             b4 = [0x7fffff03,0x7ffffc71,0x7fffff6e,0x7ffffd6d,0x7fffff7a,0x294]
         show (X.timesInteger (X.mkInteger True a4) (X.mkInteger True b4)) `shouldBe` "+0x294fff9232dffebaeebffd6dbf80086cfb001f4c78002d7cc4007c9bc8003b7b7"
+        let a5 = [1,0,4,0,16,0,64,0,256,0,1024]
+            b5 = [1,0,0,0,32,0,192,0,1024]
+        show (X.timesInteger (X.mkInteger True a5) (X.mkInteger True b5)) `shouldBe` "+0x4000000000000000700000000000000090000000000000009000000000000000a000000000000000a0000000000000006000000000000000300000000000000010000000000000001"
 
 
     prop "Can multiply two Integers." $ \ (GNP ga sa, GNP gb sb) ->
