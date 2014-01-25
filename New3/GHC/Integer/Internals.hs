@@ -33,7 +33,6 @@ module New3.GHC.Integer.Internals
 
 import Prelude hiding (Integer, abs, pi) -- (all, error, otherwise, return, show, succ, (++))
 
-import Control.Monad.Primitive
 import Data.Bits
 
 import GHC.Prim
@@ -47,6 +46,7 @@ import Numeric (showHex) -- TODO: Remove when its working.
 
 import New3.GHC.Integer.Prim
 import New3.GHC.Integer.Sign
+import New3.GHC.Integer.StrictPrim
 import New3.GHC.Integer.Type
 import New3.GHC.Integer.WordArray
 
@@ -186,17 +186,17 @@ andNatural :: Natural -> Natural -> Natural
 andNatural (Natural n1 arr1) (Natural n2 arr2) = andArray (min n1 n2) arr1 arr2
 
 andArray :: Int -> WordArray -> WordArray -> Natural
-andArray n arr1 arr2 = unsafeInlinePrim $ do
-    !marr <- newWordArray n
+andArray n arr1 arr2 = runStrictPrim $ do
+    marr <- newWordArray n
     loop1 marr 0
-    !narr <- unsafeFreezeWordArray marr
-    !nlen <- loop2 narr (n - 1)
-    returnNatural nlen narr
+    narr <- unsafeFreezeWordArray marr
+    nlen <- loop2 narr (n - 1)
+    return $! Natural nlen narr
   where
     loop1 !marr !i
         | i < n = do
-                !x <- indexWordArrayM arr1 i
-                !y <- indexWordArrayM arr2 i
+                x <- indexWordArrayM arr1 i
+                y <- indexWordArrayM arr2 i
                 writeWordArray marr i (x .&. y)
                 loop1 marr (i + 1)
         | otherwise = return ()
@@ -226,34 +226,34 @@ orNatural :: Natural -> Natural -> Natural
 orNatural (Natural n1 arr1) (Natural n2 arr2) = orArray n1 arr1 n2 arr2
 
 orNaturalW :: Natural -> Word -> Natural
-orNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
-    !marr <- newWordArray n
+orNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
+    marr <- newWordArray n
     copyWordArray marr 1 arr 1 (n - 1)
-    !x <- indexWordArrayM arr 0
+    x <- indexWordArrayM arr 0
     writeWordArray marr 0 (w .|. x)
-    !narr <- unsafeFreezeWordArray marr
-    returnNatural n narr
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural n narr
 
 orArray :: Int -> WordArray -> Int -> WordArray -> Natural
 orArray !n1 !arr1 !n2 !arr2
     | n1 < n2 = orArray n2 arr2 n1 arr1
-    | otherwise = unsafeInlinePrim $ do
-        !marr <- newWordArray n1
+    | otherwise = runStrictPrim $ do
+        marr <- newWordArray n1
         loop1 marr 0
-        !narr <- unsafeFreezeWordArray marr
-        returnNatural n1 narr
+        narr <- unsafeFreezeWordArray marr
+        return $! Natural n1 narr
   where
     loop1 !marr !i
         | i < n2 = do
-                !x <- indexWordArrayM arr1 i
-                !y <- indexWordArrayM arr2 i
+                x <- indexWordArrayM arr1 i
+                y <- indexWordArrayM arr2 i
                 writeWordArray marr i (x .|. y)
                 loop1 marr (i + 1)
         | otherwise = loop2 marr i
     loop2 !marr !i
         | i < n1 = do
                 -- TODO : Use copyArray here?
-                !x <- indexWordArrayM arr1 i
+                x <- indexWordArrayM arr1 i
                 writeWordArray marr i x
                 loop2 marr (i + 1)
         | otherwise = return ()
@@ -270,24 +270,24 @@ xorInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: I
 xorArray :: Int -> WordArray -> Int -> WordArray -> Natural
 xorArray !n1 !arr1 !n2 !arr2
     | n1 < n2 = xorArray n2 arr2 n1 arr1
-    | otherwise = unsafeInlinePrim $ do
-        !marr <- newWordArray n1
+    | otherwise = runStrictPrim $ do
+        marr <- newWordArray n1
         loop1 marr 0
-        !narr <- unsafeFreezeWordArray marr
+        narr <- unsafeFreezeWordArray marr
         -- TODO : Test this and then optimize.
         finalizeNatural n1 narr
   where
     loop1 !marr !i
         | i < n2 = do
-                !x <- indexWordArrayM arr1 i
-                !y <- indexWordArrayM arr2 i
+                x <- indexWordArrayM arr1 i
+                y <- indexWordArrayM arr2 i
                 writeWordArray marr i (xor x y)
                 loop1 marr (i + 1)
         | otherwise = loop2 marr i
     loop2 !marr !i
         | i < n1 = do
                 -- TODO : Use copyArray here?
-                !x <- indexWordArrayM arr1 i
+                x <- indexWordArrayM arr1 i
                 writeWordArray marr i x
                 loop2 marr (i + 1)
         | otherwise = return ()
@@ -310,7 +310,7 @@ shiftLInteger !(SmallPos !a) b
     | isTrue# (b >=# WORD_SIZE_IN_BITS#) = fromNatural Pos (shiftLNatural (mkSingletonNat a) (I# b))
     | otherwise =
         let !lo = unsafeShiftL a (I# b)
-            !hi = unsafeShiftR a (I# ( WORD_SIZE_IN_BITS# -# b))
+            hi = unsafeShiftR a (I# ( WORD_SIZE_IN_BITS# -# b))
         in if hi == 0
             then SmallPos lo
             else Positive (mkPair lo hi)
@@ -331,15 +331,15 @@ shiftLNatural !nat@(Natural !n !arr) !i
                 else largeShiftLArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
 
 smallShiftLArray :: Int -> WordArray -> (# Int, Int #) -> Natural
-smallShiftLArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
-    !marr <- newWordArray (succ n)
-    !nlen <- loop marr 0 0
-    !narr <- unsafeFreezeWordArray marr
-    returnNatural nlen narr
+smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
+    marr <- newWordArray (succ n)
+    nlen <- loop marr 0 0
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural nlen narr
   where
     loop !marr !i !mem
         | i < n =  do
-            !x <- indexWordArrayM arr i
+            x <- indexWordArrayM arr i
             writeWordArray marr i ((unsafeShiftL x si) .|. mem)
             loop marr (i + 1) (unsafeShiftR x sj)
         | mem /= 0 = do
@@ -349,11 +349,11 @@ smallShiftLArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
 
 -- | TODO : Use copy here? Check benchmark results.
 wordShiftLArray :: Int -> WordArray -> Int -> Natural
-wordShiftLArray !n !arr !q = unsafeInlinePrim $ do
-    !marr <- newWordArray (n + q)
+wordShiftLArray !n !arr !q = runStrictPrim $ do
+    marr <- newWordArray (n + q)
     loop1 marr 0
-    !narr <- unsafeFreezeWordArray marr
-    returnNatural (n + q) narr
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural (n + q) narr
   where
     loop1 !marr !i
         | i < q = do
@@ -362,22 +362,22 @@ wordShiftLArray !n !arr !q = unsafeInlinePrim $ do
         | otherwise = loop2 marr 0
     loop2 !marr !i
         | i < n =  do
-            !x <- indexWordArrayM arr i
+            x <- indexWordArrayM arr i
             writeWordArray marr (q + i) x
             loop2 marr (i + 1)
         | otherwise = return ()
 
 largeShiftLArray :: Int -> WordArray-> (# Int, Int, Int #) -> Natural
-largeShiftLArray !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
-    !marr <- newWordArray (n + q + 1)
+largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
+    marr <- newWordArray (n + q + 1)
     setWordArray marr 0 q 0
-    !nlen <- loop1 marr 0 0
-    !narr <- unsafeFreezeWordArray marr
-    returnNatural nlen narr
+    nlen <- loop1 marr 0 0
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural nlen narr
   where
     loop1 !marr !i !mem
         | i < n =  do
-            !x <- indexWordArrayM arr i
+            x <- indexWordArrayM arr i
             writeWordArray marr (q + i) ((unsafeShiftL x si) .|. mem)
             loop1 marr (i + 1) (unsafeShiftR x sj)
         | mem /= 0 = do
@@ -418,36 +418,36 @@ shiftRNatural !(Natural !n !arr) !i
 
 
 smallShiftRArray :: Int -> WordArray -> (# Int, Int #) -> Natural
-smallShiftRArray !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
-    !marr <- newWordArray n
+smallShiftRArray !n !arr (# !si, !sj #) = runStrictPrim $ do
+    marr <- newWordArray n
     loop marr (n - 1) 0
-    !narr <- unsafeFreezeWordArray marr
-    returnNatural n narr
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural n narr
   where
     loop !marr !i !mem
         | i >= 0 =  do
-            !x <- indexWordArrayM arr i
+            x <- indexWordArrayM arr i
             writeWordArray marr i ((unsafeShiftR x si) .|. mem)
             loop marr (i - 1) (unsafeShiftL x sj)
         | otherwise = return ()
 
 wordShiftRArray :: Int -> WordArray -> Int -> Natural
-wordShiftRArray !n !arr !q = unsafeInlinePrim $ do
-    !marr <- newWordArray (n - q)
+wordShiftRArray !n !arr !q = runStrictPrim $ do
+    marr <- newWordArray (n - q)
     copyWordArray marr 0 arr q (n - q)
-    !narr <- unsafeFreezeWordArray marr
-    returnNatural (n - q) narr
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural (n - q) narr
 
 largeShiftRArray :: Int -> WordArray-> (# Int, Int, Int #) -> Natural
-largeShiftRArray !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
-    !marr <- newWordArray (n - q)
+largeShiftRArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
+    marr <- newWordArray (n - q)
     loop marr (n - q - 1) 0
-    !narr <- unsafeFreezeWordArray marr
-    returnNatural (n - q) narr
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural (n - q) narr
   where
     loop !marr !i !mem
         | i >= 0 =  do
-            !x <- indexWordArrayM arr (q + i)
+            x <- indexWordArrayM arr (q + i)
             writeWordArray marr i ((unsafeShiftR x si) .|. mem)
             loop marr (i - 1) (unsafeShiftL x sj)
         | otherwise = return ()
@@ -514,19 +514,19 @@ safeMinusWord !a !b =
 
 {-# INLINE plusNaturalW #-}
 plusNaturalW :: Natural -> Word -> Natural
-plusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
-    !marr <- newWordArray (succ n)
-    !x <- indexWordArrayM arr 0
+plusNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
+    marr <- newWordArray (succ n)
+    x <- indexWordArrayM arr 0
     let (# !cry, !sm #) = plusWord2 x w
     writeWordArray marr 0 sm
-    !nlen <- loop1 marr 1 cry
-    !narr <- unsafeFreezeWordArray marr
-    returnNatural nlen narr
+    nlen <- loop1 marr 1 cry
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural nlen narr
   where
     loop1 !marr !i !carry
         | carry == 0 = loop2 marr i
         | i < n =  do
-            !x <- indexWordArrayM arr i
+            x <- indexWordArrayM arr i
             let (# !cry, !sm #) = plusWord2 x carry
             writeWordArray marr i sm
             loop1 marr (i + 1) cry
@@ -535,7 +535,7 @@ plusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
             return $ n + 1
     loop2 !marr !i
         | i < n =  do
-            !x <- indexWordArrayM arr i
+            x <- indexWordArrayM arr i
             writeWordArray marr i x
             loop2 marr (i + 1)
         | otherwise = return i
@@ -544,16 +544,16 @@ plusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
 plusNatural :: Natural -> Natural -> Natural
 plusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = plusNatural b a
-    | otherwise = unsafeInlinePrim $ do
-        !marr <- newWordArray (succ n1)
-        !nlen <- loop1 marr 0 0
-        !narr <- unsafeFreezeWordArray marr
-        returnNatural nlen narr
+    | otherwise = runStrictPrim $ do
+        marr <- newWordArray (succ n1)
+        nlen <- loop1 marr 0 0
+        narr <- unsafeFreezeWordArray marr
+        return $! Natural nlen narr
   where
     loop1 !marr !i !carry
         | i < n2 = do
-            !x <- indexWordArrayM arr1 i
-            !y <- indexWordArrayM arr2 i
+            x <- indexWordArrayM arr1 i
+            y <- indexWordArrayM arr2 i
             let (# !cry, !sm #) = plusWord2C x y carry
             writeWordArray marr i sm
             loop1 marr (i + 1) cry
@@ -561,7 +561,7 @@ plusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     loop2 !marr !i !carry
         | carry == 0 = loop3 marr i
         | i < n1 = do
-            !x <- indexWordArrayM arr1 i
+            x <- indexWordArrayM arr1 i
             let (# !cry, !sm #) = plusWord2 x carry
             writeWordArray marr i sm
             loop2 marr (i + 1) cry
@@ -570,7 +570,7 @@ plusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
             return (i + 1)
     loop3 !marr !i
         | i < n1 = do
-            !x <- indexWordArrayM arr1 i
+            x <- indexWordArrayM arr1 i
             writeWordArray marr i x
             loop3 marr (i + 1)
         | otherwise = return i
@@ -604,19 +604,19 @@ minusInteger !x !y = case (# x, y #) of
 
 {-# INLINE minusNaturalW #-}
 minusNaturalW :: Natural -> Word -> Natural
-minusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
-    !marr <- newWordArray (succ n)
-    !x <- indexWordArrayM arr 0
+minusNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
+    marr <- newWordArray (succ n)
+    x <- indexWordArrayM arr 0
     let (# !c, !d #) = minusWord2 x w
     writeWordArray marr 0 d
-    !nlen <- loop1 marr 1 c
-    !narr <- unsafeFreezeWordArray marr
-    returnNatural nlen narr
+    nlen <- loop1 marr 1 c
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural nlen narr
   where
     loop1 !marr !i !carry
         | carry == 0 = loop2 marr i
         | i < n =  do
-            !x <- indexWordArrayM arr i
+            x <- indexWordArrayM arr i
             let (# !c, !d #) = minusWord2 x carry
             writeWordArray marr i d
             loop1 marr (i + 1) c
@@ -625,7 +625,7 @@ minusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
             return $ n + 1
     loop2 !marr !i
         | i < n =  do
-            !x <- indexWordArrayM arr i
+            x <- indexWordArrayM arr i
             writeWordArray marr i x
             loop2 marr (i + 1)
         | otherwise = return n
@@ -635,16 +635,16 @@ minusNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
 minusNatural :: Natural -> Natural -> Natural
 minusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = plusNatural b a
-    | otherwise = unsafeInlinePrim $ do
-        !marr <- newWordArray (succ n1)
-        !nlen <- loop1 marr 0 0
-        !narr <- unsafeFreezeWordArray marr
+    | otherwise = runStrictPrim $ do
+        marr <- newWordArray (succ n1)
+        nlen <- loop1 marr 0 0
+        narr <- unsafeFreezeWordArray marr
         finalizeNatural nlen narr
   where
     loop1 !marr !i !carry
         | i < n2 = do
-            !x <- indexWordArrayM arr1 i
-            !y <- indexWordArrayM arr2 i
+            x <- indexWordArrayM arr1 i
+            y <- indexWordArrayM arr2 i
             let (# !c, !d #) = minusWord2C x y carry
             writeWordArray marr i d
             loop1 marr (i + 1) c
@@ -652,7 +652,7 @@ minusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     loop2 !marr !i !carry
         | carry == 0 = loop3 marr i
         | i < n1 = do
-            !x <- indexWordArrayM arr1 i
+            x <- indexWordArrayM arr1 i
             let (# !c, !d #) = minusWord2 x carry
             writeWordArray marr i d
             loop2 marr (i + 1) c
@@ -661,7 +661,7 @@ minusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
             return (i + 1)
     loop3 !marr !i
         | i < n1 = do
-            !x <- indexWordArrayM arr1 i
+            x <- indexWordArrayM arr1 i
             writeWordArray marr i x
             loop3 marr (i + 1)
         | otherwise = return i
@@ -707,15 +707,15 @@ safeTimesWord !sign !w1 !w2 =
 
 {-# NOINLINE timesNaturalW #-}
 timesNaturalW :: Natural -> Word -> Natural
-timesNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
-    !marr <- newWordArray (succ n)
-    !nlen <- loop marr 0 0
-    !narr <- unsafeFreezeWordArray marr
-    returnNatural nlen narr
+timesNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
+    marr <- newWordArray (succ n)
+    nlen <- loop marr 0 0
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural nlen narr
   where
     loop !marr !i !carry
         | i < n = do
-            !x <- indexWordArrayM arr i
+            x <- indexWordArrayM arr i
             let (# !c, !p #) = timesWord2C x w carry
             writeWordArray marr i p
             loop marr (i + 1) c
@@ -728,28 +728,28 @@ timesNaturalW !(Natural !n !arr) !w = unsafeInlinePrim $ do
 timesNatural :: Natural -> Natural -> Natural
 timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = timesNatural b a
-    | otherwise = unsafeInlinePrim $ do
-        !psum <- newPlaceholderWordArray
+    | otherwise = runStrictPrim $ do
+        psum <- newPlaceholderWordArray
         outerLoop 0 psum 0
   where
     outerLoop !psumLen !psum !s2
         | s2 < n2 = do
-            !w <- indexWordArrayM arr2 s2
+            w <- indexWordArrayM arr2 s2
             if w == 0
                 then outerLoop psumLen psum (succ s2)
                 else do
-                    let !newPsumLen = succ (max psumLen (n1 + succ s2))
-                    !marr <- cloneWordArrayExtend psumLen psum newPsumLen
-                    !possLen <- innerLoop1 marr psumLen psum 0 s2 w 0
-                    !narr <- unsafeFreezeWordArray marr
+                    newPsumLen <- return (succ (max psumLen (n1 + succ s2)))
+                    marr <- cloneWordArrayExtend psumLen psum newPsumLen
+                    possLen <- innerLoop1 marr psumLen psum 0 s2 w 0
+                    narr <- unsafeFreezeWordArray marr
                     outerLoop possLen narr (succ s2)
         | otherwise =
-            returnNatural psumLen psum
+            return $! Natural psumLen psum
 
     innerLoop1 !marr !pn !psum !s1 !s2 !hw !carry
         | s1 + s2 < pn = do
-            !ps <- indexWordArrayM psum (s1 + s2)
-            !x <- indexWordArrayM arr1 s1
+            ps <- indexWordArrayM psum (s1 + s2)
+            x <- indexWordArrayM arr1 s1
             let (# !hc, !hp #) = timesWord2CC x hw carry ps
             writeWordArray marr (s1 + s2) hp
             innerLoop1 marr pn psum (s1 + 1) s2 hw hc
@@ -757,7 +757,7 @@ timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
 
     innerLoop2 !marr !pn !psum !s1 !s2 !hw !carry
         | s1 < n1 = do
-            !x <- indexWordArrayM arr1 s1
+            x <- indexWordArrayM arr1 s1
             let (# !hc, !hp #) = timesWord2C x hw carry
             writeWordArray marr (s1 + s2) hp
             innerLoop2 marr pn psum (s1 + 1) s2 hw hc
@@ -769,44 +769,48 @@ timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
 {-# NOINLINE timesNaturalNew #-}
 timesNaturalNew :: Natural -> Natural -> Natural
 timesNaturalNew !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
-    | n1 < n2 = timesNatural b a
-    | otherwise = unsafeInlinePrim $ do
-        !psum <- newPlaceholderWordArray
-        outerLoop 0 psum 0
+    | n1 < n2 = timesNaturalNew b a
+    | otherwise = runStrictPrim $ do
+        maxOutLen <- return (1 + n1 + n2)
+        psum <- newWordArray maxOutLen
+        writeWordArray psum 0 0
+        outerLoop 0 0 psum
   where
-    outerLoop !psumLen !psum !s2
+    outerLoop !s2 !psumLen !psum
         | s2 < n2 = do
-            !w <- indexWordArrayM arr2 s2
+            w <- indexWordArrayM arr2 s2
             if w == 0
-                then outerLoop psumLen psum (succ s2)
+                then do
+                    -- WTF? Need this to avoid laziness screwing things up!
+                    _ <- innerLoop2 psumLen psum psumLen s2 s2 w 0
+                    outerLoop (succ s2) psumLen psum
+
                 else do
-                    let !newPsumLen = succ (max psumLen (n1 + succ s2))
-                    !marr <- cloneWordArrayExtend psumLen psum newPsumLen
-                    !possLen <- innerLoop1 marr psumLen psum 0 s2 w 0
-                    !narr <- unsafeFreezeWordArray marr
-                    outerLoop possLen narr (succ s2)
-        | otherwise =
-            returnNatural psumLen psum
+                    possLen <- innerLoop1 psumLen psum 0 s2 s2 w 0
+                    outerLoop (succ s2) possLen psum
+        | otherwise = do
+            narr <- unsafeFreezeWordArray psum
+            return $! Natural psumLen narr
 
-    innerLoop1 !marr !pn !psum !s1 !s2 !hw !carry
-        | s1 + s2 < pn = do
-            !ps <- indexWordArrayM psum (s1 + s2)
-            !x <- indexWordArrayM arr1 s1
-            let (# !hc, !hp #) = timesWord2CC x hw carry ps
-            writeWordArray marr (s1 + s2) hp
-            innerLoop1 marr pn psum (s1 + 1) s2 hw hc
-        | otherwise = innerLoop2 marr pn psum s1 s2 hw carry
+    innerLoop1 !pn !psum !s1 !d1 !s2 !w !carry
+        | d1 < pn = do
+            ps <- readWordArray psum d1
+            x <- indexWordArrayM arr1 s1
+            let (# !cry, !prod #) = timesWord2CC x w carry ps
+            writeWordArray psum d1 prod
+            innerLoop1 pn psum (s1 + 1) (d1 + 1) s2 w cry
+        | otherwise = innerLoop2 pn psum s1 d1 s2 w carry
 
-    innerLoop2 !marr !pn !psum !s1 !s2 !hw !carry
+    innerLoop2 !pn !psum !s1 !d1 !s2 !w !carry
         | s1 < n1 = do
-            !x <- indexWordArrayM arr1 s1
-            let (# !hc, !hp #) = timesWord2C x hw carry
-            writeWordArray marr (s1 + s2) hp
-            innerLoop2 marr pn psum (s1 + 1) s2 hw hc
+            x <- indexWordArrayM arr1 s1
+            let (# !cry, !prod #) = timesWord2C x w carry
+            writeWordArray psum d1 prod
+            innerLoop2 pn psum (s1 + 1) (d1 + 1) s2 w cry
         | carry /= 0 = do
-            writeWordArray marr (s1 + s2) carry
-            return (s1 + s2 + 1)
-        | otherwise = return (s1 + s2)
+            writeWordArray psum d1 carry
+            return $! d1 + 1
+        | otherwise = return d1
 
 
 {-# NOINLINE divModInteger #-}
@@ -1038,32 +1042,32 @@ zerothWordOfNatural :: Natural -> Word
 zerothWordOfNatural !(Natural _ arr) = indexWordArray arr 0
 
 mkPair :: Word -> Word -> Natural
-mkPair !sm !carry = unsafeInlinePrim mkNatPair
+mkPair !sm !carry = runStrictPrim mkNatPair
   where
-    mkNatPair :: IO Natural
+    mkNatPair :: StrictPrim s Natural
     mkNatPair = do
-        !marr <- newWordArray 2
+        marr <- newWordArray 2
         writeWordArray marr 0 sm
         writeWordArray marr 1 carry
-        !narr <- unsafeFreezeWordArray marr
+        narr <- unsafeFreezeWordArray marr
         return $ Natural 2 narr
 
 mkSingletonNat :: Word -> Natural
-mkSingletonNat !x = unsafeInlinePrim mkNat
+mkSingletonNat !x = runStrictPrim mkNat
   where
-    mkNat :: IO Natural
+    mkNat :: StrictPrim s Natural
     mkNat = do
-        !marr <- newWordArray 1
+        marr <- newWordArray 1
         writeWordArray marr 0 x
-        !narr <- unsafeFreezeWordArray marr
+        narr <- unsafeFreezeWordArray marr
         return $ Natural 1 narr
 
 
-finalizeNatural :: Int -> WordArray -> IO Natural
+finalizeNatural :: Int -> WordArray -> StrictPrim s Natural
 finalizeNatural 0 !arr = return (Natural 0 arr)
 finalizeNatural !nin !arr = do
     let !len = nonZeroLen nin arr
-    !x <- indexWordArrayM arr 0
+    x <- indexWordArrayM arr 0
     return $
         if len < 0 || (len == 1 && x == 0)
             then Natural 0 arr
@@ -1078,12 +1082,6 @@ nonZeroLen !len !arr
                 | indexWordArray arr i == 0 = trim (i - 1)
                 | otherwise = i + 1
         in trim (len - 1)
-
-
-{-# INLINE returnNatural #-}
-returnNatural :: Int -> WordArray -> IO Natural
-returnNatural !0 !arr = return (Natural 0 arr)
-returnNatural !n !arr = return (Natural n arr)
 
 
 oneInteger, minusOneInteger :: Integer
@@ -1141,9 +1139,14 @@ signShow Neg = "Neg"
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
 
-debugPutStrLn :: Int -> String -> IO ()
-debugPutStrLn line s = putStrLn $ show line ++ " : " ++ s
--- debugPutStrLn _ = return ()
+debugPrint :: Int -> String -> IO ()
+debugPrint line s = putStrLn $ show line ++ " : " ++ s
+-- debugPrint _ = return ()
+
+debugWriteWordArray :: Int -> MutableWordArray IO -> Int -> Word -> IO ()
+debugWriteWordArray line marr i x = do
+    debugPrint line $ "writing " ++ hexShowW x ++ " at " ++ show i
+    writeWordArray marr i x
 
 isSmall :: Integer -> Bool
 isSmall Zero = True
