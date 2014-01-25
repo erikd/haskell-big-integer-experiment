@@ -18,3 +18,5 @@ karatsubaSlice3D
 new-bench-integer
 sanity-test
 Stamp
+times-bench
+times-check

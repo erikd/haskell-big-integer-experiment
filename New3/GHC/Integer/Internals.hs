@@ -766,6 +766,47 @@ timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
             return (s1 + s2 + 1)
         | otherwise = return (s1 + s2)
 
+{-# NOINLINE timesNaturalNew #-}
+timesNaturalNew :: Natural -> Natural -> Natural
+timesNaturalNew !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
+    | n1 < n2 = timesNatural b a
+    | otherwise = unsafeInlinePrim $ do
+        !psum <- newPlaceholderWordArray
+        outerLoop 0 psum 0
+  where
+    outerLoop !psumLen !psum !s2
+        | s2 < n2 = do
+            !w <- indexWordArrayM arr2 s2
+            if w == 0
+                then outerLoop psumLen psum (succ s2)
+                else do
+                    let !newPsumLen = succ (max psumLen (n1 + succ s2))
+                    !marr <- cloneWordArrayExtend psumLen psum newPsumLen
+                    !possLen <- innerLoop1 marr psumLen psum 0 s2 w 0
+                    !narr <- unsafeFreezeWordArray marr
+                    outerLoop possLen narr (succ s2)
+        | otherwise =
+            returnNatural psumLen psum
+
+    innerLoop1 !marr !pn !psum !s1 !s2 !hw !carry
+        | s1 + s2 < pn = do
+            !ps <- indexWordArrayM psum (s1 + s2)
+            !x <- indexWordArrayM arr1 s1
+            let (# !hc, !hp #) = timesWord2CC x hw carry ps
+            writeWordArray marr (s1 + s2) hp
+            innerLoop1 marr pn psum (s1 + 1) s2 hw hc
+        | otherwise = innerLoop2 marr pn psum s1 s2 hw carry
+
+    innerLoop2 !marr !pn !psum !s1 !s2 !hw !carry
+        | s1 < n1 = do
+            !x <- indexWordArrayM arr1 s1
+            let (# !hc, !hp #) = timesWord2C x hw carry
+            writeWordArray marr (s1 + s2) hp
+            innerLoop2 marr pn psum (s1 + 1) s2 hw hc
+        | carry /= 0 = do
+            writeWordArray marr (s1 + s2) carry
+            return (s1 + s2 + 1)
+        | otherwise = return (s1 + s2)
 
 
 {-# NOINLINE divModInteger #-}

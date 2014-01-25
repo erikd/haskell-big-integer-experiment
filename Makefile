@@ -38,6 +38,12 @@ bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
 new-bench-integer : new-bench-integer.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
 
+times-bench : times-bench.hs $(hsfiles)
+	$(GHC) $(GHCFLAGS) --make $< -o $@
+
+times-check : times-check.hs $(hsfiles)
+	$(GHC) $(GHCFLAGS) --make $< -o $@
+
 int-bench : int-bench.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
 
@@ -62,9 +68,6 @@ kslice : karatsubaSlice3
 ksliced : karatsubaSlice3D
 	./$+
 
-new-bench : new-bench-integer
-	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
-	chmod a+r new-bench-integer.html
 
 Check/New1.hs : Check/NewX.hs.tpl
 	sed "s/NewX/New1/;s/###//g" $+ > $@
@@ -75,9 +78,15 @@ Check/New2.hs : Check/NewX.hs.tpl
 Check/New3.hs : Check/NewX.hs.tpl
 	sed "s/NewX/New3/;s/###/#/g" $+ > $@
 
-view-bench : new-bench-integer.html
-	make new-bench
-	gnome-www-browser $<
+view-bench : new-bench-integer
+	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
+	chmod a+r new-bench-integer.html
+	gnome-www-browser new-bench-integer.html
+
+view-times : times-bench times-check
+	./times-check
+	./times-bench --no-gc -o times-bench.html --template=Criterion/report.tpl
+	gnome-www-browser times-bench.html
 
 upload : new-bench-integer.html
 	scp -p $< mega-nerd.net:/home/www.mega-nerd.com/data/tmp/
