@@ -18,5 +18,6 @@ main = do
                 )
             [ C.bench "Old" $ C.whnf (foldl1 timesNatural) list
             , C.bench "New" $ C.whnf (foldl1 timesNaturalNew) list
+            , C.bench "Newest" $ C.whnf (foldl1 timesNaturalNewest) list
             ]
         ]
