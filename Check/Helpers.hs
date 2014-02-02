@@ -57,3 +57,6 @@ fromString s =
         | x <= 0 = []
         | otherwise =
             fromIntegral (x .&. 0x7fffffff) : decompose (x `shiftR` 31)
+
+showUT2 :: (Show a, Show b) => (# a, b #) -> String
+showUT2 (# a, b #) = "(" ++ show a ++ "," ++ show b ++ ")"

@@ -49,6 +49,15 @@ testExistingInteger = do
         let bits = unboxInt (int .&. 31)
         in show (G.shiftLInteger g bits) `shouldBe` show (S.shiftLInteger s bits)
 
+    prop "Can quotRem Integers." $ \ (GSP ga sa, GSP gb sb) -> do
+        if show sb /= "0x0"
+            then showUT2 (S.quotRemInteger sa sb) `shouldBe` showUT2 (G.quotRemInteger ga gb)
+            else ("1", "2") `shouldBe` ("1", "2")
+    prop "Can divMod Integers." $ \ (GSP ga sa, GSP gb sb) -> do
+        if show sb /= "0x0"
+            then showUT2 (S.divModInteger sa sb) `shouldBe` showUT2 (G.divModInteger ga gb)
+            else ("1", "2") `shouldBe` ("1", "2")
+
 --------------------------------------------------------------------------------
 
 data GmpSimplePair
