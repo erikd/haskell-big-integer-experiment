@@ -95,6 +95,7 @@ testNewInteger = do
 
     prop "Can add two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (X.plusInteger sa sb) `shouldBe` show (G.plusInteger ga gb)
+
     prop "Can subtract two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (X.minusInteger sa sb) `shouldBe` show (G.minusInteger ga gb)
 
@@ -152,6 +153,10 @@ testNewInteger = do
         let a2 = [0x730755a,0x24d01108]
             b2 = [0x13dded6c,0x319f8341]
         show (X.minusInteger (X.mkInteger False a2) (X.mkInteger True b2)) `shouldBe` show (G.minusInteger (G.mkInteger False a2) (G.mkInteger True b2))
+        let a3 = [0x4,0x0,0x0,0x1]
+            b3 = [0x0,0x1,0x0,0x1]
+        show (X.minusInteger (X.mkInteger True a3) (X.mkInteger True b3)) `shouldBe` show (G.minusInteger (G.mkInteger True a3) (G.mkInteger True b3))
+
 
     it "Can calculate product [1..n]." $ do
         show (foldl1 X.timesInteger $ map (\x -> X.smallInteger (unboxInt x)) [1..10])
