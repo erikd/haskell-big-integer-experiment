@@ -1152,10 +1152,10 @@ finalizeNatural !nin !arr = do
 
 nonZeroLen :: Int -> WordArray -> Int
 nonZeroLen !len !arr
-    | len <= 1 = 0
+    | len < 1 = 0
     | otherwise =
         let trim i
-                | i < 1 = 0
+                | i < 0 = 0
                 | indexWordArray arr i == 0 = trim (i - 1)
                 | otherwise = i + 1
         in trim (len - 1)
