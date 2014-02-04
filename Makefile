@@ -7,7 +7,7 @@ hsfiles = $(shell find Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.
 
 gmp_cmm_files = -IGMP GMP/gmp-wrappers.cmm
 
-checkfiles = Check/New1.hs Check/New2.hs Check/New3.hs
+checkfiles = Check/New1.hs Check/New2.hs Check/New3.hs Check/New4.hs
 
 PRAGMAS = -XCPP -XMagicHash -XUnboxedTuples -XUnliftedFFITypes
 
@@ -84,6 +84,9 @@ Check/New2.hs : Check/NewX.hs.tpl
 
 Check/New3.hs : Check/NewX.hs.tpl
 	sed "s/NewX/New3/;s/###/#/g" $+ > $@
+
+Check/New4.hs : Check/NewX.hs.tpl
+	sed "s/NewX/New4/;s/###/#/g" $+ > $@
 
 view-bench : new-bench-integer
 	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
