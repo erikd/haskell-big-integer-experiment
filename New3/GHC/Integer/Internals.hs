@@ -890,12 +890,42 @@ timesNaturalNewest !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
         | otherwise = do return $! (carryhi, carrylo, sum)
 
 
+{- divModInteger should be implemented in terms of quotRemInteger -}
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
+divModInteger Zero (SmallPos _) = (# Zero, Zero #)
+divModInteger (SmallPos !a) (SmallPos !b) = let (!q, !r) = divMod a b in (# if q == 0 then Zero else SmallPos q, if r == 0 then Zero else SmallPos r #)
+divModInteger (SmallNeg !a) (SmallNeg !b) = let (!q, !r) = divMod a b in (# if q == 0 then Zero else SmallPos q, if r == 0 then Zero else SmallNeg r #)
+divModInteger (SmallPos !a) (SmallNeg !b) =
+    let (!q, !r) = divMod a b
+    in if r == 0
+        then (# SmallNeg q, Zero #)
+        else (# SmallNeg (q + 1), SmallNeg (b - r) #)
+divModInteger (SmallNeg !a) (SmallPos !b) =
+    let (!q, !r) = divMod a b
+    in case (q == 0, r == 0) of
+        ( False, False )    -> (# SmallNeg (q + 1), SmallPos (b - r) #)
+        ( True, False )     -> (# SmallNeg 1, SmallPos (b - r) #)
+        ( False, True )     -> (# SmallNeg q, Zero #)
+        _                   -> (# SmallPos 3, SmallPos 3 #)
+
 divModInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE quotRemInteger #-}
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
+quotRemInteger Zero (SmallPos _) = (# Zero, Zero #)
+quotRemInteger (SmallPos !a) (SmallPos !b) = let (!q, !r) = quotRem a b in (# if q == 0 then Zero else SmallPos q, if r == 0 then Zero else SmallPos r #)
+quotRemInteger (SmallNeg !a) (SmallNeg !b) = let (!q, !r) = quotRem a b in (# if q == 0 then Zero else SmallPos q, if r == 0 then Zero else SmallNeg r #)
+quotRemInteger (SmallPos !a) (SmallNeg !b) = let (!q, !r) = quotRem a b in (# if q == 0 then Zero else SmallNeg q, if r == 0 then Zero else SmallPos r #)
+
+quotRemInteger (SmallNeg !a) (SmallPos !b) =
+    let (!q, !r) = quotRem a b
+    in case (q == 0, r == 0) of
+        ( False, False )    -> (# SmallNeg q, SmallNeg r #)
+        ( True, False )     -> (# Zero, SmallNeg r #)
+        ( False, True )     -> (# SmallNeg q, Zero #)
+        _                   -> (# SmallPos 3, SmallPos 3 #)
+
 quotRemInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE quotInteger #-}
