@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, ScopedTypeVariables #-}
+{-# LANGUAGE CPP, FlexibleInstances, ScopedTypeVariables #-}
 module Check.NewX
     ( testNewInternal
     , testNewInteger
@@ -23,6 +23,12 @@ import NewX.GHC.Integer.Prim
 
 import Check.Helpers
 
+#define NewX   1
+
+#ifdef New3
+import Data.List (sort)
+#endif
+
 testNewInternal :: Spec
 testNewInternal = do
     prop "Can add Words catching the carry." $ \ (w1, w2) ->
@@ -45,7 +51,18 @@ testNewInternal = do
             f1 = G.plusInteger (G.timesInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))) (G.wordToInteger (unboxWord c))
             f2 = G.plusInteger (G.wordToInteger (unboxWord prod)) (G.shiftLInteger (G.wordToInteger (unboxWord ov)) 64#)
         in f2 `shouldBe` f1
-
+#if New3
+    prop "Function quotRemWord works." $ \ x yMaybeZero ->
+        let yNotZero = if yMaybeZero == 0 then 42 else yMaybeZero
+            (### q, r ###) = quotRemWord x yNotZero
+        in q * yNotZero + r `shouldBe` x
+    prop "Function quotRemWord2 works." $ \ a b c ->
+        let [r, yMaybeZero, q] = sort [a, b, c]
+            yNotZero = if yMaybeZero == 0 then 42 else yMaybeZero
+            (### xhi, xlo ###) = timesWord2C q yNotZero r
+            (### qt, rt ###) = quotRemWord2 xhi xlo yNotZero
+        in showUT2 (timesWord2C qt yNotZero rt) `shouldBe` showUT2 (# xhi, xlo #)
+#endif
 
 testNewInteger :: Spec
 testNewInteger = do

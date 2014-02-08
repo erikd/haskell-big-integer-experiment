@@ -6,6 +6,7 @@ module New3.GHC.Integer.Prim
     ( plusWord, plusWord2, plusWord2C, plusWord3C
     , minusWord2, minusWord2C
     , timesWord2, timesWord2C, timesWord2CC
+    , quotRemWord, quotRemWord2
     , shiftRWord
     ) where
 
@@ -85,3 +86,15 @@ timesWord2CC !(W# a) !(W# b) !(W# c) !(W# d) =
 {-# INLINE shiftRWord #-}
 shiftRWord :: Word -> Int -> Word
 shiftRWord !(W# w) !(I# i) = W# (uncheckedShiftRL# w i)
+
+{-# INLINE quotRemWord #-}
+quotRemWord :: Word -> Word -> (# Word, Word #)
+quotRemWord (W# x) (W# y) =
+    let (# q, r #) = quotRemWord# x y
+    in (# W# q, W# r #)
+
+{-# INLINE quotRemWord2 #-}
+quotRemWord2 :: Word -> Word -> Word -> (# Word, Word #)
+quotRemWord2 (W# xhi) (W# xlo) (W# y) =
+    let (# q, r #) = quotRemWord2# xhi xlo y
+    in (# W# q, W# r #)
