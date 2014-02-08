@@ -2,10 +2,10 @@
 A Strict State Monad
 
 We want a monad we can run our Data.Primitive operations inside. Data.Primitive
-provides IO and StrictPrim instances, but we want strict evaluation.
+provides IO and ST instances, but we want strict evaluation.
 
-We take Carter Schonwald StrictIdentity monad idea [0] and cross it with the
-StrictPrim monad from Base to get StrictPrim.
+We take Carter Schonwald's StrictIdentity monad idea [0] and cross it with the
+State monad from Base to get StrictPrim.
 
 [0] http://hackage.haskell.org/package/strict-identity
 -}
@@ -14,7 +14,7 @@ StrictPrim monad from Base to get StrictPrim.
     TypeFamilies, UnboxedTuples #-}
 
 module New3.GHC.Integer.StrictPrim
-    ( StrictPrim (..)
+    ( StrictPrim
     , runStrictPrim
     ) where
 
@@ -58,6 +58,7 @@ instance PrimMonad (StrictPrim s) where
     type PrimState (StrictPrim s) = s
     {-# INLINE primitive #-}
     primitive = StrictPrim
+    {-# INLINE internal #-}
     internal (!(StrictPrim !p)) = p
 
 
