@@ -32,7 +32,7 @@ instance Show Natural where
 
 
 hexShow :: Integer -> String
-hexShow Zero = "0x0"
+hexShow (SmallPos 0) = "0x0"
 hexShow (SmallPos a) = "+0x" ++ showHex a ""
 hexShow (SmallNeg a) = "-0x" ++ showHex a ""
 hexShow (Positive n) = '+' : hexShowNatural n

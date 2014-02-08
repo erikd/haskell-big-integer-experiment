@@ -60,7 +60,7 @@ mkInteger :: Bool   -- non-negative?
                     -- ideally these would be Words rather than Ints, but
                     -- we don't have Word available at the moment.
           -> Integer
-mkInteger _ [] = smallInteger 0#
+mkInteger _ [] = zeroInteger
 mkInteger True [I# i] = smallInteger i
 mkInteger False [I# i] = smallInteger (negateInt# i)
 mkInteger nonNegative is =
@@ -69,7 +69,7 @@ mkInteger nonNegative is =
         then abs
         else negateInteger abs
   where
-    f [] = smallInteger 0#
+    f [] = zeroInteger
     f [I# x] = smallInteger x
     f (I# x : xs) = smallInteger x `orInteger` shiftLInteger (f xs) 31#
 
@@ -78,14 +78,13 @@ mkNatural ws =
     case mkInteger True ws of
         Positive a -> a
         Negative a -> a
-        Zero -> mkSingletonNat 0
         SmallPos x -> mkSingletonNat x
         SmallNeg x -> mkSingletonNat x
 
 {-# NOINLINE smallInteger #-}
 smallInteger :: Int# -> Integer
 smallInteger i
-    | isTrue# (i ==# 0#) = Zero
+    | isTrue# (i ==# 0#) = zeroInteger
     | isTrue# (i <# 0#) = SmallNeg (W# (int2Word# (negateInt# i)))
     | otherwise = SmallPos (W# (int2Word# i))
 
@@ -95,7 +94,6 @@ wordToInteger w = SmallPos (W# w)
 
 {-# NOINLINE integerToWord #-}
 integerToWord :: Integer -> Word#
-integerToWord Zero = 0##
 integerToWord (SmallPos (W# w)) = w
 integerToWord (SmallNeg (W# w)) = w
 integerToWord (Positive (Natural _ arr)) = unboxWord (indexWordArray arr 0)
@@ -103,7 +101,6 @@ integerToWord (Negative (Natural _ arr)) = unboxWord (indexWordArray arr 0)
 
 {-# NOINLINE integerToInt #-}
 integerToInt :: Integer -> Int#
-integerToInt Zero = 0#
 integerToInt (SmallPos (W# w)) = word2Int# w
 integerToInt (SmallNeg (W# w)) = negateInt# (word2Int# w)
 integerToInt (Positive (Natural _ arr)) = firstWordAsInt Pos arr
@@ -167,8 +164,8 @@ floatFromInteger = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ ::
 
 {-# NOINLINE andInteger #-}
 andInteger :: Integer -> Integer -> Integer
-andInteger Zero _ = Zero
-andInteger _ Zero = Zero
+andInteger !(SmallPos 0) _ = zeroInteger
+andInteger _ !(SmallPos 0) = zeroInteger
 
 andInteger (SmallPos a) (SmallPos b) = fromSmall Pos (a .&. b)
 andInteger (SmallPos a) (SmallNeg b) = fromSmall Pos (a .&. complement (b - 1))
@@ -208,9 +205,6 @@ andArray n arr1 arr2 = runStrictPrim $ do
 
 {-# NOINLINE orInteger #-}
 orInteger :: Integer -> Integer -> Integer
-orInteger a Zero = a
-orInteger Zero b = b
-
 orInteger (SmallPos a) (SmallPos b) = SmallPos (a .|. b)
 orInteger (SmallPos a) (SmallNeg b) = SmallNeg (1 + (complement a .&. (b - 1)))
 orInteger (SmallNeg a) (SmallPos b) = SmallNeg (1 + ((a - 1) .&. complement b))
@@ -261,8 +255,6 @@ orArray !n1 !arr1 !n2 !arr2
 
 {-# NOINLINE xorInteger #-}
 xorInteger :: Integer -> Integer -> Integer
-xorInteger a Zero = a
-xorInteger Zero b = b
 xorInteger (Positive (Natural n1 arr1)) (Positive (Natural n2 arr2)) = Positive (xorArray n1 arr1 n2 arr2)
 
 xorInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
@@ -295,7 +287,6 @@ xorArray !n1 !arr1 !n2 !arr2
 
 {-# NOINLINE complementInteger #-}
 complementInteger :: Integer -> Integer
-complementInteger !Zero = SmallNeg 1
 complementInteger !(SmallPos !a) = fromSmall Neg (a + 1)
 complementInteger !(SmallNeg !a) = fromSmall Pos (a - 1)
 complementInteger !(Positive !a) = fromNatural Neg (plusNaturalW a 1)
@@ -304,10 +295,9 @@ complementInteger !(Negative !a) = fromNatural Pos (minusNaturalW a 1)
 
 {-# NOINLINE shiftLInteger #-}
 shiftLInteger :: Integer -> Int# -> Integer
-shiftLInteger !Zero _ = Zero
 shiftLInteger !a 0# = a
 shiftLInteger !(SmallPos !a) b
-    | a == 0 = Zero
+    | a == 0 = zeroInteger
     | isTrue# (b >=# WORD_SIZE_IN_BITS#) = fromNatural Pos (shiftLNatural (mkSingletonNat a) (I# b))
     | otherwise =
         let !lo = unsafeShiftL a (I# b)
@@ -389,10 +379,10 @@ largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
 
 {-# NOINLINE shiftRInteger #-}
 shiftRInteger :: Integer -> Int# -> Integer
-shiftRInteger Zero _ = Zero
+shiftRInteger !(SmallPos 0) _ = zeroInteger
 shiftRInteger !a 0# = a
 shiftRInteger !(SmallPos !a) !b
-    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = Zero
+    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = zeroInteger
     | otherwise = fromSmall Pos (shiftRWord a (I# b))
 shiftRInteger !(SmallNeg !a) !b
     | isTrue# (b >=# WORD_SIZE_IN_BITS#) = SmallNeg 1
@@ -455,7 +445,7 @@ largeShiftRArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
 
 {-# NOINLINE negateInteger #-}
 negateInteger :: Integer -> Integer
-negateInteger !Zero = Zero
+negateInteger !(SmallPos 0) = SmallPos 0
 negateInteger !(SmallPos !a) = SmallNeg a
 negateInteger !(SmallNeg !a) = SmallPos a
 negateInteger !(Positive !a) = Negative a
@@ -464,12 +454,13 @@ negateInteger !(Negative !a) = Positive a
 {-# NOINLINE plusInteger #-}
 plusInteger :: Integer -> Integer -> Integer
 plusInteger !x !y = case (# x, y #) of
-    (# !Zero, !a #) -> a
-    (# !a, !Zero #) -> a
     (# !SmallPos !a, !SmallPos !b #) -> safePlusWord Pos a b
     (# !SmallPos !a, !SmallNeg !b #) -> safeMinusWord a b
     (# !SmallNeg !a, !SmallPos !b #) -> safeMinusWord b a
     (# !SmallNeg !a, !SmallNeg !b #) -> safePlusWord Neg a b
+
+    (# SmallPos 0, b #) -> b
+    (# a, SmallPos 0 #) -> a
 
     (# !SmallPos !a, !Positive !b #) -> Positive (plusNaturalW b a)
     (# !SmallPos !a, !Negative !b #) -> Negative (minusNaturalW b a)
@@ -491,7 +482,7 @@ plusInteger !x !y = case (# x, y #) of
 plusMinusNatural :: Natural -> Natural -> Integer
 plusMinusNatural !a !b =
     case compareNatural a b of
-        EQ -> Zero
+        EQ -> zeroInteger
         GT -> fromNatural Pos (minusNatural a b)
         LT -> fromNatural Neg (minusNatural b a)
 
@@ -509,7 +500,7 @@ safePlusWord !sign !w1 !w2 =
 safeMinusWord :: Word -> Word -> Integer
 safeMinusWord !a !b =
     case compare a b of
-        EQ -> Zero
+        EQ -> zeroInteger
         GT -> SmallPos (a - b)
         LT -> SmallNeg (b - a)
 
@@ -580,16 +571,16 @@ plusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
 {-# INLINE minusInteger #-}
 minusInteger :: Integer -> Integer -> Integer
 minusInteger !x !y = case (# x, y #) of
-    (# !a, !Zero #) -> a
-    (# !Zero, !a #) -> negateInteger a
     (# !SmallPos !a, !SmallPos !b #) -> safeMinusWord a b
     (# !SmallPos !a, !SmallNeg !b #) -> safePlusWord Pos a b
     (# !SmallNeg !a, !SmallPos !b #) -> safePlusWord Neg a b
     (# !SmallNeg !a, !SmallNeg !b #) -> safeMinusWord b a
 
+    (# SmallPos 0, b #) -> negateInteger b
+    (# a, SmallPos 0 #) -> a
+
     (# !SmallPos !a, !Positive !b #) -> Negative (minusNaturalW b a)
     (# !SmallPos !a, !Negative !b #) -> Positive (plusNaturalW b a)
-
     (# !SmallNeg !a, !Positive !b #) -> Negative (plusNaturalW b a)
     (# !SmallNeg !a, !Negative !b #) -> Positive (minusNaturalW b a)
 
@@ -671,8 +662,8 @@ minusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
 timesInteger !x !y = case (# x, y #) of
-    (# Zero, _ #) -> Zero
-    (# _, Zero #) -> Zero
+    (# SmallPos 0, _ #) -> zeroInteger
+    (# _, SmallPos 0 #) -> zeroInteger
 
     (# SmallPos a, SmallPos b #) -> safeTimesWord Pos a b
     (# SmallPos a, SmallNeg b #) -> safeTimesWord Neg a b
@@ -893,37 +884,37 @@ timesNaturalNewest !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
 {- divModInteger should be implemented in terms of quotRemInteger -}
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
-divModInteger Zero (SmallPos _) = (# Zero, Zero #)
-divModInteger (SmallPos !a) (SmallPos !b) = let (!q, !r) = divMod a b in (# if q == 0 then Zero else SmallPos q, if r == 0 then Zero else SmallPos r #)
-divModInteger (SmallNeg !a) (SmallNeg !b) = let (!q, !r) = divMod a b in (# if q == 0 then Zero else SmallPos q, if r == 0 then Zero else SmallNeg r #)
+divModInteger (SmallPos 0) (SmallPos _) = (# zeroInteger, zeroInteger #)
+divModInteger (SmallPos !a) (SmallPos !b) = let (!q, !r) = divMod a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallPos r #)
+divModInteger (SmallNeg !a) (SmallNeg !b) = let (!q, !r) = divMod a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallNeg r #)
 divModInteger (SmallPos !a) (SmallNeg !b) =
     let (!q, !r) = divMod a b
     in if r == 0
-        then (# SmallNeg q, Zero #)
+        then (# SmallNeg q, zeroInteger #)
         else (# SmallNeg (q + 1), SmallNeg (b - r) #)
 divModInteger (SmallNeg !a) (SmallPos !b) =
     let (!q, !r) = divMod a b
     in case (q == 0, r == 0) of
         ( False, False )    -> (# SmallNeg (q + 1), SmallPos (b - r) #)
         ( True, False )     -> (# SmallNeg 1, SmallPos (b - r) #)
-        ( False, True )     -> (# SmallNeg q, Zero #)
+        ( False, True )     -> (# SmallNeg q, zeroInteger #)
         _                   -> (# SmallPos 3, SmallPos 3 #)
 
 divModInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE quotRemInteger #-}
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
-quotRemInteger Zero (SmallPos _) = (# Zero, Zero #)
-quotRemInteger (SmallPos !a) (SmallPos !b) = let (!q, !r) = quotRem a b in (# if q == 0 then Zero else SmallPos q, if r == 0 then Zero else SmallPos r #)
-quotRemInteger (SmallNeg !a) (SmallNeg !b) = let (!q, !r) = quotRem a b in (# if q == 0 then Zero else SmallPos q, if r == 0 then Zero else SmallNeg r #)
-quotRemInteger (SmallPos !a) (SmallNeg !b) = let (!q, !r) = quotRem a b in (# if q == 0 then Zero else SmallNeg q, if r == 0 then Zero else SmallPos r #)
+quotRemInteger (SmallPos 0) (SmallPos _) = (# zeroInteger, zeroInteger #)
+quotRemInteger (SmallPos !a) (SmallPos !b) = let (!q, !r) = quotRem a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallPos r #)
+quotRemInteger (SmallNeg !a) (SmallNeg !b) = let (!q, !r) = quotRem a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallNeg r #)
+quotRemInteger (SmallPos !a) (SmallNeg !b) = let (!q, !r) = quotRem a b in (# if q == 0 then zeroInteger else SmallNeg q, if r == 0 then zeroInteger else SmallPos r #)
 
 quotRemInteger (SmallNeg !a) (SmallPos !b) =
     let (!q, !r) = quotRem a b
     in case (q == 0, r == 0) of
         ( False, False )    -> (# SmallNeg q, SmallNeg r #)
-        ( True, False )     -> (# Zero, SmallNeg r #)
-        ( False, True )     -> (# SmallNeg q, Zero #)
+        ( True, False )     -> (# zeroInteger, SmallNeg r #)
+        ( False, True )     -> (# SmallNeg q, zeroInteger #)
         _                   -> (# SmallPos 3, SmallPos 3 #)
 
 quotRemInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
@@ -944,23 +935,19 @@ compareInteger = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: I
 
 {-# NOINLINE eqInteger #-}
 eqInteger :: Integer -> Integer -> Bool
-eqInteger !Zero !Zero = True
 eqInteger !(SmallPos !a) !(SmallPos !b) = a == b
 eqInteger !(SmallNeg !a) !(SmallNeg !b) = b == a
 eqInteger !(Positive !a) !(Positive !b) = eqNatural a b
 eqInteger !(Negative !a) !(Negative !b) = eqNatural a b
 
-eqInteger !(SmallPos _) !Zero = False
 eqInteger !(SmallPos _) !(SmallNeg _) = False
 eqInteger !(SmallPos _) !(Positive _) = False
 eqInteger !(SmallPos _) !(Negative _) = False
 
-eqInteger !(Positive _) !Zero = False
 eqInteger !(Positive _) !(SmallPos _) = False
 eqInteger !(Positive _) !(SmallNeg _) = False
 eqInteger !(Positive _) !(Negative _) = False
 
-eqInteger !Zero _ = False
 eqInteger !(SmallNeg _) _ = False
 eqInteger !(Negative _) _ = False
 
@@ -999,10 +986,6 @@ instance  Eq Integer  where
 
 {-# NOINLINE ltInteger #-}
 ltInteger :: Integer -> Integer -> Bool
-ltInteger !Zero !Zero = False
-ltInteger !(SmallPos _) !Zero = False
-ltInteger !(SmallNeg _) !Zero = True
-
 ltInteger !(SmallPos !a) !(SmallPos !b) = a < b
 ltInteger !(SmallNeg !a) !(SmallNeg !b) = b < a
 ltInteger !(SmallPos _) !(SmallNeg _) = False
@@ -1013,23 +996,16 @@ ltInteger !(SmallPos _) !(Negative _) = False
 ltInteger !(SmallNeg _) !(Positive _) = True
 ltInteger !(SmallNeg _) !(Negative _) = False
 
-ltInteger !(Positive _) !Zero = False
 ltInteger !(Positive _) !(SmallPos _) = False
 ltInteger !(Positive _) !(SmallNeg _) = False
 ltInteger !(Positive _) !(Negative _) = False
 
-ltInteger !(Negative _) !Zero = True
 ltInteger !(Negative _) !(SmallPos _) = True
 ltInteger !(Negative _) !(SmallNeg _) = True
 ltInteger !(Negative _) !(Positive _) = True
 
 ltInteger !(Positive !a) !(Positive !b) = ltNatural a b
 ltInteger !(Negative !a) !(Negative !b) = ltNatural b a
-
-ltInteger !Zero !(SmallPos _) = True
-ltInteger !Zero !(Positive _) = True
-ltInteger !Zero !(SmallNeg _) = False
-ltInteger !Zero !(Negative _) = False
 
 ltNatural :: Natural -> Natural -> Bool
 ltNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2)
@@ -1046,10 +1022,6 @@ ltNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2)
 
 {-# NOINLINE gtInteger #-}
 gtInteger :: Integer -> Integer -> Bool
-gtInteger !Zero !Zero = False
-gtInteger !(SmallPos _) !Zero = True
-gtInteger !(SmallNeg _) !Zero = False
-
 gtInteger !(SmallPos !a) !(SmallPos !b) = a > b
 gtInteger !(SmallNeg !a) !(SmallNeg !b) = a < b
 gtInteger !(SmallPos _) !(SmallNeg _) = True
@@ -1060,24 +1032,16 @@ gtInteger !(SmallPos _) !(Negative _) = True
 gtInteger !(SmallNeg _) !(Positive _) = False
 gtInteger !(SmallNeg _) !(Negative _) = True
 
-gtInteger !(Positive _) !Zero = True
 gtInteger !(Positive _) !(SmallPos _) = True
 gtInteger !(Positive _) !(SmallNeg _) = True
 gtInteger !(Positive _) !(Negative _) = True
 
-gtInteger !(Negative _) !Zero = False
 gtInteger !(Negative _) !(SmallPos _) = False
 gtInteger !(Negative _) !(SmallNeg _) = False
 gtInteger !(Negative _) !(Positive _) = False
 
 gtInteger !(Positive !a) !(Positive !b) = gtNatural a b
 gtInteger !(Negative !a) !(Negative !b) = gtNatural b a
-
-gtInteger !Zero !(SmallPos _) = False
-gtInteger !Zero !(Positive _) = False
-gtInteger !Zero !(SmallNeg _) = True
-gtInteger !Zero !(Negative _) = True
-
 
 gtNatural :: Natural -> Natural -> Bool
 gtNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2)
@@ -1106,7 +1070,6 @@ instance Ord Integer where
 
 {-# NOINLINE absInteger #-}
 absInteger :: Integer -> Integer
-absInteger !Zero = Zero
 absInteger !a@(SmallPos _) = a
 absInteger !(SmallNeg !a) = SmallPos a
 absInteger !a@(Positive _) = a
@@ -1132,15 +1095,15 @@ unboxWord !(W# !w) = w
 {-# INLINE fromSmall #-}
 fromSmall :: Sign -> Word -> Integer
 fromSmall !s !w
-    | w == 0 = Zero
+    | w == 0 = zeroInteger
     | s == Pos = SmallPos w
     | otherwise = SmallNeg w
 
 {-# INLINE fromNatural #-}
 fromNatural :: Sign -> Natural -> Integer
 fromNatural !s !nat@(Natural n arr)
-    | n == 0 = Zero
-    | n == 1 && indexWordArray arr 0 == 0 = Zero -- TODO: See if this can be removed.
+    | n == 0 = zeroInteger
+    | n == 1 && indexWordArray arr 0 == 0 = zeroInteger -- TODO: See if this can be removed.
     | s == Pos = Positive nat
     | otherwise = Negative nat
 
@@ -1191,7 +1154,8 @@ nonZeroLen !len !arr
         in trim (len - 1)
 
 
-oneInteger, minusOneInteger :: Integer
+zeroInteger, oneInteger, minusOneInteger :: Integer
+zeroInteger = SmallPos 0
 oneInteger = SmallPos 1
 minusOneInteger = SmallNeg 1
 
@@ -1205,7 +1169,6 @@ twoToTheThirtytwoInteger = error ("New3/GHC/Integer/Type.hs: line " ++ show (__L
 toList :: Integer -> [Word]
 toList ii =
     case ii of
-        Zero -> [0]
         SmallPos w -> [w]
         SmallNeg w -> [w]
         Positive nat -> natList nat
@@ -1260,7 +1223,6 @@ debugWriteWordArray _ marr i x = writeWordArray marr i x
 #endif
 
 isSmall :: Integer -> Bool
-isSmall Zero = True
 isSmall (SmallPos _) = True
 isSmall (SmallNeg _) = True
 isSmall _ = False
@@ -1283,8 +1245,7 @@ errorLine linenum s = error $ "Line " ++ show linenum ++ ": " ++ s
 isMinimal :: Integer -> Bool
 isMinimal i =
     case i of
-        Zero -> True
-        SmallPos a -> a /= 0
+        SmallPos _ -> True
         SmallNeg a -> a /= 0
         Positive a -> isMinimalNatural a
         Negative a -> isMinimalNatural a

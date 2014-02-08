@@ -15,8 +15,7 @@ import GHC.IntWord64
 import New3.GHC.Integer.WordArray
 
 data Integer
-    = Zero
-    | SmallPos {-# UNPACK #-} !Word
+    = SmallPos {-# UNPACK #-} !Word
     | SmallNeg {-# UNPACK #-} !Word
     | Positive !Natural
     | Negative !Natural
