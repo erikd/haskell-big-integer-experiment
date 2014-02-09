@@ -31,7 +31,7 @@ module New3.GHC.Integer.Internals
 -}
     where
 
-import Prelude hiding (Integer, abs, pi, sum) -- (all, error, otherwise, return, show, succ, (++))
+import Prelude hiding (Integer, abs, pi, sum, rem) -- (all, error, otherwise, return, show, succ, (++))
 
 import Data.Bits
 
@@ -905,17 +905,22 @@ divModInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :
 {-# NOINLINE quotRemInteger #-}
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
 quotRemInteger (SmallPos 0) (SmallPos _) = (# zeroInteger, zeroInteger #)
-quotRemInteger (SmallPos !a) (SmallPos !b) = let (!q, !r) = quotRem a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallPos r #)
-quotRemInteger (SmallNeg !a) (SmallNeg !b) = let (!q, !r) = quotRem a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallNeg r #)
-quotRemInteger (SmallPos !a) (SmallNeg !b) = let (!q, !r) = quotRem a b in (# if q == 0 then zeroInteger else SmallNeg q, if r == 0 then zeroInteger else SmallPos r #)
+quotRemInteger (SmallPos !a) (SmallPos !b) = let (# !q, !r #) = quotRemWord a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallPos r #)
+quotRemInteger (SmallNeg !a) (SmallNeg !b) = let (# !q, !r #) = quotRemWord a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallNeg r #)
+quotRemInteger (SmallPos !a) (SmallNeg !b) = let (# !q, !r #) = quotRemWord a b in (# if q == 0 then zeroInteger else SmallNeg q, if r == 0 then zeroInteger else SmallPos r #)
 
 quotRemInteger (SmallNeg !a) (SmallPos !b) =
-    let (!q, !r) = quotRem a b
+    let (# !q, !r #) = quotRemWord a b
     in case (q == 0, r == 0) of
         ( False, False )    -> (# SmallNeg q, SmallNeg r #)
         ( True, False )     -> (# zeroInteger, SmallNeg r #)
         ( False, True )     -> (# SmallNeg q, zeroInteger #)
         _                   -> (# SmallPos 3, SmallPos 3 #)
+
+quotRemInteger (Positive !a) (SmallPos !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Pos q, if r == 0 then zeroInteger else SmallPos r #)
+quotRemInteger (Negative !a) (SmallPos !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Neg q, if r == 0 then zeroInteger else SmallNeg r #)
+quotRemInteger (Positive !a) (SmallNeg !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Neg q, if r == 0 then zeroInteger else SmallPos r #)
+quotRemInteger (Negative !a) (SmallNeg !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Pos q, if r == 0 then zeroInteger else SmallNeg r #)
 
 quotRemInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
@@ -924,6 +929,22 @@ quotInteger :: Integer -> Integer -> Integer
 quotInteger a b =
     let (# q, _ #) = quotRemInteger a b
     in q
+
+quotRemNaturalW :: Natural -> Word -> (Natural, Word)
+quotRemNaturalW (Natural n arr) w = runStrictPrim $ do
+    qlen <- return $! if w >= indexWordArray arr (n - 1) then n - 1 else n
+    qmarr <- newWordArray n
+    rem <- loop (n - 1) qmarr 0
+    qarr <- unsafeFreezeWordArray qmarr
+    return $! (Natural qlen qarr, rem)
+  where
+    loop i qmarr rem
+        | i >= 0 = do
+            x <- indexWordArrayM arr i
+            let (# q, r #) = quotRemWord2 rem x w
+            writeWordArray qmarr i q
+            loop (i - 1) qmarr r
+        | otherwise = return rem
 
 {-# NOINLINE remInteger #-}
 remInteger :: Integer -> Integer -> Integer

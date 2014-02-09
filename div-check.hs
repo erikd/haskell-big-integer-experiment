@@ -4,6 +4,7 @@ import Test.Hspec
 import Test.Hspec.QuickCheck
 
 import Check.Helpers
+import Check.New3
 
 import qualified GMP.Integer as G
 import qualified New3.Integer as X
@@ -17,11 +18,15 @@ main = hspec $ describe "New check:" $ do
 
 
 current :: Spec
-current =
+current = do
     it "Can quotRem Integers." $ do
         let n = X.mkInteger True [3, 0, 8]
             d = X.smallInteger (0x20000#)
         showUT2 (X.quotRemInteger n d) `shouldBe` "(+0x1000000000000,+0x3)"
+
+    prop "Can quotRemNaturalW Integers." $ \ (GNP gn sn) d -> do
+        let dNonZero = if d == 0 then 42 else d
+        showUT2 (X.quotRemInteger sn (X.smallInteger (unboxInt dNonZero))) `shouldBe` showUT2 (G.quotRemInteger gn (G.smallInteger (unboxInt dNonZero)))
 
    {-
     it "Can quotRem Integers." $ do
