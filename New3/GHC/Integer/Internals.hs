@@ -402,7 +402,7 @@ shiftRNatural !(Natural !n !arr) !i
     | otherwise = do
             let (!q, !r) = quotRem i WORD_SIZE_IN_BITS
             if q >= n
-                then Natural 0 arr
+                then zeroNatural
                 else if r == 0
                     then wordShiftRArray n arr q
                     else largeShiftRArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
@@ -922,6 +922,8 @@ quotRemInteger (Negative !a) (SmallPos !b) = let (!q, !r) = quotRemNaturalW a b 
 quotRemInteger (Positive !a) (SmallNeg !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Neg q, if r == 0 then zeroInteger else SmallPos r #)
 quotRemInteger (Negative !a) (SmallNeg !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Pos q, if r == 0 then zeroInteger else SmallNeg r #)
 
+quotRemInteger (Positive !a) (Positive !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Pos q, fromNatural Pos r #)
+
 quotRemInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE quotInteger #-}
@@ -931,9 +933,9 @@ quotInteger a b =
     in q
 
 quotRemNaturalW :: Natural -> Word -> (Natural, Word)
-quotRemNaturalW (Natural n arr) w = runStrictPrim $ do
+quotRemNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
     qlen <- return $! if w >= indexWordArray arr (n - 1) then n - 1 else n
-    qmarr <- newWordArray n
+    qmarr <- newWordArray qlen
     rem <- loop (n - 1) qmarr 0
     qarr <- unsafeFreezeWordArray qmarr
     return $! (Natural qlen qarr, rem)
@@ -945,6 +947,77 @@ quotRemNaturalW (Natural n arr) w = runStrictPrim $ do
             writeWordArray qmarr i q
             loop (i - 1) qmarr r
         | otherwise = return rem
+
+{-
+https://www.khanacademy.org/math/arithmetic/multiplication-division/partial_quotient_division/v/partial-quotient-method-of-division-2
+http://en.wikipedia.org/wiki/Division_algorithm
+http://en.wikipedia.org/wiki/Barrett_reduction
+http://en.wikipedia.org/wiki/Euclidean_division
+-}
+
+
+quotRemNatural :: Natural -> Natural -> (Natural, Natural)
+quotRemNatural !numer@(Natural !nn !narr) !denom@(Natural !dn !darr)
+    | dn > nn = (zeroNatural, numer)
+    | dn == nn && indexWordArray narr (nn - 1) < indexWordArray darr (nn - 1) = (zeroNatural, numer)
+    | dn == nn && indexWordArray narr (nn - 1) == indexWordArray darr (nn - 1) =
+                    if ltNatural numer denom
+                        then (zeroNatural, numer)
+                        else (oneNatural, minusNatural numer denom)
+#if 0
+    | otherwise = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+#else
+    | otherwise = divideOnceNatural numer denom
+
+{-
+      runStrictPrim $ do
+        qlen <- return $! if indexWordArray darr (dn - 1) >= indexWordArray narr (nn - 1) then n - 1 else n
+        qmarr <- newWordArray n
+        rmarr <- newWordArray n
+        rem <- loop (n - 1) qmarr 0
+        qarr <- unsafeFreezeWordArray qmarr
+        return $! (Natural qlen qarr, rem)
+-}
+
+
+
+
+#endif
+
+divideOnceNatural :: Natural -> Natural -> (Natural, Natural)
+divideOnceNatural numer denom =
+    let !(q1, r1) = partialQuotient numer
+    in case q1 of
+        Natural 0 _ -> (q1, r1)
+        _ ->
+            let !(!q2, !r2) = divideOnceNatural r1 denom
+            in (plusNatural q1 q2, r2)
+  where
+    {-# INLINE partialQuotient #-}
+    partialQuotient :: Natural -> (Natural, Natural)
+    partialQuotient num =
+        let (m, s) = partialQuotientWord num denom
+        in case m of
+            0 -> (zeroNatural, num)
+            _ ->
+                let !qt = shiftLNatural (wordToNatural m) (64 * s)
+                    !pr = timesNatural denom qt
+                    !rm  = minusNatural num pr
+                in (qt, rm)
+
+    {-# INLINE partialQuotientWord #-}
+    partialQuotientWord :: Natural -> Natural -> (Word, Int)
+    partialQuotientWord !(Natural !nn !narr) !(Natural !dn !darr) =
+        let !n0 = indexWordArray narr (nn - 1)
+            !d0 = indexWordArray darr (dn - 1)
+        in case (# compare dn nn, compare n0 d0 #) of
+            (# GT, _ #) -> (0, 0)
+            (# EQ, LT #) -> (0, 0)
+            (# EQ, EQ #) -> (1, nn - dn)
+            (# EQ, GT #) -> case quotRemWord n0 d0 of (# !q, _ #) -> (q, nn - dn)
+            (# LT, LT #) -> case quotRemWord2 n0 (indexWordArray narr $ nn - 2) d0 of (# !q, _ #) -> (q, nn - dn - 1)
+            (# LT, _ #) -> case quotRemWord n0 d0 of (# !q, _ #) -> (q, nn - dn)
+
 
 {-# NOINLINE remInteger #-}
 remInteger :: Integer -> Integer -> Integer
@@ -1113,6 +1186,11 @@ unboxWord :: Word -> Word#
 unboxWord !(W# !w) = w
 
 
+{-# INLINE unboxInt #-}
+unboxInt :: Int -> Int#
+unboxInt !(I# !i) = i
+
+
 {-# INLINE fromSmall #-}
 fromSmall :: Sign -> Word -> Integer
 fromSmall !s !w
@@ -1155,13 +1233,13 @@ mkSingletonNat !x = runStrictPrim mkNat
 
 
 finalizeNatural :: Int -> WordArray -> StrictPrim s Natural
-finalizeNatural 0 !arr = return (Natural 0 arr)
+finalizeNatural 0 _ = return zeroNatural
 finalizeNatural !nin !arr = do
     let !len = nonZeroLen nin arr
     x <- indexWordArrayM arr 0
     return $
         if len < 0 || (len == 1 && x == 0)
-            then Natural 0 arr
+            then zeroNatural
             else Natural len arr
 
 nonZeroLen :: Int -> WordArray -> Int
@@ -1180,11 +1258,21 @@ zeroInteger = SmallPos 0
 oneInteger = SmallPos 1
 minusOneInteger = SmallNeg 1
 
-{-
+zeroNatural, oneNatural :: Natural
+zeroNatural = runStrictPrim $ do
+        marr <- newWordArray 1
+        writeWordArray marr 0 0
+        narr <- unsafeFreezeWordArray marr
+        return $! Natural 0 narr
+oneNatural = wordToNatural 1
 
-twoToTheThirtytwoInteger :: Integer
-twoToTheThirtytwoInteger = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
--}
+wordToNatural :: Word -> Natural
+wordToNatural w = runStrictPrim $ do
+        marr <- newWordArray 1
+        writeWordArray marr 0 w
+        narr <- unsafeFreezeWordArray marr
+        return $! Natural 1 narr
+
 
 
 toList :: Integer -> [Word]

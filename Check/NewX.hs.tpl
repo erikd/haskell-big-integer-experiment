@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP, FlexibleInstances, ScopedTypeVariables #-}
 module Check.NewX
-    ( testNewInternal
+    ( GmpNewPair (..)
+    , testNewInternal
     , testNewInteger
     ) where
 

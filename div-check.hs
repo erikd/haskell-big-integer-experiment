@@ -11,7 +11,7 @@ import qualified New3.Integer as X
 
 
 main :: IO ()
-main = hspec $ describe "New check:" $ do
+main = hspec $ describe "div-check:" $ do
     testQuotRem
     testDivMod
     current
@@ -28,13 +28,34 @@ current = do
         let dNonZero = if d == 0 then 42 else d
         showUT2 (X.quotRemInteger sn (X.smallInteger (unboxInt dNonZero))) `shouldBe` showUT2 (G.quotRemInteger gn (G.smallInteger (unboxInt dNonZero)))
 
-   {-
-    it "Can quotRem Integers." $ do
-        let n = X.mkInteger True [3, 0, 8]
-            d = X.mkInteger True [0, 0, 2]
-        showUT2 (X.quotRemInteger n d) `shouldBe` showUT2 (G.quotRemInteger (G.smallInteger n) (G.smallInteger d))
-    -}
+    it "Can quotRem Integers #1." $ do
+        let n = [1,2,3,4]
+            d = [1,2,3,4]
+        showUT2 (X.quotRemInteger (X.mkInteger True n) (X.mkInteger True d)) `shouldBe` showUT2 (G.quotRemInteger (G.mkInteger True n) (G.mkInteger True d))
 
+    it "Can quotRem Integers #2." $ do
+        let n = [1,2,3,4]
+            d = [0,0,3,4]
+        showUT2 (X.quotRemInteger (X.mkInteger True n) (X.mkInteger True d)) `shouldBe` showUT2 (G.quotRemInteger (G.mkInteger True n) (G.mkInteger True d))
+
+    it "Can quotRem Integers #3." $ do
+        let n = [1,2,3,4]
+            d = [2,2,3,4]
+        showUT2 (X.quotRemInteger (X.mkInteger True n) (X.mkInteger True d)) `shouldBe` showUT2 (G.quotRemInteger (G.mkInteger True n) (G.mkInteger True d))
+
+    it "Can quotRem Integers #98." $ do
+        let n = [3, 0, 24, 0, 128, 0, 512]
+            d = [0, 0, 8]
+        putStrLn $ X.hexShow $ X.mkInteger True n
+        putStrLn $ X.hexShow $ X.mkInteger True d
+        showUT2 (X.quotRemInteger (X.mkInteger True n) (X.mkInteger True d)) `shouldBe` showUT2 (G.quotRemInteger (G.mkInteger True n) (G.mkInteger True d))
+
+    {-
+    it "Can quotRem Integers #99." $ do
+        let n = [3, 0, 16, 0, 64]
+            d = [1, 0, 8]
+        showUT2 (X.quotRemInteger (X.mkInteger True n) (X.mkInteger True d)) `shouldBe` showUT2 (G.quotRemInteger (G.mkInteger True n) (G.mkInteger True d))
+    -}
 
 
 testQuotRem :: Spec
