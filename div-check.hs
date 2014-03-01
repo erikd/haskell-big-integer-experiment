@@ -43,9 +43,16 @@ current = do
             d = [2,2,3,4]
         showUT2 (X.quotRemInteger (X.mkInteger True n) (X.mkInteger True d)) `shouldBe` showUT2 (G.quotRemInteger (G.mkInteger True n) (G.mkInteger True d))
 
-    it "Can quotRem Integers #98." $ do
+    it "Can quotRem Integers #5." $ do
         let n = [3, 0, 24, 0, 128, 0, 512]
             d = [0, 0, 8]
+        putStrLn $ X.hexShow $ X.mkInteger True n
+        putStrLn $ X.hexShow $ X.mkInteger True d
+        showUT2 (X.quotRemInteger (X.mkInteger True n) (X.mkInteger True d)) `shouldBe` showUT2 (G.quotRemInteger (G.mkInteger True n) (G.mkInteger True d))
+
+    it "Can quotRem Integers #98." $ do
+        let n = [3, 0, 24, 0, 128, 0, 512]
+            d = [0, 0, 10]
         putStrLn $ X.hexShow $ X.mkInteger True n
         putStrLn $ X.hexShow $ X.mkInteger True d
         showUT2 (X.quotRemInteger (X.mkInteger True n) (X.mkInteger True d)) `shouldBe` showUT2 (G.quotRemInteger (G.mkInteger True n) (G.mkInteger True d))
