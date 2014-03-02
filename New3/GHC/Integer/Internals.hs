@@ -137,7 +137,32 @@ int64ToInteger = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: I
 
 {-# NOINLINE encodeDoubleInteger #-}
 encodeDoubleInteger :: Integer -> Int# -> Double#
-encodeDoubleInteger = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+encodeDoubleInteger (SmallPos (W# w)) i = encodeDouble# w i
+encodeDoubleInteger (SmallNeg (W# w)) i = negateDouble# (encodeDouble# w i)
+
+encodeDoubleInteger (Positive n) s = encodeDoubleNatural n s
+encodeDoubleInteger (Negative n) s = negateDouble# (encodeDoubleNatural n s)
+
+encodeDoubleNatural :: Natural -> Int# -> Double#
+encodeDoubleNatural !(Natural n arr) s
+    | isTrue# (s +# (unboxInt (n * 64)) ># 2500#) = 1.0## /## 0.0##
+    | isTrue# (s -# (unboxInt (n * 64)) <# -2500#) = 0.0##
+    | otherwise = (+##)
+            (encodeDouble# (unboxWord (indexWordArray arr (n - 1))) (s +# 64# *# unboxInt (n - 1)))
+            (encodeDouble# (unboxWord (indexWordArray arr (n - 2))) (s +# 64# *# unboxInt (n - 2)))
+
+{-# NOINLINE decodeDoubleInteger #-}
+decodeDoubleInteger :: Double# -> (# Integer, Int# #)
+decodeDoubleInteger d =
+    case decodeDouble_2Int# d of
+        (# mantSign, mantHigh, mantLow, expn #) ->
+            let !signf = if isTrue# (mantSign ># 0#) then SmallPos else SmallNeg
+            in  (# signf (W# (plusWord# mantLow (uncheckedShiftL# mantHigh 32#)))
+                , expn #)
+
+
+foreign import ccall unsafe "__word_encodeDouble"
+        encodeDouble# :: Word# -> Int# -> Double#
 
 {-# NOINLINE encodeFloatInteger #-}
 encodeFloatInteger :: Integer -> Int# -> Float#
@@ -146,13 +171,6 @@ encodeFloatInteger = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ 
 {-# NOINLINE decodeFloatInteger #-}
 decodeFloatInteger :: Float# -> (# Integer, Int# #)
 decodeFloatInteger = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
-
--- XXX This could be optimised better, by either (word-size dependent)
--- using single 64bit value for the mantissa, or doing the multiplication
--- by just building the Digits directly
-{-# NOINLINE decodeDoubleInteger #-}
-decodeDoubleInteger :: Double# -> (# Integer, Int# #)
-decodeDoubleInteger = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE doubleFromInteger #-}
 doubleFromInteger :: Integer -> Double#
