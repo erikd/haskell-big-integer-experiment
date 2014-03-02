@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, MagicHash #-}
+{-# LANGUAGE BangPatterns, MagicHash, UnboxedTuples #-}
 module Check.Helpers where
 
 import Control.Applicative ((<$>))
@@ -30,6 +30,9 @@ unboxInt (I# i) = i
 
 boxIntHash :: Int# -> Int
 boxIntHash i = I# i
+
+boxDoubleHash :: Double# -> Double
+boxDoubleHash d = D# d
 
 {-# INLINE unboxWord #-}
 unboxWord :: Word -> Word#
