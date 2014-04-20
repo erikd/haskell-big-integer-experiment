@@ -28,6 +28,7 @@ import Check.Helpers
 
 #ifdef New3
 import Data.List (sort)
+import GHC.Int (Int32)
 #endif
 
 testNewInternal :: Spec
@@ -241,7 +242,20 @@ testNewInteger = do
         let bits = unboxInt (int .&. 0x7f)
         X.isMinimal (X.shiftLInteger s bits) `shouldBe` True
 
+#if New3
+    it "Can encode to Double." $ do
+        boxDoubleHash (X.encodeDoubleInteger (X.smallInteger 3333#) 0#) `shouldBe` boxDoubleHash (G.encodeDoubleInteger (G.smallInteger 3333#) 0#)
+        boxDoubleHash (X.encodeDoubleInteger (X.mkInteger True [1,2,4,8]) 0#) `shouldBe` boxDoubleHash (G.encodeDoubleInteger (G.mkInteger True [1,2,4,8]) 0#)
 
+    prop "Can encode to Double (QC)." $ \ (GNP g n) (int :: Int32) -> do
+        let i = unboxInt (fromIntegral int)
+        boxDoubleHash (X.encodeDoubleInteger n i) `shouldBe` boxDoubleHash (G.encodeDoubleInteger g i)
+
+    prop "Can decode Double to (Integer, Int)." $ \ d ->
+        let (# xb, xe #) = X.decodeDoubleInteger (unboxDouble d)
+            (# gb, ge #) = G.decodeDoubleInteger (unboxDouble d)
+        in show (xb, boxIntHash xe) `shouldBe` show (gb, boxIntHash ge)
+#endif
 
 --------------------------------------------------------------------------------
 
@@ -280,6 +294,6 @@ instance Arbitrary GmpNewPair where
                 return $! GNP (G.smallInteger (unboxInt i)) (X.smallInteger (unboxInt i))
             else do
                 sign <- arbitrary
-                pos <- positive32bits <$> arbitrary
+                pos <- (take 20 . positive32bits) <$> arbitrary
                 return $! GNP (G.mkInteger sign pos) (X.mkInteger sign pos)
 

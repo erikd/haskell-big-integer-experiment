@@ -28,15 +28,19 @@ mkLargeIntegerList count range = do
 unboxInt :: Int -> Int#
 unboxInt (I# i) = i
 
+{-# INLINE unboxWord #-}
+unboxWord :: Word -> Word#
+unboxWord !(W# !w) = w
+
+{-# INLINE unboxDouble #-}
+unboxDouble :: Double -> Double#
+unboxDouble !(D# !d) = d
+
 boxIntHash :: Int# -> Int
 boxIntHash i = I# i
 
 boxDoubleHash :: Double# -> Double
 boxDoubleHash d = D# d
-
-{-# INLINE unboxWord #-}
-unboxWord :: Word -> Word#
-unboxWord !(W# !w) = w
 
 -- The mkInteger functions expect values in range [0, 0x7fffffff].
 positive32bits :: [Int] -> [Int]
