@@ -1,7 +1,49 @@
-Start of a test suite and benchmarking suite for the two GHC big integer
-libraries integer-simple and integer-gmp.
+# haskell-big-integer-experiment
 
-These libraries make use of low level GHC internal data structures and hence
-are not portable across GHC versions.
+This project aims to compare and contrast the two exisiting Haskell big
+integer implementations (integer-simple and integer-gmp) to a a new
+implementation that will hopefully replace the other two.
 
-The current test is aimed at ghc-7.6.3.
+The reasons why a replacement for the above two is needed is explained
+[here][reason].
+
+The Git checkout for this project contains copies of the integer-simple and
+integer-gmp trees (with some slight mods) as well as a number of alternative
+implementations of the new library. When a decent implementation for the new
+integer library emerges from this work it will be extracted and submitted for
+inclusion in the GHC tree.
+
+__This is still very much a work in progress. Patches and pull requests more
+than welcome.__
+
+## Requirements
+
+Since we need to benchmark against the very latest versions of the integer-simple
+and inetger-gmp we need to run the latest versions of GHC which at the time of
+writing is 7.8.x (7.6 will not work).
+
+GNU Make is used for the build system.
+
+You will also need the following Haskell libraries install:
+
+* criterion
+* hspec
+
+
+## Kicking the tires
+
+A real good place to start with this is running the test suite which is as
+easy as:
+
+	make check
+
+To run the crierion benchmarks  using:
+
+    make view-bench
+
+which will run the bench marks and display them in firefox or whatever browser
+you set with the $BROWSER environment variable.
+
+
+
+[reason]: http://www.mega-nerd.com/erikd/Blog/CodeHacking/Haskell/integer_pt1.html
