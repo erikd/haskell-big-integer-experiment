@@ -11,6 +11,8 @@ checkfiles = Check/New1.hs Check/New2.hs Check/New3.hs
 
 PRAGMAS = -XCPP -XMagicHash -XUnboxedTuples -XUnliftedFFITypes
 
+BROWSER ?= firefox
+
 
 all : $(TARGETS)
 
@@ -35,7 +37,7 @@ check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.
 	$(GHC) $(GHCFLAGS) -DTESTING --make $< $(gmp_cmm_files) -o $@
 
 div-check : div-check.hs Stamp/copy $(hsfiles)
-	$(GHC) $(GHCFLAGS) -DTESTING --make $< -o $@
+	$(GHC) $(GHCFLAGS) -DTESTING --make $< $(gmp_cmm_files) -o $@
 
 bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
@@ -86,17 +88,17 @@ Check/New3.hs : Check/NewX.hs.tpl
 view-bench : new-bench-integer
 	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
 	chmod a+r new-bench-integer.html
-	gnome-www-browser new-bench-integer.html
+	$(BROWSER) new-bench-integer.html
 
 view-times : times-bench times-check
 	./times-check
 	./times-bench --no-gc -o times-bench.html --template=Criterion/report.tpl
-	gnome-www-browser times-bench.html
+	$(BROWSER) times-bench.html
 
-upload : new-bench-integer.html
-	scp -p $< mega-nerd.net:/home/www.mega-nerd.com/data/tmp/
-
+# Update the local copies of integer-simple and integer-gmp and patch them
+# to work in this framework.
 update :
+	mkdir -p Stamp
 	rm -f Stamp/*
 	make Stamp/copy
 
