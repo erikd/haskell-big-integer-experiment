@@ -98,11 +98,11 @@ view-times : times-bench times-check
 # Update the local copies of integer-simple and integer-gmp and patch them
 # to work in this framework.
 update :
-	mkdir -p Stamp
 	rm -f Stamp/*
 	make Stamp/copy
 
 Stamp/update :
+	mkdir -p Stamp
 	@if test ! -d integer-gmp ; then \
 		git clone http://git.haskell.org/packages/integer-gmp.git ; \
 		fi
@@ -113,11 +113,16 @@ Stamp/update :
 	(cd integer-simple && git checkout master && git pull --rebase)
 	@touch $@
 
-Stamp/copy : Stamp/update
+Stamp/copy : Stamp/update  Stamp/ghc-version
 	Scripts/copy_modify.sh integer-simple Simple
 	Scripts/copy_modify.sh integer-gmp GMP
 	cp integer-gmp/cbits/gmp-wrappers.cmm GMP/
 	@touch $@
+
+Stamp/ghc-version :
+	Scripts/ghc-version.sh
+	touch $@
+
 
 clean :
 	@rm -f $(TARGETS) Check/New*.hs
