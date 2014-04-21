@@ -17,7 +17,7 @@ import New2.GHC.Integer.Type
 instance Num Integer where
     (+) = plusInteger
     (-) = minusInteger
-    (*) = minusInteger
+    (*) = timesInteger
     abs = absInteger
     signum = signumInteger
     fromInteger = error "New2.Integer: fromInteger"
