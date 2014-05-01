@@ -232,7 +232,10 @@ testNewInteger = do
 
         show (X.mkInteger True [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1]) `shouldBe` show (G.mkInteger True [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1])
 
-    prop "Addition results are minimal." $ \ (GNP _ a, GNP _ b) ->
+    it "Addition results are minimal." $
+        X.isMinimal (X.plusInteger (X.mkInteger True [0x3,0x0,0x4]) (X.mkInteger False [0x3,0x2])) `shouldBe` True
+
+    prop "Addition results are minimal (QC)." $ \ (GNP _ a, GNP _ b) ->
         X.isMinimal (X.plusInteger a b) `shouldBe` True
 
     prop "Muliplication results are minimal." $ \ (GNP _ a, GNP _ b) ->
