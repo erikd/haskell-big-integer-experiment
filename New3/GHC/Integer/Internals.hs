@@ -621,7 +621,7 @@ minusNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
     writeWordArray marr 0 d
     nlen <- loop1 marr 1 c
     narr <- unsafeFreezeWordArray marr
-    return $! Natural nlen narr
+    finalizeNatural nlen narr
   where
     loop1 !marr !i !carry
         | carry == 0 = loop2 marr i
