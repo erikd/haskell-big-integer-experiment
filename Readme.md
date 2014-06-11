@@ -28,6 +28,8 @@ You will also need the following Haskell libraries install:
 
 * criterion
 * hspec
+* primitive
+* random
 
 
 ## Kicking the tires
@@ -43,6 +45,15 @@ To run the crierion benchmarks  using:
 
 which will run the bench marks and display them in firefox or whatever browser
 you set with the $BROWSER environment variable.
+
+
+## TODO
+
+This is the TODO list, with highest priority first.
+
+* Get division working (divMod, quotRem, div, mod, quot, rem).
+* Fix criterion benchmarks to make the speed graphs smooth (and valid) rather
+  than spikey (and invalid) as they are now.
 
 
 
