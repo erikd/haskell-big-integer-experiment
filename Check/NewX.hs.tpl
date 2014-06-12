@@ -7,14 +7,13 @@ module Check.NewX
 
 import Prelude hiding (Integer)
 
-import Control.Applicative ((<$>))
 import Data.Bits ((.&.), shiftR)
 import Data.List (intercalate)
 import Numeric (showHex)
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Arbitrary
-
+import Test.QuickCheck.Modifiers
 
 import qualified GMP.Integer as G
 import qualified NewX.GHC.Integer.Type as X
@@ -293,10 +292,23 @@ instance Arbitrary GmpNewPair where
         bool <- arbitrary
         if bool
             then do
-                i <- arbitrary
+                i <- fmap getNonZero arbitrary
                 return $! GNP (G.smallInteger (unboxInt i)) (X.smallInteger (unboxInt i))
             else do
                 sign <- arbitrary
-                pos <- (take 20 . positive32bits) <$> arbitrary
+                pos <- fmap (positive32bits . nonEmptyNonZero) arbitrary
                 return $! GNP (G.mkInteger sign pos) (X.mkInteger sign pos)
 
+newtype NonEmptyNonZero a = NonEmptyNonZero { nonEmptyNonZero :: [a] }
+
+instance (Arbitrary a, Eq a, Num a, Ord a) => Arbitrary (NonEmptyNonZero a) where
+    arbitrary = do
+        x <- fmap getNonZero arbitrary
+        xs <- arbitrary
+        return $ NonEmptyNonZero (x:xs)
+
+    shrink (NonEmptyNonZero xs) =
+        [ NonEmptyNonZero xs'
+        | xs' <- shrink xs
+        , not (null xs')
+        ]
