@@ -902,6 +902,7 @@ timesNaturalNewest !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
 {- divModInteger should be implemented in terms of quotRemInteger -}
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
+divModInteger _ (SmallPos 0) = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int) ++ " divide by zero")
 divModInteger (SmallPos 0) (SmallPos _) = (# zeroInteger, zeroInteger #)
 divModInteger (SmallPos !a) (SmallPos !b) = let (!q, !r) = divMod a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallPos r #)
 divModInteger (SmallNeg !a) (SmallNeg !b) = let (!q, !r) = divMod a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallNeg r #)
@@ -920,8 +921,16 @@ divModInteger (SmallNeg !a) (SmallPos !b) =
 
 divModInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
+
+divInteger :: Integer -> Integer -> Integer
+divInteger a b =
+    case divModInteger a b of
+        (# d, _ #) -> d
+
+
 {-# NOINLINE quotRemInteger #-}
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
+quotRemInteger _ (SmallPos 0) = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int) ++ " divide by zero")
 quotRemInteger (SmallPos 0) (SmallPos _) = (# zeroInteger, zeroInteger #)
 quotRemInteger (SmallPos !a) (SmallPos !b) = let (# !q, !r #) = quotRemWord a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallPos r #)
 quotRemInteger (SmallNeg !a) (SmallNeg !b) = let (# !q, !r #) = quotRemWord a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallNeg r #)
@@ -941,14 +950,17 @@ quotRemInteger (Positive !a) (SmallNeg !b) = let (!q, !r) = quotRemNaturalW a b 
 quotRemInteger (Negative !a) (SmallNeg !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Pos q, if r == 0 then zeroInteger else SmallNeg r #)
 
 quotRemInteger (Positive !a) (Positive !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Pos q, fromNatural Pos r #)
+quotRemInteger (Positive !a) (Negative !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Neg q, fromNatural Pos r #)
+quotRemInteger (Negative !a) (Positive !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Neg q, fromNatural Neg r #)
+quotRemInteger (Negative !a) (Negative !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Pos q, fromNatural Neg r #)
 
 quotRemInteger _ _ = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE quotInteger #-}
 quotInteger :: Integer -> Integer -> Integer
 quotInteger a b =
-    let (# q, _ #) = quotRemInteger a b
-    in q
+    case quotRemInteger a b of
+        (# q, _ #) -> q
 
 quotRemNaturalW :: Natural -> Word -> (Natural, Word)
 quotRemNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
@@ -995,9 +1007,15 @@ quotRemNatural !numer@(Natural !nn !narr) !denom@(Natural !dn !darr)
         rem <- loop (n - 1) qmarr 0
         qarr <- unsafeFreezeWordArray qmarr
         return $! (Natural qlen qarr, rem)
+
+divideSimple :: Natural -> Natural -> (Natural, Natural)
+divideSimple numer denom =
+    let nd# = encodeDoubleNatural numer 0#
+        dd# = encodeDoubleNatural denom 0#
+        q = decodeDoubleNatural (nd# /## dd#)
+    in (q, minusNatural numer (timesNatural q denom))
+
 -}
-
-
 
 
 #endif
