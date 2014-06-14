@@ -26,7 +26,7 @@ module New4.GHC.Integer (
     plusInteger, minusInteger, timesInteger, negateInteger,
     eqInteger, neqInteger, absInteger, signumInteger,
     leInteger, gtInteger, ltInteger, geInteger, compareInteger,
-    divModInteger, quotRemInteger, quotInteger, remInteger,
+    divModInteger, divInteger, quotRemInteger, quotInteger, remInteger,
     encodeFloatInteger, decodeFloatInteger, floatFromInteger,
     encodeDoubleInteger, decodeDoubleInteger, doubleFromInteger,
     -- gcdInteger, lcmInteger, -- XXX

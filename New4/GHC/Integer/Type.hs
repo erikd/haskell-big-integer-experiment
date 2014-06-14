@@ -21,6 +21,7 @@ data Integer
     | Negative !Natural
 
 data Natural
-    = Natural
+    = NatS {-# UNPACK #-} !Word
+    | NatB
         {-# UNPACK #-} !Int
         {-# UNPACK #-} !WordArray
