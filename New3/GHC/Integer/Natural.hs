@@ -589,7 +589,7 @@ quotRemNatural !numer@(Natural !nn !narr) !denom@(Natural !dn !darr)
                         then (zeroNatural, numer)
                         else (oneNatural, minusNatural numer denom)
 #if 0
-    | otherwise = error ("New3/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+    | otherwise = error ("New3/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
 #else
     | otherwise = divideOnceNatural numer denom
 

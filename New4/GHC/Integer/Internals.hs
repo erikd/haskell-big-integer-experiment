@@ -114,19 +114,19 @@ firstWordAsInt s arr =
 #elif WORD_SIZE_IN_BITS == 32
 {-# NOINLINE integerToWord64 #-}
 integerToWord64 :: Integer -> Word64#
-integerToWord64 = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+integerToWord64 = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE word64ToInteger #-}
 word64ToInteger:: Word64# -> Integer
-word64ToInteger = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+word64ToInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE integerToInt64 #-}
 integerToInt64 :: Integer -> Int64#
-integerToInt64 = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+integerToInt64 = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE int64ToInteger #-}
 int64ToInteger :: Int64# -> Integer
-int64ToInteger = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+int64ToInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 #else
 #error WORD_SIZE_IN_BITS not supported
 #endif
@@ -146,38 +146,38 @@ decodeDoubleInteger d =
 
 {-# NOINLINE encodeFloatInteger #-}
 encodeFloatInteger :: Integer -> Int# -> Float#
-encodeFloatInteger = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+encodeFloatInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE decodeFloatInteger #-}
 decodeFloatInteger :: Float# -> (# Integer, Int# #)
-decodeFloatInteger = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+decodeFloatInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE doubleFromInteger #-}
 doubleFromInteger :: Integer -> Double#
-doubleFromInteger = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+doubleFromInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE floatFromInteger #-}
 floatFromInteger :: Integer -> Float#
-floatFromInteger = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+floatFromInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE andInteger #-}
 andInteger :: Integer -> Integer -> Integer
 andInteger !(Positive (NatS 0)) _ = zeroInteger
 andInteger _ !(Positive (NatS 0)) = zeroInteger
 andInteger (Positive a) (Positive b) = fromNatural Pos (andNatural a b)
-andInteger _ _ = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+andInteger _ _ = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE orInteger #-}
 orInteger :: Integer -> Integer -> Integer
 orInteger (Positive a) (Positive b) = Positive (orNatural a b)
 
-orInteger _ _ = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+orInteger _ _ = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE xorInteger #-}
 xorInteger :: Integer -> Integer -> Integer
 xorInteger (Positive (NatB n1 arr1)) (Positive (NatB n2 arr2)) = Positive (xorArray n1 arr1 n2 arr2)
 
-xorInteger _ _ = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+xorInteger _ _ = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 
 {-# NOINLINE complementInteger #-}
@@ -316,7 +316,7 @@ timesInteger !x !y = case (# x, y #) of
 {- divModInteger should be implemented in terms of quotRemInteger -}
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
-divModInteger _ _ = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+divModInteger _ _ = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 
 divInteger :: Integer -> Integer -> Integer
@@ -341,11 +341,11 @@ quotInteger a b =
 
 {-# NOINLINE remInteger #-}
 remInteger :: Integer -> Integer -> Integer
-remInteger = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+remInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE compareInteger #-}
 compareInteger :: Integer -> Integer -> Ordering
-compareInteger = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+compareInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE eqInteger #-}
 eqInteger :: Integer -> Integer -> Bool
@@ -396,7 +396,7 @@ absInteger !(Negative !a) = Positive a
 
 {-# NOINLINE signumInteger #-}
 signumInteger :: Integer -> Integer
-signumInteger = error ("New4/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+signumInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE hashInteger #-}
 hashInteger :: Integer -> Int#
