@@ -6,8 +6,6 @@ import GHC.Base
 
 import qualified Criterion.Main as C
 import qualified System.Random as R
-import qualified Test.QuickCheck as QC
-import qualified Test.QuickCheck.Gen as QC
 
 import qualified GMP.Integer as G
 import qualified Simple.Integer as S
@@ -61,7 +59,7 @@ makeInput :: IO [Int]
 makeInput = do
     gen <- R.newStdGen
     let (len, gen2) = R.randomR (10, 100) gen
-    return . fmap abs $ QC.unGen (QC.vector len) gen2 10000
+    return . fmap abs . take len $ R.randoms gen2
 
 
 boxIntHash :: Int# -> Int
