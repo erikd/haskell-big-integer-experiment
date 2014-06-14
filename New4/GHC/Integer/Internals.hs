@@ -164,7 +164,7 @@ floatFromInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE
 andInteger :: Integer -> Integer -> Integer
 andInteger !(Positive (NatS 0)) _ = zeroInteger
 andInteger _ !(Positive (NatS 0)) = zeroInteger
-andInteger (Positive a) (Positive b) = fromNatural Pos (andNatural a b)
+andInteger (Positive a) (Positive b) = fromNatural Positive (andNatural a b)
 andInteger _ _ = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE orInteger #-}
@@ -182,15 +182,15 @@ xorInteger _ _ = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__
 
 {-# NOINLINE complementInteger #-}
 complementInteger :: Integer -> Integer
-complementInteger !(Positive !a) = fromNatural Neg (plusNaturalW a 1)
-complementInteger !(Negative !a) = fromNatural Pos (minusNaturalW a 1)
+complementInteger !(Positive !a) = fromNatural Negative (plusNaturalW a 1)
+complementInteger !(Negative !a) = fromNatural Positive (minusNaturalW a 1)
 
 
 {-# NOINLINE shiftLInteger #-}
 shiftLInteger :: Integer -> Int# -> Integer
 shiftLInteger !a 0# = a
-shiftLInteger !(Positive !a) !b = fromNatural Pos (shiftLNatural a (I# b))
-shiftLInteger !(Negative !a) !b = fromNatural Neg (shiftLNatural a (I# b))
+shiftLInteger !(Positive !a) !b = fromNatural Positive (shiftLNatural a (I# b))
+shiftLInteger !(Negative !a) !b = fromNatural Negative (shiftLNatural a (I# b))
 
 smallShiftLArray :: Int -> WordArray -> (# Int, Int #) -> Natural
 smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
@@ -251,15 +251,15 @@ largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
 {-# NOINLINE shiftRInteger #-}
 shiftRInteger :: Integer -> Int# -> Integer
 shiftRInteger !(Positive !(NatS !0)) _ = zeroInteger
-shiftRInteger !(Positive !a) !b = fromNatural Pos (shiftRNatural a (I# b))
+shiftRInteger !(Positive !a) !b = fromNatural Positive (shiftRNatural a (I# b))
 shiftRInteger !(Negative !a) !b = do
     let nat = shiftRNatural (minusNaturalW a 1) (I# b)
     case nat of
-        NatS _ -> fromNatural Neg (plusNaturalW nat 1)
+        NatS _ -> fromNatural Negative (plusNaturalW nat 1)
         NatB !nx _ ->
             if nx == 0
                 then minusOneInteger
-                else fromNatural Neg (plusNaturalW nat 1)
+                else fromNatural Negative (plusNaturalW nat 1)
 
 {-# NOINLINE negateInteger #-}
 negateInteger :: Integer -> Integer
@@ -280,8 +280,8 @@ plusMinusNatural :: Natural -> Natural -> Integer
 plusMinusNatural !a !b =
     case compareNatural a b of
         EQ -> zeroInteger
-        GT -> fromNatural Pos (minusNatural a b)
-        LT -> fromNatural Neg (minusNatural b a)
+        GT -> fromNatural Positive (minusNatural a b)
+        LT -> fromNatural Negative (minusNatural b a)
 
 
 {-# INLINE safeMinusWord #-}
@@ -318,19 +318,19 @@ timesInteger !x !y = case (# x, y #) of
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
 divModInteger (Positive !a) (Positive !b) =
     case quotRemNatural a b of
-        (!q, !r) -> (# fromNatural Pos q, fromNatural Pos r #)
+        (!q, !r) -> (# fromNatural Positive q, fromNatural Positive r #)
 divModInteger (Negative !a) (Negative !b) =
     case quotRemNatural a b of
-        (!q, NatS 0) -> (# fromNatural Pos q, zeroInteger #)
-        (!q, !r) -> (# fromNatural Pos q, fromNatural Neg r #)
+        (!q, NatS 0) -> (# fromNatural Positive q, zeroInteger #)
+        (!q, !r) -> (# fromNatural Positive q, fromNatural Negative r #)
 divModInteger (Positive !a) (Negative !b) =
     case quotRemNatural a b of
-        (!q, NatS 0) -> (# fromNatural Neg q, zeroInteger #)
-        (!q, !r) -> (# fromNatural Neg (plusNaturalW q 1), fromNatural Neg (minusNatural b r) #)
+        (!q, NatS 0) -> (# fromNatural Negative q, zeroInteger #)
+        (!q, !r) -> (# fromNatural Negative (plusNaturalW q 1), fromNatural Negative (minusNatural b r) #)
 divModInteger (Negative !a) (Positive !b) =
     case quotRemNatural a b of
-        (!q, NatS 0) ->  (# fromNatural Neg q, zeroInteger #)
-        (!q, !r) -> (# fromNatural Neg (plusNaturalW q 1), fromNatural Pos (minusNatural b r) #)
+        (!q, NatS 0) ->  (# fromNatural Negative q, zeroInteger #)
+        (!q, !r) -> (# fromNatural Negative (plusNaturalW q 1), fromNatural Positive (minusNatural b r) #)
 
 divInteger :: Integer -> Integer -> Integer
 divInteger a b =
@@ -342,18 +342,18 @@ divInteger a b =
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
 quotRemInteger (Positive !a) (Positive !b) =
     case quotRemNatural a b of
-        (!q, !r) -> (# fromNatural Pos q, fromNatural Pos r #)
+        (!q, !r) -> (# fromNatural Positive q, fromNatural Positive r #)
 quotRemInteger (Positive !a) (Negative !b) =
     case quotRemNatural a b of
-        (!q, !r) -> (# fromNatural Neg q, fromNatural Pos r #)
+        (!q, !r) -> (# fromNatural Negative q, fromNatural Positive r #)
 quotRemInteger (Negative !a) (Positive !b) =
     case quotRemNatural a b of
-        (!q, NatS 0) -> (# fromNatural Neg q, zeroInteger #)
-        (!q, !r) -> (# fromNatural Neg q, fromNatural Neg r #)
+        (!q, NatS 0) -> (# fromNatural Negative q, zeroInteger #)
+        (!q, !r) -> (# fromNatural Negative q, fromNatural Negative r #)
 quotRemInteger (Negative !a) (Negative !b) =
     case quotRemNatural a b of
-        (!q, NatS 0) -> (# fromNatural Pos q, zeroInteger #)
-        (!q, !r) -> (# fromNatural Pos q, fromNatural Neg r #)
+        (!q, NatS 0) -> (# fromNatural Positive q, zeroInteger #)
+        (!q, !r) -> (# fromNatural Positive q, fromNatural Negative r #)
 
 {-# NOINLINE quotInteger #-}
 quotInteger :: Integer -> Integer -> Integer
@@ -429,24 +429,19 @@ hashInteger = integerToInt
 -- Helpers (not part of the API).
 
 {-# INLINE fromSmall #-}
-fromSmall :: Sign -> Word -> Integer
-fromSmall !s !w
+fromSmall :: (Natural -> Integer) -> Word -> Integer
+fromSmall !signf !w
     | w == 0 = zeroInteger
-    | s == Pos = Positive (NatS w)
-    | otherwise = Negative (NatS w)
+    | otherwise = signf (NatS w)
 
 {-# INLINE fromNatural #-}
-fromNatural :: Sign -> Natural -> Integer
+fromNatural :: (Natural -> Integer) -> Natural -> Integer
 fromNatural _ !(NatS 0) = zeroInteger
-fromNatural !s !nat@(NatS _)
-    | s == Pos = Positive nat
-    | otherwise = Negative nat
-
-fromNatural !s !nat@(NatB n arr)
+fromNatural signf !nat@(NatS _) = signf nat
+fromNatural signf !nat@(NatB n arr)
     | n == 0 = zeroInteger
     | n == 1 && indexWordArray arr 0 == 0 = zeroInteger -- TODO: See if this can be removed.
-    | s == Pos = Positive nat
-    | otherwise = Negative nat
+    | otherwise = signf nat
 
 zeroInteger, oneInteger, minusOneInteger :: Integer
 zeroInteger = Positive (NatS 0)
