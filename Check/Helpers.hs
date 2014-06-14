@@ -42,6 +42,9 @@ boxIntHash i = I# i
 boxDoubleHash :: Double# -> Double
 boxDoubleHash d = D# d
 
+boxTuple :: (# a, b #) -> (a, b)
+boxTuple (# a, b #) = (a, b)
+
 -- The mkInteger functions expect values in range [0, 0x7fffffff].
 positive32bits :: [Int] -> [Int]
 positive32bits = map (\i -> (abs i) .&. 0x7fffffff)
