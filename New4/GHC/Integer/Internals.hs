@@ -316,8 +316,21 @@ timesInteger !x !y = case (# x, y #) of
 {- divModInteger should be implemented in terms of quotRemInteger -}
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
-divModInteger _ _ = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
-
+divModInteger (Positive !a) (Positive !b) =
+    case quotRemNatural a b of
+        (!q, !r) -> (# fromNatural Pos q, fromNatural Pos r #)
+divModInteger (Negative !a) (Negative !b) =
+    case quotRemNatural a b of
+        (!q, NatS 0) -> (# fromNatural Pos q, zeroInteger #)
+        (!q, !r) -> (# fromNatural Pos q, fromNatural Neg r #)
+divModInteger (Positive !a) (Negative !b) =
+    case quotRemNatural a b of
+        (!q, NatS 0) -> (# fromNatural Neg q, zeroInteger #)
+        (!q, !r) -> (# fromNatural Neg (plusNaturalW q 1), fromNatural Neg (minusNatural b r) #)
+divModInteger (Negative !a) (Positive !b) =
+    case quotRemNatural a b of
+        (!q, NatS 0) ->  (# fromNatural Neg q, zeroInteger #)
+        (!q, !r) -> (# fromNatural Neg (plusNaturalW q 1), fromNatural Pos (minusNatural b r) #)
 
 divInteger :: Integer -> Integer -> Integer
 divInteger a b =
@@ -327,10 +340,20 @@ divInteger a b =
 
 {-# NOINLINE quotRemInteger #-}
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
-quotRemInteger (Positive !a) (Positive !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Pos q, fromNatural Pos r #)
-quotRemInteger (Positive !a) (Negative !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Neg q, fromNatural Pos r #)
-quotRemInteger (Negative !a) (Positive !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Neg q, fromNatural Neg r #)
-quotRemInteger (Negative !a) (Negative !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Pos q, fromNatural Neg r #)
+quotRemInteger (Positive !a) (Positive !b) =
+    case quotRemNatural a b of
+        (!q, !r) -> (# fromNatural Pos q, fromNatural Pos r #)
+quotRemInteger (Positive !a) (Negative !b) =
+    case quotRemNatural a b of
+        (!q, !r) -> (# fromNatural Neg q, fromNatural Pos r #)
+quotRemInteger (Negative !a) (Positive !b) =
+    case quotRemNatural a b of
+        (!q, NatS 0) -> (# fromNatural Neg q, zeroInteger #)
+        (!q, !r) -> (# fromNatural Neg q, fromNatural Neg r #)
+quotRemInteger (Negative !a) (Negative !b) =
+    case quotRemNatural a b of
+        (!q, NatS 0) -> (# fromNatural Pos q, zeroInteger #)
+        (!q, !r) -> (# fromNatural Pos q, fromNatural Neg r #)
 
 {-# NOINLINE quotInteger #-}
 quotInteger :: Integer -> Integer -> Integer
@@ -414,6 +437,7 @@ fromSmall !s !w
 
 {-# INLINE fromNatural #-}
 fromNatural :: Sign -> Natural -> Integer
+fromNatural _ !(NatS 0) = zeroInteger
 fromNatural !s !nat@(NatS _)
     | s == Pos = Positive nat
     | otherwise = Negative nat
