@@ -37,6 +37,7 @@ naturalToWord !(NatS w) = w
 naturalToWord !(NatB !_ !arr) = indexWordArray arr 0
 
 encodeDoubleNatural :: Natural -> Int# -> Double#
+encodeDoubleNatural !(NatS w) s = encodeDouble# (unboxWord w) s
 encodeDoubleNatural !(NatB !n arr) s
     | isTrue# (s +# (unboxInt (n * 64)) ># 2500#) = 1.0## /## 0.0##
     | isTrue# (s -# (unboxInt (n * 64)) <# -2500#) = 0.0##
@@ -44,14 +45,15 @@ encodeDoubleNatural !(NatB !n arr) s
             (encodeDouble# (unboxWord (indexWordArray arr (n - 1))) (s +# 64# *# unboxInt (n - 1)))
             (encodeDouble# (unboxWord (indexWordArray arr (n - 2))) (s +# 64# *# unboxInt (n - 2)))
 
-encodeDoubleNatural _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
 
 foreign import ccall unsafe "__word_encodeDouble"
         encodeDouble# :: Word# -> Int# -> Double#
 
 andNatural :: Natural -> Natural -> Natural
-andNatural (NatB !n1 arr1) (NatB !n2 arr2) = andArray (min n1 n2) arr1 arr2
-andNatural _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
+andNatural !(NatS !a) !(NatS !b) = NatS (a .&. b)
+andNatural !(NatS !a) !(NatB !_ arr) = NatS (a .&. indexWordArray arr 0)
+andNatural !(NatB !_ arr) !(NatS !b) = NatS (indexWordArray arr 0 .&. b)
+andNatural !(NatB !n1 arr1) !(NatB !n2 arr2) = andArray (min n1 n2) arr1 arr2
 
 andArray :: Int -> WordArray -> WordArray -> Natural
 andArray n arr1 arr2 = runStrictPrim $ do
@@ -74,8 +76,11 @@ andArray n arr1 arr2 = runStrictPrim $ do
         | otherwise = return (i + 1)
 
 orNatural :: Natural -> Natural -> Natural
+orNatural !(NatS !a) !(NatS !b) = NatS (a .|. b)
+orNatural !(NatS !w) !nat@(NatB _ _) = orNaturalW nat w
+orNatural !nat@(NatB _ _) !(NatS !w) = orNaturalW nat w
 orNatural !(NatB !n1 !arr1) (NatB !n2 !arr2) = orArray n1 arr1 n2 arr2
-orNatural _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
+
 
 orNaturalW :: Natural -> Word -> Natural
 orNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
@@ -141,6 +146,7 @@ xorArray !n1 !arr1 !n2 !arr2
 
 
 shiftLNatural :: Natural -> Int -> Natural
+shiftLNatural !(NatS !w) !i = shiftLNatural (mkSingletonNat w) i
 shiftLNatural !nat@(NatB !n !arr) !i
     | i <= 0 = nat
     | i < WORD_SIZE_IN_BITS =
@@ -151,7 +157,6 @@ shiftLNatural !nat@(NatB !n !arr) !i
                 then wordShiftLArray n arr q
                 else largeShiftLArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
 
-shiftLNatural _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
 
 smallShiftLArray :: Int -> WordArray -> (# Int, Int #) -> Natural
 smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
@@ -210,6 +215,10 @@ largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
 
 
 shiftRNatural :: Natural -> Int -> Natural
+shiftRNatural !n !0 = n
+shiftRNatural !(NatS !w) !i
+    | i >= WORD_SIZE_IN_BITS = zeroNatural
+    | otherwise = NatS (unsafeShiftR w i)
 shiftRNatural !(NatB !n !arr) !i
     | i < WORD_SIZE_IN_BITS =
             smallShiftRArray n arr (# i, WORD_SIZE_IN_BITS - i #)
@@ -220,8 +229,6 @@ shiftRNatural !(NatB !n !arr) !i
                 else if r == 0
                     then wordShiftRArray n arr q
                     else largeShiftRArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
-
-shiftRNatural _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
 
 smallShiftRArray :: Int -> WordArray -> (# Int, Int #) -> Natural
 smallShiftRArray !n !arr (# !si, !sj #) = runStrictPrim $ do
@@ -260,6 +267,7 @@ largeShiftRArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
 
 {-# INLINE plusNaturalW #-}
 plusNaturalW :: Natural -> Word -> Natural
+plusNaturalW !(NatS !a) !w = safePlusWord a w
 plusNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
     marr <- newWordArray (succ n)
     x <- indexWordArrayM arr 0
@@ -286,10 +294,20 @@ plusNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
             loop2 marr (i + 1)
         | otherwise = return i
 
-plusNaturalW _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
+{-# INLINE safePlusWord #-}
+safePlusWord :: Word -> Word -> Natural
+safePlusWord !w1 !w2 =
+    let (# !c, !s #) = plusWord2 w1 w2
+    in case c == 0 of
+            True -> NatS s
+            False -> mkPair s c
+
 
 {-# NOINLINE plusNatural #-}
 plusNatural :: Natural -> Natural -> Natural
+plusNatural !(NatS !a) !(NatS !b) = safePlusWord a b
+plusNatural !(NatS !w) !n@(NatB _ _) = plusNaturalW n w
+plusNatural !n@(NatB _ _) !(NatS !w) = plusNaturalW n w
 plusNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
     | n1 < n2 = plusNatural b a
     | otherwise = runStrictPrim $ do
@@ -323,10 +341,10 @@ plusNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
             loop3 marr (i + 1)
         | otherwise = return i
 
-plusNatural _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
 
 {-# INLINE minusNaturalW #-}
 minusNaturalW :: Natural -> Word -> Natural
+minusNaturalW !(NatS !a) !w = NatS (a - w)
 minusNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
     marr <- newWordArray (succ n)
     x <- indexWordArrayM arr 0
@@ -353,10 +371,10 @@ minusNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
             loop2 marr (i + 1)
         | otherwise = return n
 
-minusNaturalW _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
-
 {-# INLINE minusNatural #-}
 minusNatural :: Natural -> Natural -> Natural
+minusNatural !(NatS !a) !(NatS !b) = NatS (a - b)
+minusNatural !n@(NatB _ _) !(NatS !w) = minusNaturalW n w
 minusNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
     | n1 < n2 = plusNatural b a
     | otherwise = runStrictPrim $ do
@@ -413,8 +431,20 @@ timesNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
 
 timesNaturalW _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
 
+{-# INLINE safeTimesWord #-}
+safeTimesWord :: Word -> Word -> Natural
+safeTimesWord !w1 !w2 =
+    let (# !ovf, !prod #) = timesWord2 w1 w2
+    in case ovf == 0 of
+            False -> mkPair prod ovf
+            True -> NatS prod
+
+
 {-# NOINLINE timesNatural #-}
 timesNatural :: Natural -> Natural -> Natural
+timesNatural !(NatS !a) !(NatS !b) = safeTimesWord a b
+timesNatural !(NatS !w) !n@(NatB _ _) = timesNaturalW n w
+timesNatural !n@(NatB _ _) !(NatS !w)  = timesNaturalW n w
 timesNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
     | n1 < n2 = timesNatural b a
     | otherwise = runStrictPrim $ do
@@ -455,7 +485,6 @@ timesNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
             return (s1 + s2 + 1)
         | otherwise = return (s1 + s2)
 
-timesNatural _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE timesNaturalNew #-}
 timesNaturalNew :: Natural -> Natural -> Natural
@@ -826,6 +855,14 @@ arrayShow !len !arr =
                 x : xs
         | otherwise = []
 
+isSmallNatural :: Natural -> Bool
+isSmallNatural (NatS _) = True
+isSmallNatural (NatB _ _) = False
+
+isMinimalNatural :: Natural -> Bool
+isMinimalNatural (NatS _) = True
+isMinimalNatural (NatB 0 _) = False
+isMinimalNatural (NatB n arr) = indexWordArray arr (n - 1) /= 0
 
 hexShowW :: Word -> String
 hexShowW w = "0x" ++ showHex w ""
