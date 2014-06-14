@@ -259,6 +259,27 @@ testNewInteger = do
         in show (xb, boxIntHash xe) `shouldBe` show (gb, boxIntHash ge)
 #endif
 
+#if New4
+    prop "Can quotRemInteger small Integers." $ \ (a, NonZero b) -> do
+        let (ga, gb) = (G.smallInteger (unboxInt a), G.smallInteger (unboxInt b))
+            (xa, xb) = (X.smallInteger (unboxInt a), X.smallInteger (unboxInt b))
+        show (boxTuple (X.quotRemInteger xa xb)) `shouldBe` show (boxTuple (G.quotRemInteger ga gb))
+
+    prop "Can divModInteger small Integers." $ \ (a, NonZero b) -> do
+        let (ga, gb) = (G.smallInteger (unboxInt a), G.smallInteger (unboxInt b))
+            (xa, xb) = (X.smallInteger (unboxInt a), X.smallInteger (unboxInt b))
+        show (boxTuple (X.divModInteger xa xb)) `shouldBe` show (boxTuple (G.divModInteger ga gb))
+
+    prop "Can quotRemInteger big by small Integers." $ \ (GNP ga xa, NonZero b) -> do
+        let (gb, xb) = (G.smallInteger (unboxInt b), X.smallInteger (unboxInt b))
+        show (boxTuple (X.quotRemInteger xa xb)) `shouldBe` show (boxTuple (G.quotRemInteger ga gb))
+
+    prop "Can divModInteger big by small Integers." $ \ (GNP ga xa, NonZero b) -> do
+        let (gb, xb) = (G.smallInteger (unboxInt b), X.smallInteger (unboxInt b))
+        show (boxTuple (X.divModInteger xa xb)) `shouldBe` show (boxTuple (G.divModInteger ga gb))
+#endif
+
+
 --------------------------------------------------------------------------------
 
 data GmpNewPair
