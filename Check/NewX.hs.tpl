@@ -25,7 +25,7 @@ import Check.Helpers
 
 #define NewX   1
 
-#ifdef New3
+#if (New3 || New4)
 import Data.List (sort)
 import GHC.Int (Int32)
 #endif
@@ -52,7 +52,7 @@ testNewInternal = do
             f1 = G.plusInteger (G.timesInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))) (G.wordToInteger (unboxWord c))
             f2 = G.plusInteger (G.wordToInteger (unboxWord prod)) (G.shiftLInteger (G.wordToInteger (unboxWord ov)) 64#)
         in f2 `shouldBe` f1
-#if New3
+#if (New3 || New4)
     prop "Function quotRemWord works." $ \ x yMaybeZero ->
         let yNotZero = if yMaybeZero == 0 then 42 else yMaybeZero
             (### q, r ###) = quotRemWord x yNotZero
@@ -244,7 +244,7 @@ testNewInteger = do
         let bits = unboxInt (int .&. 0x7f)
         X.isMinimal (X.shiftLInteger s bits) `shouldBe` True
 
-#if New3
+#if (New3 || New4)
     it "Can encode to Double." $ do
         boxDoubleHash (X.encodeDoubleInteger (X.smallInteger 3333#) 0#) `shouldBe` boxDoubleHash (G.encodeDoubleInteger (G.smallInteger 3333#) 0#)
         boxDoubleHash (X.encodeDoubleInteger (X.mkInteger True [1,2,4,8]) 0#) `shouldBe` boxDoubleHash (G.encodeDoubleInteger (G.mkInteger True [1,2,4,8]) 0#)
