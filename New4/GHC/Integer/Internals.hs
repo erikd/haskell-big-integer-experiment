@@ -139,10 +139,9 @@ encodeDoubleInteger (Negative n) s = negateDouble# (encodeDoubleNatural n s)
 {-# NOINLINE decodeDoubleInteger #-}
 decodeDoubleInteger :: Double# -> (# Integer, Int# #)
 decodeDoubleInteger d =
-    case decodeDouble_2Int# d of
-        (# mantSign, mantHigh, mantLow, expn #) ->
-            let !signf = if isTrue# (mantSign ># 0#) then Positive else Negative
-            in  (# signf (NatS (W# (plusWord# mantLow (uncheckedShiftL# mantHigh 32#)))), expn #)
+    let (# signf, absd #) = if (D# d) >= 0.0 then (# Positive, d #) else (# Negative, negateDouble# d #)
+        (# nat, expn #) = decodeDoubleNatural absd
+    in (# signf nat, expn #)
 
 {-# NOINLINE encodeFloatInteger #-}
 encodeFloatInteger :: Integer -> Int# -> Float#

@@ -7,7 +7,7 @@
 
 module New4.GHC.Integer.Natural where
 
-import Prelude hiding (Integer, abs, pi, sum, rem) -- (all, error, otherwise, return, show, succ, (++))
+import Prelude hiding (Integer, abs, pi, sum, quot, rem) -- (all, error, otherwise, return, show, succ, (++))
 
 import Data.Bits
 
@@ -36,6 +36,9 @@ naturalToWord :: Natural -> Word
 naturalToWord !(NatS w) = w
 naturalToWord !(NatB !_ !arr) = indexWordArray arr 0
 
+foreign import ccall unsafe "__word_encodeDouble"
+    encodeDouble# :: Word# -> Int# -> Double#
+
 encodeDoubleNatural :: Natural -> Int# -> Double#
 encodeDoubleNatural !(NatS w) s = encodeDouble# (unboxWord w) s
 encodeDoubleNatural !(NatB !n arr) s
@@ -45,9 +48,13 @@ encodeDoubleNatural !(NatB !n arr) s
             (encodeDouble# (unboxWord (indexWordArray arr (n - 1))) (s +# 64# *# unboxInt (n - 1)))
             (encodeDouble# (unboxWord (indexWordArray arr (n - 2))) (s +# 64# *# unboxInt (n - 2)))
 
+{-# NOINLINE decodeDoubleNatural #-}
+decodeDoubleNatural :: Double# -> (# Natural, Int# #)
+decodeDoubleNatural d =
+    case decodeDouble_2Int# d of
+        (# _, mantHigh, mantLow, expn #) ->
+            (# NatS (W# (plusWord# mantLow (uncheckedShiftL# mantHigh 32#))), expn #)
 
-foreign import ccall unsafe "__word_encodeDouble"
-        encodeDouble# :: Word# -> Int# -> Double#
 
 andNatural :: Natural -> Natural -> Natural
 andNatural !(NatS !a) !(NatS !b) = NatS (a .&. b)
@@ -628,13 +635,13 @@ quotRemNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
         | otherwise = return rem
 
 quotRemNaturalW _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
+
 {-
 https://www.khanacademy.org/math/arithmetic/multiplication-division/partial_quotient_division/v/partial-quotient-method-of-division-2
 http://en.wikipedia.org/wiki/Division_algorithm
 http://en.wikipedia.org/wiki/Barrett_reduction
 http://en.wikipedia.org/wiki/Euclidean_division
 -}
-
 
 quotRemNatural :: Natural -> Natural -> (Natural, Natural)
 quotRemNatural !(NatS !a) !(NatS !b) = case quotRemWord a b of (# q, r #) -> (NatS q, NatS r)
@@ -647,66 +654,42 @@ quotRemNatural !numer@(NatB !nn !narr) !denom@(NatB !dn !darr)
                     if ltNatural numer denom
                         then (zeroNatural, numer)
                         else (oneNatural, minusNatural numer denom)
-#if 1
-    | otherwise = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
-#else
-    | otherwise = divideOnceNatural numer denom
+    | otherwise = divideSimple numer denom
 
-{-
-      runStrictPrim $ do
-        qlen <- return $! if indexWordArray darr (dn - 1) >= indexWordArray narr (nn - 1) then n - 1 else n
-        qmarr <- newWordArray n
-        rmarr <- newWordArray n
-        rem <- loop (n - 1) qmarr 0
-        qarr <- unsafeFreezeWordArray qmarr
-        return $! (Natural qlen qarr, rem)
 
 divideSimple :: Natural -> Natural -> (Natural, Natural)
 divideSimple numer denom =
-    let nd# = encodeDoubleNatB !numer 0#
-        dd# = encodeDoubleNatural denom 0#
-        q = decodeDoubleNatural (nd# /## dd#)
-    in (q, minusNatB !numer (timesNatural q denom))
-
--}
-
-divideOnceNatural :: Natural -> Natural -> (Natural, Natural)
-divideOnceNatural !numer denom =
-    let !(q1, r1) = partialQuotient numer
-    in case q1 of
-        NatB !0 !_ -> (q1, r1)
-        _ ->
-            let !(!q2, !r2) = divideOnceNatural r1 denom
-            in (plusNatural q1 q2, r2)
-  where
-    {-# INLINE partialQuotient #-}
-    partialQuotient :: Natural -> (Natural, Natural)
-    partialQuotient num =
-        let (m, s) = partialQuotientWord num denom
-        in case m of
-            0 -> (zeroNatural, num)
-            _ ->
-                let !qt = shiftLNatural (wordToNatural m) (64 * s)
-                    !pr = timesNatural denom qt
-                    !rm = minusNatural num pr
-                in (qt, rm)
-
-    {-# INLINE partialQuotientWord #-}
-    partialQuotientWord :: Natural -> Natural -> (Word, Int)
-    partialQuotientWord !(NatB !nn !narr) !(NatB !dn !darr) =
-        let !n0 = indexWordArray narr (nn - 1)
-            !d0 = indexWordArray darr (dn - 1)
-        in case (# compare dn nn, compare n0 d0 #) of
-            (# GT, _ #) -> (0, 0)
-            (# EQ, LT #) -> (0, 0)
-            (# EQ, EQ #) -> (1, nn - dn)
-            (# EQ, GT #) -> case quotRemWord n0 d0 of (# !q, _ #) -> (q, nn - dn)
-            (# LT, LT #) -> case quotRemWord2 n0 (indexWordArray narr $ nn - 2) d0 of (# !q, _ #) -> (q, nn - dn - 1)
-            (# LT, _ #) -> case quotRemWord n0 d0 of (# !q, _ #) -> (q, nn - dn)
-
-#endif
+    let !nd# = encodeDoubleNatural numer 0#
+        !dd# = encodeDoubleNatural denom 0#
+        !quot = natFromDouble (nd# /## dd#)
+        !rem = minusNatural numer (timesNatural quot denom)
+    in if ltNatural rem denom
+            then (quot, rem)
+            else
+                let (quot2, rem2) = divideSimple rem denom
+                    !quot3 = plusNatural quot quot2
+                in (quot3, rem2)
 
 
+assert :: String -> Bool -> a -> a
+assert str true result =
+    if true
+        then result
+        else error str
+
+natFromDouble :: Double# -> Natural
+natFromDouble d =
+    case decodeDouble_2Int# d of
+        (# _, mantHigh, mantLow, expn #) ->
+            let wrd = W# (plusWord# mantLow (uncheckedShiftL# mantHigh 32#))
+                nat = NatS (if (W# mantHigh) > 0 then wrd - 1 else wrd)
+                dv = if isTrue# (expn >=# 0#)
+                        then shiftLNatural nat (I# expn)
+                        else shiftRNatural nat (- (I# expn))
+            in case dv of
+                NatS 0 -> NatS 0
+                NatS 1 -> NatS 1
+                _ -> minusNaturalW dv 1
 
 eqNatural :: Natural -> Natural -> Bool
 eqNatural !(NatS !a) !(NatS !b) = a == b
@@ -854,6 +837,12 @@ arrayShow !len !arr =
                     x = indexWordArray arr i
                 x : xs
         | otherwise = []
+
+
+showNatural :: Natural -> String
+showNatural (NatS w) = "0x" ++ showHex w ""
+showNatural (NatB n arr) = arrayShow n arr
+
 
 isSmallNatural :: Natural -> Bool
 isSmallNatural (NatS _) = True
