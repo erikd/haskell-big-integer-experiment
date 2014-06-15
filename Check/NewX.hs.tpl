@@ -277,6 +277,13 @@ testNewInteger = do
     prop "Can divModInteger big by small Integers." $ \ (GNP ga xa, NonZero b) -> do
         let (gb, xb) = (G.smallInteger (unboxInt b), X.smallInteger (unboxInt b))
         show (boxTuple (X.divModInteger xa xb)) `shouldBe` show (boxTuple (G.divModInteger ga gb))
+
+    prop "Can quotRemInteger big Integers. (QC)." $ \ (GNP ga xa, GNP gb xb) ->
+        show (boxTuple (X.quotRemInteger xa xb)) `shouldBe` show (boxTuple (G.quotRemInteger ga gb))
+
+    prop "Can divModInteger big Integers. (QC)." $ \ (GNP ga xa, GNP gb xb) ->
+        show (boxTuple (X.divModInteger xa xb)) `shouldBe` show (boxTuple (G.divModInteger ga gb))
+
 #endif
 
 
@@ -317,7 +324,7 @@ instance Arbitrary GmpNewPair where
                 return $! GNP (G.smallInteger (unboxInt i)) (X.smallInteger (unboxInt i))
             else do
                 sign <- arbitrary
-                pos <- fmap (positive32bits . nonEmptyNonZero) arbitrary
+                pos <- fmap (positive32bits . take 30 . nonEmptyNonZero) arbitrary
                 return $! GNP (G.mkInteger sign pos) (X.mkInteger sign pos)
 
 newtype NonEmptyNonZero a = NonEmptyNonZero { nonEmptyNonZero :: [a] }
