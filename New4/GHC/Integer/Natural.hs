@@ -671,12 +671,6 @@ divideSimple numer denom =
                 in (quot3, rem2)
 
 
-assert :: String -> Bool -> a -> a
-assert str true result =
-    if true
-        then result
-        else error str
-
 natFromDouble :: Double# -> Natural
 natFromDouble d =
     case decodeDouble_2Int# d of

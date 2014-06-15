@@ -19,9 +19,6 @@ all : $(TARGETS)
 check : check-integer
 	./check-integer # | tee check.log
 
-dcheck : div-check
-	./div-check
-
 core3 :
 	ghc-core New3/GHC/Integer/Internals.hs
 
@@ -34,9 +31,6 @@ llvm3 :
 	less New3/GHC/Integer/Internals.ll
 
 check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs
-	$(GHC) $(GHCFLAGS) -DTESTING --make $< $(gmp_cmm_files) -o $@
-
-div-check : div-check.hs Stamp/copy $(hsfiles)
 	$(GHC) $(GHCFLAGS) -DTESTING --make $< $(gmp_cmm_files) -o $@
 
 bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
