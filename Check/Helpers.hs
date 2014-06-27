@@ -11,6 +11,11 @@ import qualified System.Random as R
 --------------------------------------------------------------------------------
 -- Data generators.
 
+mkSmallIntRangeList :: Int -> (Int, Int) -> IO [Int]
+mkSmallIntRangeList count (upper, lower) = do
+    fmap (take count . R.randomRs (upper, lower)) R.newStdGen
+
+
 mkSmallIntegerList :: Int -> (Int -> a) -> IO [a]
 mkSmallIntegerList count constructor =
     fmap (map constructor . take count . R.randoms) R.newStdGen
