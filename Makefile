@@ -1,7 +1,7 @@
 TARGETS = check-integer bench-integer new-bench-integer
 
 GHC = ghc
-GHCFLAGS = -Wall -fwarn-tabs -Werror -O3 $(PRAGMAS)
+GHCFLAGS = -Wall -Werror -fwarn-tabs -fPIC -O3 $(PRAGMAS)
 
 hsfiles = $(shell find Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
 
