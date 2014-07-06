@@ -8,6 +8,7 @@ module New4.GHC.Integer.Prim
     , timesWord2, timesWord2C, timesWord2CC
     , quotRemWord, quotRemWord2
     , shiftRWord
+    , log2Word
     ) where
 
 import GHC.Base (Word (..), Int (..))
@@ -98,3 +99,15 @@ quotRemWord2 :: Word -> Word -> Word -> (# Word, Word #)
 quotRemWord2 (W# xhi) (W# xlo) (W# y) =
     let (# q, r #) = quotRemWord2# xhi xlo y
     in (# W# q, W# r #)
+
+{-# NOINLINE log2Word #-}
+log2Word :: Word# -> Int#
+log2Word w# =
+    case or# w# (uncheckedShiftL# w# 1#) of
+        w1# -> case or# w1# (uncheckedShiftL# w1# 2#) of
+            w2# -> case or# w2# (uncheckedShiftL# w2# 4#) of
+                w3# -> case or# w3# (uncheckedShiftL# w3# 8#) of
+                    w4# -> case or# w4# (uncheckedShiftL# w4# 16#) of
+                        w5# -> case or# w5# (uncheckedShiftL# w5# 32#) of
+                            x# -> case word2Int# (and# x# (not# (uncheckedShiftL# x# 1#))) of
+                                res# -> res#
