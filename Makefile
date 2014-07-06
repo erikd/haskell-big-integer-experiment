@@ -71,10 +71,10 @@ ksliced : karatsubaSlice3D
 
 
 Check/New1.hs : Check/NewX.hs.tpl
-	sed "s/NewX/New1/;s/###//g" $+ > $@
+	sed "s/NewX/New1/;s/###/#/g" $+ > $@
 
 Check/New2.hs : Check/NewX.hs.tpl
-	sed "s/NewX/New2/;s/###//g" $+ > $@
+	sed "s/NewX/New2/;s/###/#/g" $+ > $@
 
 Check/New3.hs : Check/NewX.hs.tpl
 	sed "s/NewX/New3/;s/###/#/g" $+ > $@

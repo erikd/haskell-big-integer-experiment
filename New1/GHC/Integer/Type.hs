@@ -109,49 +109,49 @@ integerToInt (Large !s _ arr) =
 #elif WORD_SIZE_IN_BITS == 32
 {-# NOINLINE integerToWord64 #-}
 integerToWord64 :: Integer -> Word64#
-integerToWord64 = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+integerToWord64 = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE word64ToInteger #-}
 word64ToInteger:: Word64# -> Integer
-word64ToInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+word64ToInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE integerToInt64 #-}
 integerToInt64 :: Integer -> Int64#
-integerToInt64 = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+integerToInt64 = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE int64ToInteger #-}
 int64ToInteger :: Int64# -> Integer
-int64ToInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+int64ToInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 #else
 #error WORD_SIZE_IN_BITS not supported
 #endif
 
 {-# NOINLINE encodeDoubleInteger #-}
 encodeDoubleInteger :: Integer -> Int# -> Double#
-encodeDoubleInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+encodeDoubleInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE encodeFloatInteger #-}
 encodeFloatInteger :: Integer -> Int# -> Float#
-encodeFloatInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+encodeFloatInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE decodeFloatInteger #-}
 decodeFloatInteger :: Float# -> (# Integer, Int# #)
-decodeFloatInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+decodeFloatInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 -- XXX This could be optimised better, by either (word-size dependent)
 -- using single 64bit value for the mantissa, or doing the multiplication
 -- by just building the Digits directly
 {-# NOINLINE decodeDoubleInteger #-}
 decodeDoubleInteger :: Double# -> (# Integer, Int# #)
-decodeDoubleInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+decodeDoubleInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE doubleFromInteger #-}
 doubleFromInteger :: Integer -> Double#
-doubleFromInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+doubleFromInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE floatFromInteger #-}
 floatFromInteger :: Integer -> Float#
-floatFromInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+floatFromInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE andInteger #-}
 andInteger :: Integer -> Integer -> Integer
@@ -168,7 +168,7 @@ andInteger a@(Small _ _) b@(Large _ _ _) = andInteger (mkLarge a) b
 
 andInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = andArray Pos (min n1 n2) arr1 arr2
 
-andInteger _ _ = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+andInteger _ _ = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
 andArray :: Sign -> Int -> ByteArray -> ByteArray -> Integer
@@ -201,7 +201,7 @@ orInteger a@(Small _ _) b@(Large _ _ _) = orInteger (mkLarge a) b
 
 orInteger (Large Pos n1 arr1) (Large Pos n2 arr2) = orArray Pos n1 arr1 n2 arr2
 
-orInteger _ _ = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+orInteger _ _ = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
 
@@ -237,7 +237,7 @@ xorInteger (Large _ n1 arr1) (Large _ n2 arr2) =
     if n1 >= n2
         then xorArray Pos n1 arr1 n2 arr2
         else xorArray Pos n2 arr2 n1 arr1
-xorInteger _ _ = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+xorInteger _ _ = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
 xorArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
@@ -461,7 +461,7 @@ minusArrayW  !s !n !arr !w = unsafeInlinePrim $ do
     !marr <- newWordArray (succ n)
     writeWordArray marr n 0
     !x <- indexWordArrayM arr 0
-    let (!c, !d) = minusWord2 x w
+    let (# !c, !d #) = minusWord2 x w
     writeWordArray marr 0 d
     !nlen <- loop1 marr 1 c
     !narr <- unsafeFreezeWordArray marr
@@ -471,7 +471,7 @@ minusArrayW  !s !n !arr !w = unsafeInlinePrim $ do
         | carry == 0 = loop2 marr i
         | i < n =  do
             !x <- indexWordArrayM arr i
-            let (!c, !d) = minusWord2 x carry
+            let (# !c, !d #) = minusWord2 x carry
             writeWordArray marr i d
             loop1 marr (i + 1) c
         | otherwise = do
@@ -498,7 +498,7 @@ minusArray !s !n1 !arr1 !n2 !arr2
         | i < n2 = do
             !x <- indexWordArrayM arr1 i
             !y <- indexWordArrayM arr2 i
-            let (!c, !d) = minusWord2C x y carry
+            let (# !c, !d #) = minusWord2C x y carry
             writeWordArray marr i d
             loop1 marr (i + 1) c
         | otherwise = loop2 marr i carry
@@ -506,7 +506,7 @@ minusArray !s !n1 !arr1 !n2 !arr2
         | carry == 0 = loop3 marr i
         | i < n1 = do
             !x <- indexWordArrayM arr1 i
-            let (!c, !d) = minusWord2 x carry
+            let (# !c, !d #) = minusWord2 x carry
             writeWordArray marr i d
             loop2 marr (i + 1) c
         | otherwise = do
@@ -542,7 +542,7 @@ timesInteger !x !y = case (# x, y #) of
 {-# INLINE safeTimesWord #-}
 safeTimesWord :: Sign -> Word -> Word -> Integer
 safeTimesWord !s !w1 !w2 =
-    let (!ovf, !prod) = timesWord2 w1 w2
+    let (# !ovf, !prod #) = timesWord2 w1 w2
     in if ovf == 0
         then Small s prod
         else mkPair s prod ovf
@@ -558,7 +558,7 @@ timesArrayW !s !n !arr !w = unsafeInlinePrim $ do
     loop !marr !i !carry
         | i < n = do
             !x <- indexWordArrayM arr i
-            let (!c, !p) = timesWord2C x w carry
+            let (# !c, !p #) = timesWord2C x w carry
             writeWordArray marr i p
             loop marr (i + 1) c
         | otherwise =
@@ -590,12 +590,12 @@ timesArray !s !n1 !arr1 !n2 !arr2
         | s1 + s2 < pn && s1 < n1 = do
             !ps <- indexWordArrayM psum (s1 + s2)
             !x <- indexWordArrayM arr1 s1
-            let (!hc, !hp) = timesWord2CC x hw carry ps
+            let (# !hc, !hp #) = timesWord2CC x hw carry ps
             writeWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
         | s1 < n1 = do
             !x <- indexWordArrayM arr1 s1
-            let (!hc, !hp) = timesWord2C x hw carry
+            let (# !hc, !hp #) = timesWord2C x hw carry
             writeWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
         | carry /= 0 = do
@@ -605,11 +605,11 @@ timesArray !s !n1 !arr1 !n2 !arr2
 
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
-divModInteger _ _ = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+divModInteger _ _ = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE quotRemInteger #-}
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
-quotRemInteger _ _ = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+quotRemInteger _ _ = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE quotInteger #-}
 quotInteger :: Integer -> Integer -> Integer
@@ -619,11 +619,11 @@ quotInteger a b =
 
 {-# NOINLINE remInteger #-}
 remInteger :: Integer -> Integer -> Integer
-remInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+remInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE compareInteger #-}
 compareInteger :: Integer -> Integer -> Ordering
-compareInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+compareInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE eqInteger #-}
 eqInteger :: Integer -> Integer -> Bool
@@ -644,7 +644,6 @@ eqInteger (Large Neg _ _) (Small Neg _) = False
 
 eqInteger (Large Pos _ _) (Large Neg _ _) = False
 eqInteger (Large Neg _ _) (Large Pos _ _) = False
-
 
 eqInteger (Large s1 n1 arr1) (Large s2 n2 arr2)
     | s1 /= s2 = False
@@ -742,7 +741,7 @@ absInteger a = a
 
 {-# NOINLINE signumInteger #-}
 signumInteger :: Integer -> Integer
-signumInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+signumInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE hashInteger #-}
 hashInteger :: Integer -> Int#
@@ -927,7 +926,7 @@ minusOneInteger = Small Neg 1
 {-
 
 twoToTheThirtytwoInteger :: Integer
-twoToTheThirtytwoInteger = error ("New1.GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+twoToTheThirtytwoInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 -}
 
 

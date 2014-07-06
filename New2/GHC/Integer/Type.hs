@@ -447,7 +447,7 @@ minusArrayW !n !arr !w = unsafeInlinePrim $ do
     !marr <- newWordArray (succ n)
     writeWordArray marr n 0
     !x <- indexWordArrayM arr 0
-    let (!c, !d) = minusWord2 x w
+    let (# !c, !d #) = minusWord2 x w
     writeWordArray marr 0 d
     !nlen <- loop1 marr 1 c
     !narr <- unsafeFreezeWordArray marr
@@ -457,7 +457,7 @@ minusArrayW !n !arr !w = unsafeInlinePrim $ do
         | carry == 0 = loop2 marr i
         | i < n =  do
             !x <- indexWordArrayM arr i
-            let (!c, !d) = minusWord2 x carry
+            let (# !c, !d #) = minusWord2 x carry
             writeWordArray marr i d
             loop1 marr (i + 1) c
         | otherwise = do
@@ -484,7 +484,7 @@ minusArray !n1 !arr1 !n2 !arr2
         | i < n2 = do
             !x <- indexWordArrayM arr1 i
             !y <- indexWordArrayM arr2 i
-            let (!c, !d) = minusWord2C x y carry
+            let (# !c, !d #) = minusWord2C x y carry
             writeWordArray marr i d
             loop1 marr (i + 1) c
         | otherwise = loop2 marr i carry
@@ -492,7 +492,7 @@ minusArray !n1 !arr1 !n2 !arr2
         | carry == 0 = loop3 marr i
         | i < n1 = do
             !x <- indexWordArrayM arr1 i
-            let (!c, !d) = minusWord2 x carry
+            let (# !c, !d #) = minusWord2 x carry
             writeWordArray marr i d
             loop2 marr (i + 1) c
         | otherwise = do
@@ -532,7 +532,7 @@ timesNatural !x !y = case (# x, y #) of
 {-# INLINE safeTimesWord #-}
 safeTimesWord :: Word -> Word -> Natural
 safeTimesWord !w1 !w2 =
-    let (!ovf, !prod) = timesWord2 w1 w2
+    let (# !ovf, !prod #) = timesWord2 w1 w2
     in if ovf == 0
         then Small prod
         else mkPair prod ovf
@@ -548,7 +548,7 @@ timesArrayW !n !arr !w = unsafeInlinePrim $ do
     loop !marr !i !carry
         | i < n = do
             !x <- indexWordArrayM arr i
-            let (!c, !p) = timesWord2C x w carry
+            let (# !c, !p #) = timesWord2C x w carry
             writeWordArray marr i p
             loop marr (i + 1) c
         | otherwise =
@@ -580,12 +580,12 @@ timesArray !n1 !arr1 !n2 !arr2
         | s1 + s2 < pn && s1 < n1 = do
             !ps <- indexWordArrayM psum (s1 + s2)
             !x <- indexWordArrayM arr1 s1
-            let (!hc, !hp) = timesWord2CC x hw carry ps
+            let (# !hc, !hp #) = timesWord2CC x hw carry ps
             writeWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
         | s1 < n1 = do
             !x <- indexWordArrayM arr1 s1
-            let (!hc, !hp) = timesWord2C x hw carry
+            let (# !hc, !hp #) = timesWord2C x hw carry
             writeWordArray marr (s1 + s2) hp
             innerLoop marr pn psum (s1 + 1) s2 hw hc
         | carry /= 0 = do
