@@ -85,4 +85,4 @@ log2WordSlow =
     loop :: Int# -> Word# -> Int#
     loop acc# w#
         | isTrue# (word2Int# w# ==# 0#) = acc#
-        | otherwise = loop (acc# +# 1#) (uncheckedShiftL# w# 1#)
+        | otherwise = loop (acc# +# 1#) (uncheckedShiftRL# w# 1#)
