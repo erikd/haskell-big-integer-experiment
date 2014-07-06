@@ -71,16 +71,16 @@ ksliced : karatsubaSlice3D
 
 
 Check/New1.hs : Check/NewX.hs.tpl
-	sed "s/NewX/New1/;s/###/#/g" $+ > $@
+	sed "s/NewX/New1/" $+ > $@
 
 Check/New2.hs : Check/NewX.hs.tpl
-	sed "s/NewX/New2/;s/###/#/g" $+ > $@
+	sed "s/NewX/New2/" $+ > $@
 
 Check/New3.hs : Check/NewX.hs.tpl
-	sed "s/NewX/New3/;s/###/#/g" $+ > $@
+	sed "s/NewX/New3/" $+ > $@
 
 Check/New4.hs : Check/NewX.hs.tpl
-	sed "s/NewX/New4/;s/###/#/g" $+ > $@
+	sed "s/NewX/New4/" $+ > $@
 
 view-bench : new-bench-integer
 	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
