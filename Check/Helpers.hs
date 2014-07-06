@@ -75,3 +75,14 @@ fromString s =
 
 showUT2 :: (Show a, Show b) => (# a, b #) -> String
 showUT2 (# a, b #) = "(" ++ show a ++ "," ++ show b ++ ")"
+
+
+-- A slow naive version of log2Word used to test fast versions.
+log2WordSlow :: Word# -> Int#
+log2WordSlow =
+    loop 0#
+  where
+    loop :: Int# -> Word# -> Int#
+    loop acc# w#
+        | isTrue# (word2Int# w# ==# 0#) = acc#
+        | otherwise = loop (acc# +# 1#) (uncheckedShiftL# w# 1#)
