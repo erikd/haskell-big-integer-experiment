@@ -22,8 +22,8 @@ import Numeric (showHex) -- TODO: Remove when its working.
 import Debug.Trace
 
 import Common.GHC.Integer.Prim
+import Common.GHC.Integer.StrictPrim
 import New3.GHC.Integer.Sign
-import New3.GHC.Integer.StrictPrim
 import New3.GHC.Integer.Type
 import New3.GHC.Integer.WordArray
 
