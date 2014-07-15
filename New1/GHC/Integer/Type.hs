@@ -45,8 +45,8 @@ import GHC.IntWord64
 
 import Numeric (showHex) -- TODO: Remove when its working.
 
+import Common.GHC.Integer.Prim
 import New1.GHC.Integer.Array
-import New1.GHC.Integer.Prim
 import New1.GHC.Integer.Sign
 
 #if !defined(__HADDOCK__)

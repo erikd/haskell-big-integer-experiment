@@ -19,7 +19,7 @@ import qualified GMP.Integer as G
 import qualified NewX.GHC.Integer.Type as X
 import qualified NewX.Integer as X
 
-import NewX.GHC.Integer.Prim
+import Common.GHC.Integer.Prim
 
 import Check.Helpers
 

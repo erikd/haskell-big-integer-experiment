@@ -2,7 +2,7 @@
 
 #include "MachDeps.h"
 
-module New3.GHC.Integer.Prim
+module Common.GHC.Integer.Prim
     ( plusWord, plusWord2, plusWord2C, plusWord3C
     , minusWord2, minusWord2C
     , timesWord2, timesWord2C, timesWord2CC
