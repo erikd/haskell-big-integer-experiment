@@ -43,7 +43,6 @@ import GHC.IntWord64
 #endif
 
 import Numeric (showHex) -- TODO: Remove when its working.
-import Debug.Trace
 
 import Common.GHC.Integer.Prim
 import Common.GHC.Integer.StrictPrim
@@ -660,19 +659,12 @@ arrayShow !len !arr =
         | otherwise = []
 
 
-hexShowW :: Word -> String
-hexShowW w = "0x" ++ showHex w ""
-
 signShow :: Sign -> String
 signShow Pos = "Pos"
 signShow Neg = "Neg"
 
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
-
-debugPrint :: Int -> String -> StrictPrim s ()
-debugPrint line s = trace (show line ++ " : " ++ s) $ return ()
-
 
 debugWriteWordArray :: Int -> MutableWordArray (StrictPrim s) -> Int -> Word -> StrictPrim s ()
 # if 0

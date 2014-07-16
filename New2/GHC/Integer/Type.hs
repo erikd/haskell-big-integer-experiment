@@ -929,19 +929,12 @@ arrayShow !len !arr =
         | otherwise = []
 
 
-hexShowW :: Word -> String
-hexShowW w = "0x" ++ showHex w ""
-
 signShow :: Sign -> String
 signShow Pos = "Pos"
 signShow Neg = "Neg"
 
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
-
-debugPutStrLn :: String -> IO ()
-debugPutStrLn = putStrLn
--- debugPutStrLn _ = return ()
 
 isMinimal :: Integer -> Bool
 isMinimal i =

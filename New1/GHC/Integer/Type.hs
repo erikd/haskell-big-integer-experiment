@@ -42,8 +42,7 @@ import GHC.Tuple ()
 import GHC.IntWord64
 #endif
 
-import Numeric (showHex) -- TODO: Remove when its working.
-
+import Common.GHC.Integer.Debug
 import Common.GHC.Integer.Prim
 import Common.GHC.Integer.StrictPrim
 import New1.GHC.Integer.Array
@@ -946,7 +945,7 @@ toList (Large _ n arr) =
 arrayShow :: Int -> ByteArray -> String
 arrayShow !len !arr =
     let hexify w =
-            let x = showHex w ""
+            let x = showHexW w
             in replicate (16 - length x) '0' ++ x
         digits = dropWhile (== '0') . concatMap hexify . reverse $ unpackArray 0
     in if null digits then "0x0" else "0x" ++ digits
@@ -958,20 +957,8 @@ arrayShow !len !arr =
                 x : xs
         | otherwise = []
 
-
-hexShowW :: Word -> String
-hexShowW w = "0x" ++ showHex w ""
-
-signShow :: Sign -> String
-signShow Pos = "Pos"
-signShow Neg = "Neg"
-
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
-
-debugPutStrLn :: Int -> String -> IO ()
--- debugPutStrLn line s = putStrLn $ show line ++ " : " ++ s
-debugPutStrLn _ _ = return ()
 
 
 isMinimal :: Integer -> Bool
