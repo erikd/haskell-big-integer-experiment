@@ -270,11 +270,27 @@ testNewInteger = do
             (xa, xb) = (X.smallInteger (unboxInt a), X.smallInteger (unboxInt b))
         show (boxTuple (X.divModInteger xa xb)) `shouldBe` show (boxTuple (G.divModInteger ga gb))
 
-    prop "Can quotRemInteger big by small Integers." $ \ (GNP ga xa, NonZero b) -> do
+    it "Can quotRemInteger big by small Integers." $ do
+        let a = [ 0, 0, 0x5 ]
+            (xa, ga) = (X.mkInteger True a, G.mkInteger True a)
+            (xb, gb) = (X.smallInteger (unboxInt 1), G.smallInteger (unboxInt 1))
+        show (boxTuple (X.quotRemInteger xa xb)) `shouldBe` show (boxTuple (G.quotRemInteger ga gb))
+
+    it "Can divModInteger big by small Integers." $ do
+        let a = [ 0, 0, 0x5 ]
+            (xa, ga) = (X.mkInteger True a, G.mkInteger True a)
+            (xb, gb) = (X.smallInteger (unboxInt 1), G.smallInteger (unboxInt 1))
+        show (boxTuple (X.divModInteger xa xb)) `shouldBe` show (boxTuple (G.divModInteger ga gb))
+
+    prop "Can quotRemInteger big by small Integers (QC)." $ \ (GNP ga xa, NonZero b) -> do
         let (gb, xb) = (G.smallInteger (unboxInt b), X.smallInteger (unboxInt b))
         show (boxTuple (X.quotRemInteger xa xb)) `shouldBe` show (boxTuple (G.quotRemInteger ga gb))
 
-    prop "Can divModInteger big by small Integers." $ \ (GNP ga xa, NonZero b) -> do
+    prop "Can quotRemInteger big by small Integers (QC)." $ \ (GNP ga xa, NonZero b) -> do
+        let (gb, xb) = (G.smallInteger (unboxInt b), X.smallInteger (unboxInt b))
+        show (boxTuple (X.quotRemInteger xa xb)) `shouldBe` show (boxTuple (G.quotRemInteger ga gb))
+
+    prop "Can divModInteger big by small Integers (QC)." $ \ (GNP ga xa, NonZero b) -> do
         let (gb, xb) = (G.smallInteger (unboxInt b), X.smallInteger (unboxInt b))
         show (boxTuple (X.divModInteger xa xb)) `shouldBe` show (boxTuple (G.divModInteger ga gb))
 

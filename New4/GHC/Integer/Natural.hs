@@ -620,7 +620,7 @@ timesNaturalNewest _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__
 
 quotRemNaturalW :: Natural -> Word -> (Natural, Word)
 quotRemNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
-    qlen <- return $! if w >= indexWordArray arr (n - 1) then n - 1 else n
+    qlen <- return $! if w > indexWordArray arr (n - 1) then n - 1 else n
     qmarr <- newWordArray qlen
     rem <- loop (n - 1) qmarr 0
     qarr <- unsafeFreezeWordArray qmarr
