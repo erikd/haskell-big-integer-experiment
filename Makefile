@@ -3,7 +3,7 @@ TARGETS = check-integer bench-integer new-bench-integer
 GHC = ghc
 GHCFLAGS = -Wall -Werror -fwarn-tabs -fPIC -O3 $(PRAGMAS)
 
-hsfiles = $(shell find Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
+hsfiles = $(shell find Common/ Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
 
 gmp_cmm_files = -IGMP GMP/gmp-wrappers.cmm
 
