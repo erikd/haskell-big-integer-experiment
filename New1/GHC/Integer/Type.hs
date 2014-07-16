@@ -32,7 +32,6 @@ module New1.GHC.Integer.Type
 
 import Prelude hiding (Integer, abs, pi) -- (all, error, otherwise, return, show, succ, (++))
 
-import Control.Monad.Primitive
 import Data.Bits
 import Data.Primitive.ByteArray
 
@@ -46,6 +45,7 @@ import GHC.IntWord64
 import Numeric (showHex) -- TODO: Remove when its working.
 
 import Common.GHC.Integer.Prim
+import Common.GHC.Integer.StrictPrim
 import New1.GHC.Integer.Array
 import New1.GHC.Integer.Sign
 
@@ -172,7 +172,7 @@ andInteger _ _ = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: I
 
 
 andArray :: Sign -> Int -> ByteArray -> ByteArray -> Integer
-andArray s n arr1 arr2 = unsafeInlinePrim $ do
+andArray s n arr1 arr2 = runStrictPrim $ do
     !marr <- newWordArray n
     loop marr 0
     !narr <- unsafeFreezeWordArray marr
@@ -208,7 +208,7 @@ orInteger _ _ = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: In
 orArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 orArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = orArray s n2 arr2 n1 arr1
-    | otherwise = unsafeInlinePrim $ do
+    | otherwise = runStrictPrim $ do
         !marr <- newWordArray n1
         !nlen <- loop1 marr 0
         !narr <- unsafeFreezeWordArray marr
@@ -241,7 +241,7 @@ xorInteger _ _ = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: I
 
 
 xorArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
-xorArray !s !n1 !arr1 !n2 !arr2 = unsafeInlinePrim $ do
+xorArray !s !n1 !arr1 !n2 !arr2 = runStrictPrim $ do
     !marr <- newWordArray n1
     loop1 marr 0
     !narr <- unsafeFreezeWordArray marr
@@ -347,7 +347,7 @@ safePlusWord !sign !w1 !w2 =
         else mkPair sign s c
 
 plusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
-plusArrayW !s !n !arr !w = unsafeInlinePrim $ do
+plusArrayW !s !n !arr !w = runStrictPrim $ do
     !marr <- newWordArray (succ n)
     writeWordArray marr n 0
     !x <- indexWordArrayM arr 0
@@ -378,7 +378,7 @@ plusArrayW !s !n !arr !w = unsafeInlinePrim $ do
 plusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 plusArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray s n2 arr2 n1 arr1
-    | otherwise = unsafeInlinePrim $ do --
+    | otherwise = runStrictPrim $ do --
         !marr <- newWordArray (succ n1)
         loop1 marr 0 0
         !narr <- unsafeFreezeWordArray marr
@@ -457,7 +457,7 @@ minusInteger (Large Pos n1 arr1) (Large Neg n2 arr2) = plusArray Pos n1 arr1 n2 
 
 
 minusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
-minusArrayW  !s !n !arr !w = unsafeInlinePrim $ do
+minusArrayW  !s !n !arr !w = runStrictPrim $ do
     !marr <- newWordArray (succ n)
     writeWordArray marr n 0
     !x <- indexWordArrayM arr 0
@@ -488,7 +488,7 @@ minusArrayW  !s !n !arr !w = unsafeInlinePrim $ do
 minusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 minusArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray s n2 arr2 n1 arr1
-    | otherwise = unsafeInlinePrim $ do --
+    | otherwise = runStrictPrim $ do --
         !marr <- newWordArray (succ n1)
         !nlen <- loop1 marr 0 0
         !narr <- unsafeFreezeWordArray marr
@@ -548,7 +548,7 @@ safeTimesWord !s !w1 !w2 =
         else mkPair s prod ovf
 
 timesArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
-timesArrayW !s !n !arr !w = unsafeInlinePrim $ do
+timesArrayW !s !n !arr !w = runStrictPrim $ do
     !marr <- newWordArrayCleared (succ n)
     writeWordArray marr (n - 1) 0
     loop marr 0 0
@@ -568,7 +568,7 @@ timesArrayW !s !n !arr !w = unsafeInlinePrim $ do
 timesArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 timesArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = timesArray s n2 arr2 n1 arr1
-    | otherwise = unsafeInlinePrim $ do
+    | otherwise = runStrictPrim $ do
         !psum <- newPlaceholderWordArray
         outerLoop 0 psum 0
   where
@@ -760,9 +760,9 @@ mkLarge (Small Neg w) = mkSingletonArray Neg w
 mkLarge a = a
 
 mkPair :: Sign -> Word -> Word -> Integer
-mkPair !sign !sm !carry = unsafeInlinePrim mkLargePair
+mkPair !sign !sm !carry = runStrictPrim mkLargePair
   where
-    mkLargePair :: IO Integer
+    mkLargePair :: StrictPrim s Integer
     mkLargePair = do
         !marr <- newWordArray 2
         writeWordArray marr 0 sm
@@ -771,9 +771,9 @@ mkPair !sign !sm !carry = unsafeInlinePrim mkLargePair
         return $ Large sign 2 narr
 
 mkSingletonArray :: Sign -> Word -> Integer
-mkSingletonArray !s !x = unsafeInlinePrim mkSingleton
+mkSingletonArray !s !x = runStrictPrim mkSingleton
   where
-    mkSingleton :: IO Integer
+    mkSingleton :: StrictPrim s Integer
     mkSingleton = do
         !marr <- newWordArray 1
         writeWordArray marr 0 x
@@ -791,7 +791,7 @@ shiftLArray !s !n !arr !i
                 else largeShiftLArray s n arr (# q, r, WORD_SIZE_IN_BITS - r #)
 
 smallShiftLArray :: Sign -> Int -> ByteArray -> (# Int, Int #) -> Integer
-smallShiftLArray !s !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
+smallShiftLArray !s !n !arr (# !si, !sj #) = runStrictPrim $ do
     !marr <- newWordArray (succ n)
     !nlen <- loop marr 0 0
     !narr <- unsafeFreezeWordArray marr
@@ -809,7 +809,7 @@ smallShiftLArray !s !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
 
 -- | TODO : Use copy here
 wordShiftLArray :: Sign -> Int -> ByteArray -> Int -> Integer
-wordShiftLArray !s !n !arr !q = unsafeInlinePrim $ do
+wordShiftLArray !s !n !arr !q = runStrictPrim $ do
     !marr <- newWordArray (n + q)
     loop1 marr 0
     !narr <- unsafeFreezeWordArray marr
@@ -829,7 +829,7 @@ wordShiftLArray !s !n !arr !q = unsafeInlinePrim $ do
 
 
 largeShiftLArray :: Sign -> Int -> ByteArray-> (# Int, Int, Int #) -> Integer
-largeShiftLArray !s !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
+largeShiftLArray !s !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
     !marr <- newWordArray (n + q + 1)
     setWordArray marr 0 q 0
     loop2 marr 0 0
@@ -861,7 +861,7 @@ shiftRArray !s !n !arr !i
 
 
 smallShiftRArray :: Sign -> Int -> ByteArray -> (# Int, Int #) -> Integer
-smallShiftRArray !s !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
+smallShiftRArray !s !n !arr (# !si, !sj #) = runStrictPrim $ do
     !marr <- newWordArray n
     loop marr (n - 1) 0
     !narr <- unsafeFreezeWordArray marr
@@ -875,7 +875,7 @@ smallShiftRArray !s !n !arr (# !si, !sj #) = unsafeInlinePrim $ do
         | otherwise = return ()
 
 wordShiftRArray :: Sign -> Int -> ByteArray -> Int -> Integer
-wordShiftRArray !s !n !arr !q = unsafeInlinePrim $ do
+wordShiftRArray !s !n !arr !q = runStrictPrim $ do
     !marr <- newWordArray (n - q)
     copyWordArray marr 0 arr q (n - q)
     !narr <- unsafeFreezeWordArray marr
@@ -883,7 +883,7 @@ wordShiftRArray !s !n !arr !q = unsafeInlinePrim $ do
 
 
 largeShiftRArray :: Sign -> Int -> ByteArray-> (# Int, Int, Int #) -> Integer
-largeShiftRArray !s !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
+largeShiftRArray !s !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
     !marr <- newWordArray (n - q)
     loop marr (n - q - 1) 0
     !narr <- unsafeFreezeWordArray marr
@@ -897,7 +897,7 @@ largeShiftRArray !s !n !arr (# !q, !si, !sj #) = unsafeInlinePrim $ do
         | otherwise = return ()
 
 
-finalizeLarge :: Sign -> Int -> ByteArray -> IO Integer
+finalizeLarge :: Sign -> Int -> ByteArray -> StrictPrim s Integer
 finalizeLarge !s !nin !arr = do
     let !len = nonZeroLen nin arr
     !x <-indexWordArrayM arr 0
