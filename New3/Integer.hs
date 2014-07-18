@@ -10,6 +10,7 @@ module New3.Integer
 import Prelude hiding (Integer)
 import Numeric
 
+import Common.GHC.Integer.Prim
 import New3.GHC.Integer
 import New3.GHC.Integer.Internals
 import New3.GHC.Integer.Type
@@ -32,11 +33,11 @@ instance Show Natural where
 
 
 hexShow :: Integer -> String
-hexShow (SmallPos 0) = "0x0"
-hexShow (SmallPos a) = "+0x" ++ showHex a ""
-hexShow (SmallNeg a) = "-0x" ++ showHex a ""
-hexShow (Positive n) = '+' : hexShowNatural n
-hexShow (Negative n) = '-' : hexShowNatural n
+hexShow (SmallPos 0##) = "0x0"
+hexShow (SmallPos a) = "+0x" ++ showHex (boxWord# a) ""
+hexShow (SmallNeg a) = "-0x" ++ showHex (boxWord# a) ""
+hexShow (Positive n arr) = '+' : hexShowNatural (Natural n arr)
+hexShow (Negative n arr) = '-' : hexShowNatural (Natural n arr)
 
 hexShowNatural :: Natural -> String
 hexShowNatural (Natural n arr) = arrayShow n arr

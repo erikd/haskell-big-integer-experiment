@@ -706,17 +706,6 @@ gtNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2)
 zerothWordOfNatural :: Natural -> Word
 zerothWordOfNatural !(Natural _ arr) = indexWordArray arr 0
 
-mkPair :: Word -> Word -> Natural
-mkPair !sm !carry = runStrictPrim mkNatPair
-  where
-    mkNatPair :: StrictPrim s Natural
-    mkNatPair = do
-        marr <- newWordArray 2
-        writeWordArray marr 0 sm
-        writeWordArray marr 1 carry
-        narr <- unsafeFreezeWordArray marr
-        return $ Natural 2 narr
-
 mkSingletonNat :: Word -> Natural
 mkSingletonNat !x = runStrictPrim mkNat
   where

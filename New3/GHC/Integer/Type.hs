@@ -6,6 +6,7 @@
 
 module New3.GHC.Integer.Type where
 
+import GHC.Prim
 import GHC.Types
 #if WORD_SIZE_IN_BITS < 64
 import GHC.IntWord64
@@ -15,12 +16,16 @@ import GHC.IntWord64
 import New3.GHC.Integer.WordArray
 
 data Integer
-    = SmallPos {-# UNPACK #-} !Word
-    | SmallNeg {-# UNPACK #-} !Word
-    | Positive !Natural
-    | Negative !Natural
+    = SmallPos Word#
+    | SmallNeg Word#
+    | Positive
+            {-# UNPACK #-} !Int
+            {-# UNPACK #-} !WordArray
+    | Negative
+            {-# UNPACK #-} !Int
+            {-# UNPACK #-} !WordArray
 
 data Natural
     = Natural
-        {-# UNPACK #-} !Int
-        {-# UNPACK #-} !WordArray
+            {-# UNPACK #-} !Int
+            {-# UNPACK #-} !WordArray

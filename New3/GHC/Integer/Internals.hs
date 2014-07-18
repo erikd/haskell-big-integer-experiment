@@ -25,7 +25,7 @@ module New3.GHC.Integer.Internals
     , hashInteger
 
 
-    , toList, mkNatural
+    , toList
 
     ) where
 -}
@@ -73,38 +73,30 @@ mkInteger nonNegative is =
     f [I# x] = smallInteger x
     f (I# x : xs) = smallInteger x `orInteger` shiftLInteger (f xs) 31#
 
-mkNatural :: [Int] -> Natural
-mkNatural ws =
-    case mkInteger True ws of
-        Positive a -> a
-        Negative a -> a
-        SmallPos x -> mkSingletonNat x
-        SmallNeg x -> mkSingletonNat x
-
 {-# NOINLINE smallInteger #-}
 smallInteger :: Int# -> Integer
 smallInteger i
     | isTrue# (i ==# 0#) = zeroInteger
-    | isTrue# (i <# 0#) = SmallNeg (W# (int2Word# (negateInt# i)))
-    | otherwise = SmallPos (W# (int2Word# i))
+    | isTrue# (i <# 0#) = SmallNeg (int2Word# (negateInt# i))
+    | otherwise = SmallPos (int2Word# i)
 
 {-# NOINLINE wordToInteger #-}
 wordToInteger :: Word# -> Integer
-wordToInteger w = SmallPos (W# w)
+wordToInteger w = SmallPos w
 
 {-# NOINLINE integerToWord #-}
 integerToWord :: Integer -> Word#
-integerToWord (SmallPos (W# w)) = w
-integerToWord (SmallNeg (W# w)) = w
-integerToWord (Positive (Natural _ arr)) = unboxWord (indexWordArray arr 0)
-integerToWord (Negative (Natural _ arr)) = unboxWord (indexWordArray arr 0)
+integerToWord (SmallPos w) = w
+integerToWord (SmallNeg w) = w
+integerToWord (Positive _ arr) = unboxWord (indexWordArray arr 0)
+integerToWord (Negative _ arr) = unboxWord (indexWordArray arr 0)
 
 {-# NOINLINE integerToInt #-}
 integerToInt :: Integer -> Int#
-integerToInt (SmallPos (W# w)) = word2Int# w
-integerToInt (SmallNeg (W# w)) = negateInt# (word2Int# w)
-integerToInt (Positive (Natural _ arr)) = firstWordAsInt Pos arr
-integerToInt (Negative (Natural _ arr)) = firstWordAsInt Neg arr
+integerToInt (SmallPos w) = word2Int# w
+integerToInt (SmallNeg w) = negateInt# (word2Int# w)
+integerToInt (Positive _ arr) = firstWordAsInt Pos arr
+integerToInt (Negative _ arr) = firstWordAsInt Neg arr
 
 firstWordAsInt :: Sign -> WordArray -> Int#
 firstWordAsInt s arr =
@@ -137,11 +129,11 @@ int64ToInteger = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__
 
 {-# NOINLINE encodeDoubleInteger #-}
 encodeDoubleInteger :: Integer -> Int# -> Double#
-encodeDoubleInteger (SmallPos (W# w)) i = encodeDouble# w i
-encodeDoubleInteger (SmallNeg (W# w)) i = negateDouble# (encodeDouble# w i)
+encodeDoubleInteger (SmallPos w) i = encodeDouble# w i
+encodeDoubleInteger (SmallNeg w) i = negateDouble# (encodeDouble# w i)
 
-encodeDoubleInteger (Positive n) s = encodeDoubleNatural n s
-encodeDoubleInteger (Negative n) s = negateDouble# (encodeDoubleNatural n s)
+encodeDoubleInteger (Positive n arr) s = encodeDoubleNatural (Natural n arr) s
+encodeDoubleInteger (Negative n arr) s = negateDouble# (encodeDoubleNatural (Natural n arr) s)
 
 {-# NOINLINE decodeDoubleInteger #-}
 decodeDoubleInteger :: Double# -> (# Integer, Int# #)
@@ -149,7 +141,7 @@ decodeDoubleInteger d =
     case decodeDouble_2Int# d of
         (# mantSign, mantHigh, mantLow, expn #) ->
             let !signf = if isTrue# (mantSign ># 0#) then SmallPos else SmallNeg
-            in  (# signf (W# (plusWord# mantLow (uncheckedShiftL# mantHigh 32#)))
+            in  (# signf (plusWord# mantLow (uncheckedShiftL# mantHigh 32#))
                 , expn #)
 
 {-# NOINLINE encodeFloatInteger #-}
@@ -170,66 +162,66 @@ floatFromInteger = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE
 
 {-# NOINLINE andInteger #-}
 andInteger :: Integer -> Integer -> Integer
-andInteger !(SmallPos 0) _ = zeroInteger
-andInteger _ !(SmallPos 0) = zeroInteger
+andInteger !(SmallPos 0##) _ = zeroInteger
+andInteger _ !(SmallPos 0##) = zeroInteger
 
-andInteger (SmallPos a) (SmallPos b) = fromSmall Pos (a .&. b)
-andInteger (SmallPos a) (SmallNeg b) = fromSmall Pos (a .&. complement (b - 1))
-andInteger (SmallNeg a) (SmallPos b) = fromSmall Pos (complement (a - 1) .&. b)
-andInteger (SmallNeg a) (SmallNeg b) = fromSmall Neg (1 + ((a - 1) .|. (b - 1)))
+andInteger (SmallPos a) (SmallPos b) = fromSmall SmallPos (boxWord# (and# a b))
+andInteger (SmallPos a) (SmallNeg b) = fromSmall SmallPos (boxWord# (and# a (not# (minusWord# b 1##))))
+andInteger (SmallNeg a) (SmallPos b) = fromSmall SmallPos (boxWord# (not# (and# (minusWord# a 1##) b)))
+andInteger (SmallNeg a) (SmallNeg b) = fromSmall SmallNeg (boxWord# (plusWord# (or# (minusWord# a 1##) (minusWord# b 1##)) 1##))
 
-andInteger (SmallPos a) (Positive b) = fromSmall Pos (a .&. zerothWordOfNatural b)
-andInteger (Positive a) (SmallPos b) = fromSmall Pos (zerothWordOfNatural a .&. b)
+andInteger (SmallPos a) (Positive n arr) = fromSmall SmallPos ((W# a) .&. zerothWordOfNatural (Natural n arr))
+andInteger (Positive n arr) (SmallPos b) = fromSmall SmallPos (zerothWordOfNatural (Natural n arr) .&. (W# b))
 
 
-andInteger (Positive a) (Positive b) = fromNatural Pos (andNatural a b)
+andInteger (Positive n1 arr1) (Positive n2 arr2) = fromNatural Pos (andNatural (Natural n1 arr1) (Natural n2 arr2))
 andInteger _ _ = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE orInteger #-}
 orInteger :: Integer -> Integer -> Integer
-orInteger (SmallPos a) (SmallPos b) = SmallPos (a .|. b)
-orInteger (SmallPos a) (SmallNeg b) = SmallNeg (1 + (complement a .&. (b - 1)))
-orInteger (SmallNeg a) (SmallPos b) = SmallNeg (1 + ((a - 1) .&. complement b))
-orInteger (SmallNeg a) (SmallNeg b) = SmallNeg (1 + ((a - 1) .&. (b - 1)))
+orInteger (SmallPos a) (SmallPos b) = SmallPos (or# a b)
+orInteger (SmallPos a) (SmallNeg b) = SmallNeg (plusWord# 1## (and# (not# a) (minusWord# b 1##)))
+orInteger (SmallNeg a) (SmallPos b) = SmallNeg (plusWord# 1## (and# (minusWord# a 1##) (not# b)))
+orInteger (SmallNeg a) (SmallNeg b) = SmallNeg (plusWord# 1## (and# (minusWord# a 1##) (minusWord# b 1##)))
 
-orInteger (SmallPos a) (Positive b) = Positive (orNaturalW b a)
-orInteger (Positive a) (SmallPos b) = Positive (orNaturalW a b)
+orInteger (SmallPos a) (Positive n arr) = fromNatural Pos (orNaturalW (Natural n arr) (W# a))
+orInteger (Positive n arr) (SmallPos b) = fromNatural Pos (orNaturalW (Natural n arr) (W# b))
 
-orInteger (Positive a) (Positive b) = Positive (orNatural a b)
+orInteger (Positive n1 arr1) (Positive n2 arr2) = fromNatural Pos (orNatural (Natural n1 arr1) (Natural n2 arr2))
 
 orInteger _ _ = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 {-# NOINLINE xorInteger #-}
 xorInteger :: Integer -> Integer -> Integer
-xorInteger (Positive (Natural n1 arr1)) (Positive (Natural n2 arr2)) = Positive (xorArray n1 arr1 n2 arr2)
+-- xorInteger (Positive (Natural n1 arr1)) (Positive (Natural n2 arr2)) = Positive (xorArray n1 arr1 n2 arr2)
 
 xorInteger _ _ = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
 
 {-# NOINLINE complementInteger #-}
 complementInteger :: Integer -> Integer
-complementInteger !(SmallPos !a) = fromSmall Neg (a + 1)
-complementInteger !(SmallNeg !a) = fromSmall Pos (a - 1)
-complementInteger !(Positive !a) = fromNatural Neg (plusNaturalW a 1)
-complementInteger !(Negative !a) = fromNatural Pos (minusNaturalW a 1)
+complementInteger !(SmallPos !a) = fromSmall SmallNeg ((W# a) + 1)
+complementInteger !(SmallNeg !a) = fromSmall SmallPos ((W# a) - 1)
+complementInteger !(Positive !n !arr) = fromNatural Neg (plusNaturalW (Natural n arr) 1)
+complementInteger !(Negative !n !arr) = fromNatural Pos (minusNaturalW (Natural n arr) 1)
 
 
 {-# NOINLINE shiftLInteger #-}
 shiftLInteger :: Integer -> Int# -> Integer
 shiftLInteger !a 0# = a
 shiftLInteger !(SmallPos !a) b
-    | a == 0 = zeroInteger
-    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = fromNatural Pos (shiftLNatural (mkSingletonNat a) (I# b))
+    | isTrue# (eqWord# a 0##) = zeroInteger
+    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = fromNatural Pos (shiftLNatural (mkSingletonNat (W# a)) (I# b))
     | otherwise =
-        let !lo = unsafeShiftL a (I# b)
-            hi = unsafeShiftR a (I# ( WORD_SIZE_IN_BITS# -# b))
+        let !lo = unsafeShiftL (W# a) (I# b)
+            hi = unsafeShiftR (W# a) (I# ( WORD_SIZE_IN_BITS# -# b))
         in if hi == 0
-            then SmallPos lo
-            else Positive (mkPair lo hi)
+            then SmallPos (unboxWord lo)
+            else mkPair Positive lo hi
 
-shiftLInteger !(SmallNeg !a) !b = fromNatural Neg (shiftLNatural (mkSingletonNat a) (I# b))
-shiftLInteger !(Positive !a) !b = fromNatural Pos (shiftLNatural a (I# b))
-shiftLInteger !(Negative !a) !b = fromNatural Neg (shiftLNatural a (I# b))
+shiftLInteger !(SmallNeg !a) !b = fromNatural Neg (shiftLNatural (mkSingletonNat (W# a)) (I# b))
+shiftLInteger !(Positive !n !arr) !b = fromNatural Pos (shiftLNatural (Natural n arr) (I# b))
+shiftLInteger !(Negative !n !arr) !b = fromNatural Neg (shiftLNatural (Natural n arr) (I# b))
 
 smallShiftLArray :: Int -> WordArray -> (# Int, Int #) -> Natural
 smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
@@ -289,29 +281,29 @@ largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
 
 {-# NOINLINE shiftRInteger #-}
 shiftRInteger :: Integer -> Int# -> Integer
-shiftRInteger !(SmallPos 0) _ = zeroInteger
+shiftRInteger !(SmallPos 0##) _ = zeroInteger
 shiftRInteger !a 0# = a
 shiftRInteger !(SmallPos !a) !b
     | isTrue# (b >=# WORD_SIZE_IN_BITS#) = zeroInteger
-    | otherwise = fromSmall Pos (shiftRWord a (I# b))
+    | otherwise = fromSmall SmallPos (shiftRWord (boxWord# a) (I# b))
 shiftRInteger !(SmallNeg !a) !b
-    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = SmallNeg 1
-    | otherwise = fromSmall Neg ((shiftRWord (a - 1) (I# b)) + 1)
+    | isTrue# (b >=# WORD_SIZE_IN_BITS#) = minusOneInteger
+    | otherwise = fromSmall SmallNeg ((shiftRWord ((boxWord# a) - 1) (I# b)) + 1)
 
-shiftRInteger !(Positive !a) !b = fromNatural Pos (shiftRNatural a (I# b))
-shiftRInteger !(Negative !a) !b =
-    let !nat@(Natural !nx _) = shiftRNatural (minusNaturalW a 1) (I# b)
+shiftRInteger !(Positive !n !arr) !b = fromNatural Pos (shiftRNatural (Natural n arr) (I# b))
+shiftRInteger !(Negative !n !arr) !b =
+    let !nat@(Natural !nx _) = shiftRNatural (minusNaturalW (Natural n arr) 1) (I# b)
     in if nx == 0
-        then SmallNeg 1
+        then minusOneInteger
         else fromNatural Neg (plusNaturalW nat 1)
 
 {-# NOINLINE negateInteger #-}
 negateInteger :: Integer -> Integer
-negateInteger !(SmallPos 0) = SmallPos 0
+negateInteger !(SmallPos 0##) = zeroInteger
 negateInteger !(SmallPos !a) = SmallNeg a
 negateInteger !(SmallNeg !a) = SmallPos a
-negateInteger !(Positive !a) = Negative a
-negateInteger !(Negative !a) = Positive a
+negateInteger !(Positive !n !arr) = Negative n arr
+negateInteger !(Negative !n !arr) = Positive n arr
 
 {-# NOINLINE plusInteger #-}
 plusInteger :: Integer -> Integer -> Integer
@@ -321,23 +313,23 @@ plusInteger !x !y = case (# x, y #) of
     (# !SmallNeg !a, !SmallPos !b #) -> safeMinusWord b a
     (# !SmallNeg !a, !SmallNeg !b #) -> safePlusWord Neg a b
 
-    (# SmallPos 0, b #) -> b
-    (# a, SmallPos 0 #) -> a
+    (# SmallPos 0##, b #) -> b
+    (# a, SmallPos 0## #) -> a
 
-    (# !SmallPos !a, !Positive !b #) -> Positive (plusNaturalW b a)
-    (# !SmallPos !a, !Negative !b #) -> Negative (minusNaturalW b a)
-    (# !SmallNeg !a, !Positive !b #) -> Positive (minusNaturalW b a)
-    (# !SmallNeg !a, !Negative !b #) -> Negative (plusNaturalW b a)
+    (# !SmallPos !a, !Positive !n !arr #) -> fromNatural Pos (plusNaturalW (Natural n arr) (W# a))
+    (# !SmallPos !a, !Negative !n !arr #) -> fromNatural Neg (minusNaturalW (Natural n arr) (W# a))
+    (# !SmallNeg !a, !Positive !n !arr #) -> fromNatural Pos (minusNaturalW (Natural n arr) (W# a))
+    (# !SmallNeg !a, !Negative !n !arr #) -> fromNatural Neg (plusNaturalW (Natural n arr) (W# a))
 
-    (# !Positive !a, !SmallPos !b #) -> Positive (plusNaturalW a b)
-    (# !Positive !a, !SmallNeg !b #) -> Positive (minusNaturalW a b)
-    (# !Positive !a, !Positive !b #) -> Positive (plusNatural a b)
-    (# !Positive !a, !Negative !b #) -> plusMinusNatural a b
+    (# !Positive !n !arr, !SmallPos !b #) -> fromNatural Pos (plusNaturalW (Natural n arr) (W# b))
+    (# !Positive !n !arr, !SmallNeg !b #) -> fromNatural Pos (minusNaturalW (Natural n arr) (W# b))
+    (# !Positive !n1 !arr1, !Positive !n2 !arr2 #) -> fromNatural Pos (plusNatural (Natural n1 arr1) (Natural n2 arr2))
+    (# !Positive !n1 !arr1, !Negative !n2 !arr2 #) -> plusMinusNatural (Natural n1 arr1) (Natural n2 arr2)
 
-    (# !Negative !a, !SmallPos !b #) -> Negative (minusNaturalW a b)
-    (# !Negative !a, !SmallNeg !b #) -> Negative (plusNaturalW a b)
-    (# !Negative !a, !Positive !b #) -> plusMinusNatural b a
-    (# !Negative !a, !Negative !b #) -> Negative (plusNatural a b)
+    (# !Negative !n !arr, !SmallPos !b #) -> fromNatural Neg (minusNaturalW (Natural n arr) (W# b))
+    (# !Negative !n !arr, !SmallNeg !b #) -> fromNatural Neg (plusNaturalW (Natural n arr) (W# b))
+    (# !Negative !n1 !arr1, !Positive !n2 !arr2 #) -> plusMinusNatural (Natural n2 arr2) (Natural n1 arr1)
+    (# !Negative !n1 !arr1, !Negative !n2 !arr2 #) -> fromNatural Neg (plusNatural (Natural n1 arr1) (Natural n2 arr2))
 
 
 {-# NOINLINE plusMinusNatural #-}
@@ -349,22 +341,22 @@ plusMinusNatural !a !b =
         LT -> fromNatural Neg (minusNatural b a)
 
 {-# INLINE safePlusWord #-}
-safePlusWord :: Sign -> Word -> Word -> Integer
+safePlusWord :: Sign -> Word# -> Word# -> Integer
 safePlusWord !sign !w1 !w2 =
-    let (# !c, !s #) = plusWord2 w1 w2
+    let (# !c, !s #) = plusWord2 (W# w1) (W# w2)
     in case (# c == 0, sign #) of
-        (# True, Pos #) -> SmallPos s
-        (# True, Neg #) -> SmallNeg s
-        (# False, Pos #) -> Positive (mkPair s c)
-        (# False, Neg #) -> Negative (mkPair s c)
+        (# True, Pos #) -> SmallPos (unboxWord s)
+        (# True, Neg #) -> SmallNeg (unboxWord s)
+        (# False, Pos #) -> mkPair Positive s c
+        (# False, Neg #) -> mkPair Negative s c
 
 {-# INLINE safeMinusWord #-}
-safeMinusWord :: Word -> Word -> Integer
+safeMinusWord :: Word# -> Word# -> Integer
 safeMinusWord !a !b =
-    case compare a b of
+    case compare (W# a) (W# b) of
         EQ -> zeroInteger
-        GT -> SmallPos (a - b)
-        LT -> SmallNeg (b - a)
+        GT -> SmallPos (minusWord# a b)
+        LT -> SmallNeg (minusWord# b a)
 
 {-# INLINE minusInteger #-}
 minusInteger :: Integer -> Integer -> Integer
@@ -374,81 +366,82 @@ minusInteger !x !y = case (# x, y #) of
     (# !SmallNeg !a, !SmallPos !b #) -> safePlusWord Neg a b
     (# !SmallNeg !a, !SmallNeg !b #) -> safeMinusWord b a
 
-    (# SmallPos 0, b #) -> negateInteger b
-    (# a, SmallPos 0 #) -> a
+    (# SmallPos 0##, b #) -> negateInteger b
+    (# a, SmallPos 0## #) -> a
 
-    (# !SmallPos !a, !Positive !b #) -> Negative (minusNaturalW b a)
-    (# !SmallPos !a, !Negative !b #) -> Positive (plusNaturalW b a)
-    (# !SmallNeg !a, !Positive !b #) -> Negative (plusNaturalW b a)
-    (# !SmallNeg !a, !Negative !b #) -> Positive (minusNaturalW b a)
+    (# !SmallPos !a, !Positive !n !arr #) -> fromNatural Neg (minusNaturalW (Natural n arr) (W# a))
+    (# !SmallPos !a, !Negative !n !arr #) -> fromNatural Pos (plusNaturalW (Natural n arr) (W# a))
+    (# !SmallNeg !a, !Positive !n !arr #) -> fromNatural Neg (plusNaturalW (Natural n arr) (W# a))
+    (# !SmallNeg !a, !Negative !n !arr #) -> fromNatural Pos (minusNaturalW (Natural n arr) (W# a))
 
-    (# !Positive !a, !SmallPos !b #) -> Positive (minusNaturalW a b)
-    (# !Positive !a, !SmallNeg !b #) -> Positive (plusNaturalW a b)
-    (# !Positive !a, !Positive !b #) -> plusMinusNatural a b
-    (# !Positive !a, !Negative !b #) -> Positive (plusNatural a b)
+    (# !Positive !n !arr, !SmallPos !b #) -> fromNatural Pos (minusNaturalW (Natural n arr) (W# b))
+    (# !Positive !n !arr, !SmallNeg !b #) -> fromNatural Pos (plusNaturalW (Natural n arr) (W# b))
+    (# !Positive !n1 !arr1, !Positive !n2 !arr2 #) -> plusMinusNatural (Natural n1 arr1) (Natural n2 arr2)
+    (# !Positive !n1 !arr1, !Negative !n2 !arr2 #) -> fromNatural Pos (plusNatural (Natural n1 arr1) (Natural n2 arr2))
 
-    (# !Negative !a, !SmallPos !b #) -> Negative (plusNaturalW a b)
-    (# !Negative !a, !SmallNeg !b #) -> Negative (minusNaturalW a b)
-    (# !Negative !a, !Positive !b #) -> Negative (plusNatural a b)
-    (# !Negative !a, !Negative !b #) -> plusMinusNatural b a
+    (# !Negative !n !arr, !SmallPos !b #) -> fromNatural Neg (plusNaturalW (Natural n arr) (W# b))
+    (# !Negative !n !arr, !SmallNeg !b #) -> fromNatural Neg (minusNaturalW (Natural n arr) (W# b))
+    (# !Negative !n1 !arr1, !Positive !n2 !arr2 #) -> fromNatural Neg (plusNatural (Natural n1 arr1) (Natural n2 arr2))
+    (# !Negative !n1 !arr1, !Negative !n2 !arr2 #) -> plusMinusNatural (Natural n2 arr2) (Natural n1 arr1)
 
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
 timesInteger !x !y = case (# x, y #) of
-    (# SmallPos 0, _ #) -> zeroInteger
-    (# _, SmallPos 0 #) -> zeroInteger
+    (# SmallPos 0##, _ #) -> zeroInteger
+    (# _, SmallPos 0## #) -> zeroInteger
 
     (# SmallPos a, SmallPos b #) -> safeTimesWord Pos a b
     (# SmallPos a, SmallNeg b #) -> safeTimesWord Neg a b
     (# SmallNeg a, SmallPos b #) -> safeTimesWord Neg a b
     (# SmallNeg a, SmallNeg b #) -> safeTimesWord Pos a b
 
-    (# SmallPos a, Positive b #) -> Positive (timesNaturalW b a)
-    (# SmallPos a, Negative b #) -> Negative (timesNaturalW b a)
-    (# SmallNeg a, Positive b #) -> Negative (timesNaturalW b a)
-    (# SmallNeg a, Negative b #) -> Positive (timesNaturalW b a)
+    (# SmallPos a, Positive n arr #) -> fromNatural Pos (timesNaturalW (Natural n arr) (W# a))
+    (# SmallPos a, Negative n arr #) -> fromNatural Neg (timesNaturalW (Natural n arr) (W# a))
+    (# SmallNeg a, Positive n arr #) -> fromNatural Neg (timesNaturalW (Natural n arr) (W# a))
+    (# SmallNeg a, Negative n arr #) -> fromNatural Pos (timesNaturalW (Natural n arr) (W# a))
 
-    (# Positive a, SmallPos b #) -> Positive (timesNaturalW a b)
-    (# Positive a, SmallNeg b #) -> Negative (timesNaturalW a b)
-    (# Positive a, Positive b #) -> Positive (timesNatural a b)
-    (# Positive a, Negative b #) -> Negative (timesNatural a b)
+    (# Positive n arr, SmallPos b #) -> fromNatural Pos (timesNaturalW (Natural n arr) (W# b))
+    (# Positive n arr, SmallNeg b #) -> fromNatural Neg (timesNaturalW (Natural n arr) (W# b))
+    (# Negative n arr, SmallPos b #) -> fromNatural Neg (timesNaturalW (Natural n arr) (W# b))
+    (# Negative n arr, SmallNeg b #) -> fromNatural Pos (timesNaturalW (Natural n arr) (W# b))
 
-    (# Negative a, SmallPos b #) -> Negative (timesNaturalW a b)
-    (# Negative a, SmallNeg b #) -> Positive (timesNaturalW a b)
-    (# Negative a, Positive b #) -> Negative (timesNatural a b)
-    (# Negative a, Negative b #) -> Positive (timesNatural a b)
+    (# Positive n1 arr1, Positive n2 arr2 #) -> fromNatural Pos (timesNatural (Natural n1 arr1) (Natural n2 arr2))
+    (# Positive n1 arr1, Negative n2 arr2 #) -> fromNatural Neg (timesNatural (Natural n1 arr1) (Natural n2 arr2))
+
+    (# Negative n1 arr1, Positive n2 arr2 #) -> fromNatural Neg (timesNatural (Natural n1 arr1) (Natural n2 arr2))
+    (# Negative n1 arr1, Negative n2 arr2 #) -> fromNatural Pos (timesNatural (Natural n1 arr1) (Natural n2 arr2))
 
 
 {-# INLINE safeTimesWord #-}
-safeTimesWord :: Sign -> Word -> Word -> Integer
+safeTimesWord :: Sign -> Word# -> Word# -> Integer
 safeTimesWord !sign !w1 !w2 =
-    let (# !ovf, !prod #) = timesWord2 w1 w2
+    let (# !ovf, !prod #) = timesWord2 (W# w1) (W# w2)
     in case (# ovf == 0, sign #) of
-        (# False, Pos #) -> Positive (mkPair prod ovf)
-        (# False, Neg #) -> Negative (mkPair prod ovf)
-        (# True, Pos #) -> SmallPos prod
-        (# True, Neg #) -> SmallNeg prod
+        (# False, Pos #) -> mkPair Positive prod ovf
+        (# False, Neg #) -> mkPair Negative prod ovf
+        (# True, Pos #) -> SmallPos (unboxWord prod)
+        (# True, Neg #) -> SmallNeg (unboxWord prod)
 
 
 {- divModInteger should be implemented in terms of quotRemInteger -}
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
-divModInteger _ (SmallPos 0) = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int) ++ " divide by zero")
-divModInteger (SmallPos 0) (SmallPos _) = (# zeroInteger, zeroInteger #)
-divModInteger (SmallPos !a) (SmallPos !b) = let (!q, !r) = divMod a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallPos r #)
-divModInteger (SmallNeg !a) (SmallNeg !b) = let (!q, !r) = divMod a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallNeg r #)
+divModInteger _ (SmallPos 0##) = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int) ++ " divide by zero")
+divModInteger (SmallPos 0##) (SmallPos _) = (# zeroInteger, zeroInteger #)
+divModInteger (SmallPos !a) (SmallPos !b) = let (!q, !r) = divMod (W# a) (W# b) in (# if q == 0 then zeroInteger else SmallPos (unboxWord q), if r == 0 then zeroInteger else SmallPos (unboxWord r) #)
+divModInteger (SmallNeg !a) (SmallNeg !b) = let (!q, !r) = divMod (W# a) (W# b) in (# if q == 0 then zeroInteger else SmallPos (unboxWord q), if r == 0 then zeroInteger else SmallNeg (unboxWord r) #)
 divModInteger (SmallPos !a) (SmallNeg !b) =
-    let (!q, !r) = divMod a b
+    let (!q, !r) = divMod (W# a) (W# b)
     in if r == 0
-        then (# SmallNeg q, zeroInteger #)
-        else (# SmallNeg (q + 1), SmallNeg (b - r) #)
+        then (# SmallNeg (unboxWord q), zeroInteger #)
+        else (# SmallNeg (unboxWord (q + 1)), SmallPos (unboxWord ((W# b) - r)) #)
 divModInteger (SmallNeg !a) (SmallPos !b) =
-    let (!q, !r) = divMod a b
+    let (!q, !r) = divMod (W# a) (W# b)
     in case (q == 0, r == 0) of
-        ( False, False )    -> (# SmallNeg (q + 1), SmallPos (b - r) #)
-        ( True, False )     -> (# SmallNeg 1, SmallPos (b - r) #)
-        ( False, True )     -> (# SmallNeg q, zeroInteger #)
-        _                   -> (# SmallPos 3, SmallPos 3 #)
+        ( False, False )    -> (# SmallNeg (unboxWord (q + 1)), SmallPos (unboxWord ((W# b) - r)) #)
+        ( True, False )     -> (# SmallNeg 1##, SmallPos (unboxWord ((W# b) - r)) #)
+        ( False, True )     -> (# SmallNeg (unboxWord q), zeroInteger #)
+        _                   -> (# SmallPos 3##, SmallPos 3## #)
 
 divModInteger _ _ = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
@@ -461,29 +454,29 @@ divInteger a b =
 
 {-# NOINLINE quotRemInteger #-}
 quotRemInteger :: Integer -> Integer -> (# Integer, Integer #)
-quotRemInteger _ (SmallPos 0) = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int) ++ " divide by zero")
-quotRemInteger (SmallPos 0) (SmallPos _) = (# zeroInteger, zeroInteger #)
-quotRemInteger (SmallPos !a) (SmallPos !b) = let (# !q, !r #) = quotRemWord a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallPos r #)
-quotRemInteger (SmallNeg !a) (SmallNeg !b) = let (# !q, !r #) = quotRemWord a b in (# if q == 0 then zeroInteger else SmallPos q, if r == 0 then zeroInteger else SmallNeg r #)
-quotRemInteger (SmallPos !a) (SmallNeg !b) = let (# !q, !r #) = quotRemWord a b in (# if q == 0 then zeroInteger else SmallNeg q, if r == 0 then zeroInteger else SmallPos r #)
+quotRemInteger _ (SmallPos 0##) = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int) ++ " divide by zero")
+quotRemInteger (SmallPos 0##) (SmallPos _) = (# zeroInteger, zeroInteger #)
+quotRemInteger (SmallPos !a) (SmallPos !b) = let (# !q, !r #) = quotRemWord (W# a) (W# b) in (# if q == 0 then zeroInteger else SmallPos (unboxWord q), if r == 0 then zeroInteger else SmallPos (unboxWord r) #)
+quotRemInteger (SmallNeg !a) (SmallNeg !b) = let (# !q, !r #) = quotRemWord (W# a) (W# b) in (# if q == 0 then zeroInteger else SmallPos (unboxWord q), if r == 0 then zeroInteger else SmallNeg (unboxWord r) #)
+quotRemInteger (SmallPos !a) (SmallNeg !b) = let (# !q, !r #) = quotRemWord (W# a) (W# b) in (# if q == 0 then zeroInteger else SmallNeg (unboxWord q), if r == 0 then zeroInteger else SmallPos (unboxWord r) #)
 
 quotRemInteger (SmallNeg !a) (SmallPos !b) =
-    let (# !q, !r #) = quotRemWord a b
+    let (# !q, !r #) = quotRemWord (W# a) (W# b)
     in case (q == 0, r == 0) of
-        ( False, False )    -> (# SmallNeg q, SmallNeg r #)
-        ( True, False )     -> (# zeroInteger, SmallNeg r #)
-        ( False, True )     -> (# SmallNeg q, zeroInteger #)
-        _                   -> (# SmallPos 3, SmallPos 3 #)
+        ( False, False )    -> (# SmallNeg (unboxWord q), SmallNeg (unboxWord r) #)
+        ( True, False )     -> (# zeroInteger, SmallNeg (unboxWord r) #)
+        ( False, True )     -> (# SmallNeg (unboxWord q), zeroInteger #)
+        _                   -> (# SmallPos 3##, SmallPos 3## #)
 
-quotRemInteger (Positive !a) (SmallPos !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Pos q, if r == 0 then zeroInteger else SmallPos r #)
-quotRemInteger (Negative !a) (SmallPos !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Neg q, if r == 0 then zeroInteger else SmallNeg r #)
-quotRemInteger (Positive !a) (SmallNeg !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Neg q, if r == 0 then zeroInteger else SmallPos r #)
-quotRemInteger (Negative !a) (SmallNeg !b) = let (!q, !r) = quotRemNaturalW a b in (# fromNatural Pos q, if r == 0 then zeroInteger else SmallNeg r #)
+quotRemInteger (Positive n arr) (SmallPos !b) = let (!q, !r) = quotRemNaturalW (Natural n arr) (W# b) in (# fromNatural Pos q, if r == 0 then zeroInteger else SmallPos (unboxWord r) #)
+quotRemInteger (Negative n arr) (SmallPos !b) = let (!q, !r) = quotRemNaturalW (Natural n arr) (W# b) in (# fromNatural Neg q, if r == 0 then zeroInteger else SmallNeg (unboxWord r) #)
+quotRemInteger (Positive n arr) (SmallNeg !b) = let (!q, !r) = quotRemNaturalW (Natural n arr) (W# b) in (# fromNatural Neg q, if r == 0 then zeroInteger else SmallPos (unboxWord r) #)
+quotRemInteger (Negative n arr) (SmallNeg !b) = let (!q, !r) = quotRemNaturalW (Natural n arr) (W# b) in (# fromNatural Pos q, if r == 0 then zeroInteger else SmallNeg (unboxWord r) #)
 
-quotRemInteger (Positive !a) (Positive !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Pos q, fromNatural Pos r #)
-quotRemInteger (Positive !a) (Negative !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Neg q, fromNatural Pos r #)
-quotRemInteger (Negative !a) (Positive !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Neg q, fromNatural Neg r #)
-quotRemInteger (Negative !a) (Negative !b) = let (!q, !r) = quotRemNatural a b in (# fromNatural Pos q, fromNatural Neg r #)
+quotRemInteger (Positive n1 arr1) (Positive n2 arr2) = let (!q, !r) = quotRemNatural (Natural n1 arr1) (Natural n2 arr2) in (# fromNatural Pos q, fromNatural Pos r #)
+quotRemInteger (Positive n1 arr1) (Negative n2 arr2) = let (!q, !r) = quotRemNatural (Natural n1 arr1) (Natural n2 arr2) in (# fromNatural Neg q, fromNatural Pos r #)
+quotRemInteger (Negative n1 arr1) (Positive n2 arr2) = let (!q, !r) = quotRemNatural (Natural n1 arr1) (Natural n2 arr2) in (# fromNatural Neg q, fromNatural Neg r #)
+quotRemInteger (Negative n1 arr1) (Negative n2 arr2) = let (!q, !r) = quotRemNatural (Natural n1 arr1) (Natural n2 arr2) in (# fromNatural Pos q, fromNatural Neg r #)
 
 quotRemInteger _ _ = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 
@@ -504,21 +497,11 @@ compareInteger = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__
 
 {-# NOINLINE eqInteger #-}
 eqInteger :: Integer -> Integer -> Bool
-eqInteger !(SmallPos !a) !(SmallPos !b) = a == b
-eqInteger !(SmallNeg !a) !(SmallNeg !b) = b == a
-eqInteger !(Positive !a) !(Positive !b) = eqNatural a b
-eqInteger !(Negative !a) !(Negative !b) = eqNatural a b
-
-eqInteger !(SmallPos _) !(SmallNeg _) = False
-eqInteger !(SmallPos _) !(Positive _) = False
-eqInteger !(SmallPos _) !(Negative _) = False
-
-eqInteger !(Positive _) !(SmallPos _) = False
-eqInteger !(Positive _) !(SmallNeg _) = False
-eqInteger !(Positive _) !(Negative _) = False
-
-eqInteger !(SmallNeg _) _ = False
-eqInteger !(Negative _) _ = False
+eqInteger !(SmallPos !a) !(SmallPos !b) = isTrue# (eqWord# a b)
+eqInteger !(SmallNeg !a) !(SmallNeg !b) = isTrue# (eqWord# a b)
+eqInteger !(Positive n1 arr1) !(Positive n2 arr2) = eqNatural (Natural n1 arr1) (Natural n2 arr2)
+eqInteger !(Negative n1 arr1) !(Negative n2 arr2) = eqNatural (Natural n1 arr1) (Natural n2 arr2)
+eqInteger _ _ = False
 
 {-# NOINLINE neqInteger #-}
 neqInteger :: Integer -> Integer -> Bool
@@ -530,49 +513,50 @@ instance  Eq Integer  where
 
 {-# NOINLINE ltInteger #-}
 ltInteger :: Integer -> Integer -> Bool
-ltInteger !(SmallPos !a) !(SmallPos !b) = a < b
-ltInteger !(SmallNeg !a) !(SmallNeg !b) = b < a
+ltInteger !(SmallPos !a) !(SmallPos !b) = isTrue# (ltWord# a b)
+ltInteger !(SmallNeg !a) !(SmallNeg !b) = isTrue# (ltWord# b a)
 ltInteger !(SmallPos _) !(SmallNeg _) = False
 ltInteger !(SmallNeg _) !(SmallPos _) = True
 
-ltInteger !(SmallPos _) !(Positive _) = True
-ltInteger !(SmallPos _) !(Negative _) = False
-ltInteger !(SmallNeg _) !(Positive _) = True
-ltInteger !(SmallNeg _) !(Negative _) = False
+ltInteger !(SmallPos _) !(Positive _ _) = True
+ltInteger !(SmallPos _) !(Negative _ _) = False
+ltInteger !(SmallNeg _) !(Positive _ _) = True
+ltInteger !(SmallNeg _) !(Negative _ _) = False
 
-ltInteger !(Positive _) !(SmallPos _) = False
-ltInteger !(Positive _) !(SmallNeg _) = False
-ltInteger !(Positive _) !(Negative _) = False
+ltInteger !(Positive _ _) !(SmallPos _) = False
+ltInteger !(Positive _ _) !(SmallNeg _) = False
+ltInteger !(Positive _ _) !(Negative _ _) = False
 
-ltInteger !(Negative _) !(SmallPos _) = True
-ltInteger !(Negative _) !(SmallNeg _) = True
-ltInteger !(Negative _) !(Positive _) = True
+ltInteger !(Negative _ _) !(SmallPos _) = True
+ltInteger !(Negative _ _) !(SmallNeg _) = True
+ltInteger !(Negative _ _) !(Positive _ _) = True
 
-ltInteger !(Positive !a) !(Positive !b) = ltNatural a b
-ltInteger !(Negative !a) !(Negative !b) = ltNatural b a
+ltInteger !(Positive n1 arr1) !(Positive n2 arr2) = ltNatural (Natural n1 arr1) (Natural n2 arr2)
+ltInteger !(Negative n1 arr1) !(Negative n2 arr2) = ltNatural (Natural n2 arr2) (Natural n1 arr1)
 
 {-# NOINLINE gtInteger #-}
 gtInteger :: Integer -> Integer -> Bool
-gtInteger !(SmallPos !a) !(SmallPos !b) = a > b
-gtInteger !(SmallNeg !a) !(SmallNeg !b) = a < b
+gtInteger !(SmallPos !a) !(SmallPos !b) = isTrue# (gtWord# a b)
+gtInteger !(SmallNeg !a) !(SmallNeg !b) = isTrue# (gtWord# b a)
 gtInteger !(SmallPos _) !(SmallNeg _) = True
 gtInteger !(SmallNeg _) !(SmallPos _) = False
 
-gtInteger !(SmallPos _) !(Positive _) = False
-gtInteger !(SmallPos _) !(Negative _) = True
-gtInteger !(SmallNeg _) !(Positive _) = False
-gtInteger !(SmallNeg _) !(Negative _) = True
+gtInteger !(SmallPos _) !(Positive _ _) = False
+gtInteger !(SmallPos _) !(Negative _ _) = True
+gtInteger !(SmallNeg _) !(Positive _ _) = False
+gtInteger !(SmallNeg _) !(Negative _ _) = True
 
-gtInteger !(Positive _) !(SmallPos _) = True
-gtInteger !(Positive _) !(SmallNeg _) = True
-gtInteger !(Positive _) !(Negative _) = True
+gtInteger !(Positive _ _) !(SmallPos _) = True
+gtInteger !(Positive _ _) !(SmallNeg _) = True
+gtInteger !(Positive _ _) !(Negative _ _) = True
 
-gtInteger !(Negative _) !(SmallPos _) = False
-gtInteger !(Negative _) !(SmallNeg _) = False
-gtInteger !(Negative _) !(Positive _) = False
+gtInteger !(Negative _ _) !(SmallPos _) = False
+gtInteger !(Negative _ _) !(SmallNeg _) = False
+gtInteger !(Negative _ _) !(Positive _ _) = False
 
-gtInteger !(Positive !a) !(Positive !b) = gtNatural a b
-gtInteger !(Negative !a) !(Negative !b) = gtNatural b a
+gtInteger !(Positive n1 arr1) !(Positive n2 arr2) = gtNatural (Natural n1 arr1) (Natural n2 arr2)
+gtInteger !(Negative n1 arr1) !(Negative n2 arr2) = gtNatural (Natural n2 arr2) (Natural n1 arr1)
+
 
 leInteger :: Integer -> Integer -> Bool
 leInteger !a !b = not (gtInteger a b)
@@ -591,12 +575,15 @@ instance Ord Integer where
 absInteger :: Integer -> Integer
 absInteger !a@(SmallPos _) = a
 absInteger !(SmallNeg !a) = SmallPos a
-absInteger !a@(Positive _) = a
-absInteger !(Negative !a) = Positive a
+absInteger !a@(Positive _ _) = a
+absInteger !(Negative n arr) = Positive n arr
 
 {-# NOINLINE signumInteger #-}
 signumInteger :: Integer -> Integer
-signumInteger = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
+signumInteger (SmallPos _) = oneInteger
+signumInteger (SmallNeg _) = minusOneInteger
+signumInteger (Positive _ _) = oneInteger
+signumInteger (Negative _ _) = minusOneInteger
 
 {-# NOINLINE hashInteger #-}
 hashInteger :: Integer -> Int#
@@ -606,35 +593,46 @@ hashInteger = integerToInt
 -- Helpers (not part of the API).
 
 {-# INLINE fromSmall #-}
-fromSmall :: Sign -> Word -> Integer
-fromSmall !s !w
-    | w == 0 = zeroInteger
-    | s == Pos = SmallPos w
-    | otherwise = SmallNeg w
+fromSmall :: (Word# -> Integer) -> Word -> Integer
+fromSmall !ctor !(W# w#)
+    | (W# w#) == 0 = zeroInteger
+    | otherwise = ctor w#
 
 {-# INLINE fromNatural #-}
 fromNatural :: Sign -> Natural -> Integer
-fromNatural !s !nat@(Natural n arr)
+fromNatural !s !(Natural !n !arr)
     | n == 0 = zeroInteger
     | n == 1 && indexWordArray arr 0 == 0 = zeroInteger -- TODO: See if this can be removed.
-    | s == Pos = Positive nat
-    | otherwise = Negative nat
+    | s == Pos = Positive n arr
+    | otherwise = Negative n arr
+
+mkPair :: (Int -> WordArray -> Integer) -> Word -> Word -> Integer
+mkPair !ctor !sm !carry = runStrictPrim mkNatPair
+  where
+    mkNatPair :: StrictPrim s Integer
+    mkNatPair = do
+        marr <- newWordArray 2
+        writeWordArray marr 0 sm
+        writeWordArray marr 1 carry
+        narr <- unsafeFreezeWordArray marr
+        return $ ctor 2 narr
+
 
 zeroInteger, oneInteger, minusOneInteger :: Integer
-zeroInteger = SmallPos 0
-oneInteger = SmallPos 1
-minusOneInteger = SmallNeg 1
+zeroInteger = SmallPos 0##
+oneInteger = SmallPos 1##
+minusOneInteger = SmallNeg 1##
 
 
 toList :: Integer -> [Word]
 toList ii =
     case ii of
-        SmallPos w -> [w]
-        SmallNeg w -> [w]
-        Positive nat -> natList nat
-        Negative nat -> natList nat
+        SmallPos w -> [W# w]
+        SmallNeg w -> [W# w]
+        Positive n arr -> natList n arr
+        Negative n arr -> natList n arr
   where
-    natList (Natural n arr) = unpackArray 0
+    natList n arr = unpackArray 0
         where
             unpackArray i
                 | i < n = do
@@ -687,11 +685,11 @@ isMinimal :: Integer -> Bool
 isMinimal i =
     case i of
         SmallPos _ -> True
-        SmallNeg a -> a /= 0
-        Positive a -> isMinimalNatural a
-        Negative a -> isMinimalNatural a
+        SmallNeg a -> isTrue# (neWord# a 0##)
+        Positive n arr -> isMinimalNatural n arr
+        Negative n arr -> isMinimalNatural n arr
   where
-    isMinimalNatural (Natural 0 _) = False
-    isMinimalNatural (Natural n arr) = indexWordArray arr (n - 1) /= 0
+    isMinimalNatural 0 _ = False
+    isMinimalNatural n arr = indexWordArray arr (n - 1) /= 0
 
 #endif
