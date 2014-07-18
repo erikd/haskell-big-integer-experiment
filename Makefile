@@ -1,9 +1,11 @@
-TARGETS = check-integer bench-integer new-bench-integer
+TARGETS = check-integer bench-integer
 
 GHC = ghc
 GHCFLAGS = -Wall -Werror -fwarn-tabs -fPIC -O3 $(PRAGMAS)
 
 hsfiles = $(shell find Common/ Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
+
+bench_hsfiles = Check/BenchG.hs Check/Bench1.hs Check/Bench2.hs Check/Bench3.hs Check/Bench4.hs Check/BenchS.hs
 
 gmp_cmm_files = -IGMP GMP/gmp-wrappers.cmm
 
@@ -30,13 +32,10 @@ llvm3 :
 	$(GHC) $(GHCFLAGS) -DTESTING -fllvm -keep-llvm-files New3/GHC/Integer/Internals.hs
 	less New3/GHC/Integer/Internals.ll
 
-check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs
+check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs Check/New4.hs
 	$(GHC) $(GHCFLAGS) -DTESTING --make $< $(gmp_cmm_files) -o $@
 
-bench-integer : bench-integer.hs Stamp/copy $(hsfiles)
-	$(GHC) $(GHCFLAGS) --make $< -o $@
-
-new-bench-integer : new-bench-integer.hs Stamp/copy $(hsfiles)
+bench-integer : bench-integer.hs Stamp/copy $(hsfiles) $(bench_hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
 
 times-bench : times-bench.hs $(hsfiles)
@@ -82,10 +81,30 @@ Check/New3.hs : Check/NewX.template.hs
 Check/New4.hs : Check/NewX.template.hs
 	sed "s/NewX/New4/" $+ > $@
 
-view-bench : new-bench-integer
-	./new-bench-integer --no-gc -o new-bench-integer.html --template=Criterion/report.tpl
-	chmod a+r new-bench-integer.html
-	$(BROWSER) new-bench-integer.html
+
+Check/BenchG.hs : Check/BenchX.template.hs
+	sed "s/BenchX/BenchG/;s/NewX/GMP/" $+ > $@
+
+Check/BenchS.hs : Check/BenchX.template.hs
+	sed "s/BenchX/BenchS/;s/NewX/Simple/" $+ > $@
+
+Check/Bench1.hs : Check/BenchX.template.hs
+	sed "s/BenchX/Bench1/;s/NewX/New1/" $+ > $@
+
+Check/Bench2.hs : Check/BenchX.template.hs
+	sed "s/BenchX/Bench2/;s/NewX/New2/" $+ > $@
+
+Check/Bench3.hs : Check/BenchX.template.hs
+	sed "s/BenchX/Bench3/;s/NewX/New3/" $+ > $@
+
+Check/Bench4.hs : Check/BenchX.template.hs
+	sed "s/BenchX/Bench4/;s/NewX/New4/" $+ > $@
+
+
+view-bench : bench-integer
+	./bench-integer --no-gc -o bench-integer.html --template=Criterion/report.tpl
+	chmod a+r bench-integer.html
+	$(BROWSER) bench-integer.html
 
 view-times : times-bench times-check
 	./times-check
@@ -122,7 +141,7 @@ Stamp/ghc-version :
 
 
 clean :
-	@rm -f $(TARGETS) Check/New[1-9].hs
+	@rm -f $(TARGETS) Check/Bench[GS0-9].hs Check/New[0-9].hs
 	@find . -name \*.o -o -name \*.hi -o -name \*.s -o -name \*.ll -o -name \*.hcr | xargs rm -f
 
 hlint :

@@ -6,7 +6,8 @@
 bench-integer
 check-integer
 check.log
-Check/New*.hs
+Check/Bench[GS0-9].hs
+Check/New[0-9].hs
 half-test
 int-bench
 integer-gmp
