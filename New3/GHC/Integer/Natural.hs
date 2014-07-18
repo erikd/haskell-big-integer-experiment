@@ -702,17 +702,6 @@ gtNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2)
 --------------------------------------------------------------------------------
 -- Helpers (not part of the API).
 
-
-{-# INLINE unboxWord #-}
-unboxWord :: Word -> Word#
-unboxWord !(W# !w) = w
-
-
-{-# INLINE unboxInt #-}
-unboxInt :: Int -> Int#
-unboxInt !(I# !i) = i
-
-
 {-# INLINE zerothWordOfNatural #-}
 zerothWordOfNatural :: Natural -> Word
 zerothWordOfNatural !(Natural _ arr) = indexWordArray arr 0

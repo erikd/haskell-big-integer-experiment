@@ -749,10 +749,6 @@ hashInteger = integerToInt
 --------------------------------------------------------------------------------
 -- Helpers (not part of the API).
 
-
-unboxWord :: Word -> Word#
-unboxWord !(W# w) = w
-
 mkLarge :: Integer -> Integer
 mkLarge (Small Pos w) = mkSingletonArray Pos w
 mkLarge (Small Neg w) = mkSingletonArray Neg w

@@ -70,7 +70,7 @@ testNewInteger = do
     prop "Can convert from Int." $ \ i ->
         show (X.smallInteger (unboxInt i)) `shouldBe` show (G.smallInteger (unboxInt i))
     prop "Can convert to Int." $ \ i ->
-        boxIntHash (X.integerToInt (X.smallInteger (unboxInt i))) `shouldBe` i
+        boxInt# (X.integerToInt (X.smallInteger (unboxInt i))) `shouldBe` i
 
     it "Can create Integers." $ do
         show (X.mkInteger True [0x7fffffff, 0x7fffffff, 0x3f]) `shouldBe` "+0xfffffffffffffffff"
@@ -256,7 +256,7 @@ testNewInteger = do
     prop "Can decode Double to (Integer, Int)." $ \ d ->
         let (# xb, xe #) = X.decodeDoubleInteger (unboxDouble d)
             (# gb, ge #) = G.decodeDoubleInteger (unboxDouble d)
-        in show (xb, boxIntHash xe) `shouldBe` show (gb, boxIntHash ge)
+        in show (xb, boxInt# xe) `shouldBe` show (gb, boxInt# ge)
 #endif
 
 #if New4

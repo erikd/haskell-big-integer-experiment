@@ -30,19 +30,9 @@ mkLargeIntegerList count range = do
     ints <- mapM mkIntList lengths
     return . take count $ zipWith (,) signs ints
 
-unboxInt :: Int -> Int#
-unboxInt (I# i) = i
 
-{-# INLINE unboxWord #-}
-unboxWord :: Word -> Word#
-unboxWord !(W# !w) = w
-
-{-# INLINE unboxDouble #-}
 unboxDouble :: Double -> Double#
 unboxDouble !(D# !d) = d
-
-boxIntHash :: Int# -> Int
-boxIntHash i = I# i
 
 boxDoubleHash :: Double# -> Double
 boxDoubleHash d = D# d

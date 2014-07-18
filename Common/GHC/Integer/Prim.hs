@@ -3,7 +3,8 @@
 #include "MachDeps.h"
 
 module Common.GHC.Integer.Prim
-    ( plusWord, plusWord2, plusWord2C, plusWord3C
+    ( boxInt#, boxWord#, unboxInt, unboxWord
+    , plusWord, plusWord2, plusWord2C, plusWord3C
     , minusWord2, minusWord2C
     , timesWord2, timesWord2C, timesWord2CC
     , quotRemWord, quotRemWord2
@@ -13,6 +14,24 @@ module Common.GHC.Integer.Prim
 import GHC.Base (Word (..), Int (..))
 import GHC.Types (isTrue#)
 import GHC.Prim
+
+
+{-# INLINE boxInt# #-}
+boxInt# :: Int# -> Int
+boxInt# i# = (I# i#)
+
+{-# INLINE boxWord# #-}
+boxWord# :: Word# -> Word
+boxWord# w# = (W# w#)
+
+
+{-# INLINE unboxInt #-}
+unboxInt :: Int -> Int#
+unboxInt !(I# !w) = w
+
+{-# INLINE unboxWord #-}
+unboxWord :: Word -> Word#
+unboxWord !(W# !w) = w
 
 
 {-# INLINE plusWord #-}

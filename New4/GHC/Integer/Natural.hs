@@ -750,17 +750,6 @@ gtNatural !(NatB !n1 !arr1) !(NatB !n2 !arr2)
 --------------------------------------------------------------------------------
 -- Helpers (not part of the API).
 
-
-{-# INLINE unboxWord #-}
-unboxWord :: Word -> Word#
-unboxWord !(W# !w) = w
-
-
-{-# INLINE unboxInt #-}
-unboxInt :: Int -> Int#
-unboxInt !(I# !i) = i
-
-
 {-# INLINE zerothWordOfNatural #-}
 zerothWordOfNatural :: Natural -> Word
 zerothWordOfNatural !(NatS !x) = x

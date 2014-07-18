@@ -720,10 +720,6 @@ hashInteger = integerToInt
 --------------------------------------------------------------------------------
 -- Helpers (not part of the API).
 
-
-unboxWord :: Word -> Word#
-unboxWord !(W# w) = w
-
 mkLarge :: Natural -> Natural
 mkLarge (Small w) = mkSingletonArray w
 mkLarge a = a

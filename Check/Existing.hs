@@ -13,6 +13,7 @@ import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Arbitrary
 
+import Common.GHC.Integer.Prim
 
 import qualified GMP.Integer as G
 import qualified Simple.Integer as S
@@ -25,7 +26,7 @@ testExistingInteger = do
     prop "Can convert from Int." $ \ i ->
         show (G.smallInteger (unboxInt i)) `shouldBe` show (S.smallInteger (unboxInt i))
     prop "Can convert to Int." $ \ (GSP g s) ->
-        show (boxIntHash (G.integerToInt g)) `shouldBe` show (boxIntHash (S.integerToInt s))
+        show (boxInt# (G.integerToInt g)) `shouldBe` show (boxInt# (S.integerToInt s))
     prop "Can create Integers." $ \ (GSP g s) ->
         show g `shouldBe` show s
     prop "Can add Integers." $ \ (GSP ga sa, GSP gb sb) ->
@@ -45,7 +46,7 @@ testExistingInteger = do
     prop "Can XOR two Integers." $ \ (GSP ga sa, GSP gb sb) ->
         show (G.xorInteger ga gb) `shouldBe` show (S.xorInteger sa sb)
     prop "Can hash an Integer." $ \ (GSP g s) ->
-        show (boxIntHash (G.hashInteger g)) `shouldBe` show (boxIntHash (S.hashInteger s))
+        show (boxInt# (G.hashInteger g)) `shouldBe` show (boxInt# (S.hashInteger s))
     prop "Can shiftL Integers." $ \ (GSP g s, int) ->
         let bits = unboxInt (int .&. 31)
         in show (G.shiftLInteger g bits) `shouldBe` show (S.shiftLInteger s bits)
