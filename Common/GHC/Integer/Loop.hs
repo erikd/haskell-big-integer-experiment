@@ -7,9 +7,11 @@ package:
 
     http://hackage.haskell.org/package/loop
 
-The function intLoop is pretty much just like the upstream while intLoopState
-adds a state value that is threaded through the computation. A more general
-version of this function was contributed back upstream:
+The function intLoop is pretty much just like the upstream's numLoop, with
+with more explicit types.
+
+The intLoopState adds a state value that is threaded through the computation.
+A more general version of this function was contributed back upstream:
 
     https://github.com/nh2/loop/pull/2
 
@@ -38,13 +40,16 @@ intLoop start end f =
                 go (x + 1)
 
 
+-- | @intLoopState start end f@: Loops over a contiguous numerical range, from
+-- @start@ up to and including @end@, threading a state value through the
+-- computation.
 {-# INLINE intLoopState #-}
 intLoopState :: Int -> Int -> b -> (Int -> b -> StrictPrim s b) -> StrictPrim s b
 intLoopState start end initState f =
     go start initState
   where
     go !x !s
-        | x == end = return s
+        | x == end = f x s
         | otherwise = do
                 !ns <- f x s
                 go (x + 1) ns
