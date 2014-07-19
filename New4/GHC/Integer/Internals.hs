@@ -128,7 +128,7 @@ integerToInt64 = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__
 int64ToInteger :: Int64# -> Integer
 int64ToInteger = error ("New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int))
 #else
-#error WORD_SIZE_IN_BITS not supported
+int64ToInteger = error $ "New4/GHC/Integer/Internals.hs: line " ++ show (__LINE__ :: Int) ++ ": WORD_SIZE_IN_BITS not supported"
 #endif
 
 {-# NOINLINE encodeDoubleInteger #-}

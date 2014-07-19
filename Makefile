@@ -125,5 +125,8 @@ clean :
 	@rm -f $(TARGETS) Check/New*.hs
 	@find . -name \*.o -o -name \*.hi -o -name \*.s -o -name \*.ll -o -name \*.hcr | xargs rm -f
 
+hlint :
+	hlint $(shell find Common/ Check/ Hnew*/ -name \*.hs)
+
 realclean :
 	@rm -f Stamp/*

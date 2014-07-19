@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, ScopedTypeVariables #-}
+{-# LANGUAGE UnboxedTuples, FlexibleInstances, ScopedTypeVariables #-}
 module Check.Common
     ( testCommon
     ) where

@@ -35,31 +35,32 @@ instance Applicative (StrictPrim s) where
 
 instance Functor (StrictPrim s) where
     {-# INLINE fmap #-}
-    fmap !f !(StrictPrim !m) = StrictPrim $ \ !s ->
+    fmap !f (StrictPrim !m) = StrictPrim $ \ !s ->
         case m s of
             (# !new_s,!r #) -> (# new_s, f $! r #)
 
 
 instance Monad (StrictPrim s) where
     {-# INLINE return #-}
-    return !x = StrictPrim $! \ !s -> (# s, x #)
+    return !x = StrictPrim ( \ !s -> (# s, x #))
 
     {-# INLINE (>>) #-}
-    (!m) >> (!k) = m >>= \ _ -> k
+    (!m) >> (!k) = do { _ <- m ;  k }
 
     {-# INLINE (>>=) #-}
-    (!(StrictPrim !m)) >>= (!k) =
-        StrictPrim $! \ !s ->
+    (StrictPrim !m) >>= (!k) =
+        StrictPrim ( \ !s ->
             case m s of
                 (# new_s, r #) -> case k r of
-                    StrictPrim k2 -> (k2 new_s)
+                    StrictPrim k2 -> k2 new_s
+            )
 
 instance PrimMonad (StrictPrim s) where
     type PrimState (StrictPrim s) = s
     {-# INLINE primitive #-}
     primitive = StrictPrim
     {-# INLINE internal #-}
-    internal (!(StrictPrim !p)) = p
+    internal (StrictPrim !p) = p
 
 
 {-# INLINE runStrictPrim #-}

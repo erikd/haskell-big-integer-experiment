@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, CPP, MagicHash, UnboxedTuples #-}
+{-# LANGUAGE CPP, MagicHash #-}
 
 module Common.GHC.Integer.Debug where
 

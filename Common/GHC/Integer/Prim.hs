@@ -35,32 +35,32 @@ boxDouble# d# = D# d#
 
 {-# INLINE unboxInt #-}
 unboxInt :: Int -> Int#
-unboxInt !(I# !i#) = i#
+unboxInt (I# !i#) = i#
 
 {-# INLINE unboxWord #-}
 unboxWord :: Word -> Word#
-unboxWord !(W# !w#) = w#
+unboxWord (W# !w#) = w#
 
 {-# INLINE unboxDouble #-}
 unboxDouble :: Double -> Double#
-unboxDouble !(D# !d#) = d#
+unboxDouble (D# !d#) = d#
 
 
 {-# INLINE plusWord #-}
 plusWord :: Word -> Word -> Word
-plusWord !(W# a) !(W# b) =
+plusWord (W# a) (W# b) =
     let !s = plusWord# a b
     in W# s
 
 {-# INLINE plusWord2 #-}
 plusWord2 :: Word -> Word -> (# Word, Word #)
-plusWord2 !(W# a) !(W# b) =
+plusWord2 (W# a) (W# b) =
     let (# !c, !s #) = plusWord2# a b
     in (# W# c, W# s #)
 
 {-# INLINE plusWord2C #-}
 plusWord2C :: Word -> Word -> Word -> (# Word, Word #)
-plusWord2C !(W# a) !(W# b) !(W# c) =
+plusWord2C (W# a) (W# b) (W# c) =
     let (# !c1, !s1 #) = plusWord2# a b
         (# !c2, !s2 #) = plusWord2# s1 c
         !carry = plusWord# c1 c2
@@ -68,7 +68,7 @@ plusWord2C !(W# a) !(W# b) !(W# c) =
 
 {-# INLINE plusWord3C #-}
 plusWord3C :: Word -> Word -> Word -> Word -> (# Word, Word #)
-plusWord3C !(W# a) !(W# b) !(W# c) !(W# d) =
+plusWord3C (W# a) (W# b) (W# c) (W# d) =
     let (# !c1, !s1 #) = plusWord2# a b
         (# !c2, !s2 #) = plusWord2# c d
         (# !c3, !s3 #) = plusWord2# s1 s2
@@ -78,7 +78,7 @@ plusWord3C !(W# a) !(W# b) !(W# c) !(W# d) =
 
 {-# INLINE minusWord2 #-}
 minusWord2 :: Word -> Word -> (# Word, Word #)
-minusWord2 !(W# a) !(W# b) =
+minusWord2 (W# a) (W# b) =
     let !diff = minusWord# a b
         -- TODO : Really need a minusWord2# PrimOp.
         !carry = if isTrue# (ltWord# a b) then 1## else 0##
@@ -86,7 +86,7 @@ minusWord2 !(W# a) !(W# b) =
 
 {-# INLINE minusWord2C #-}
 minusWord2C :: Word -> Word -> Word -> (# Word, Word #)
-minusWord2C !(W# a) !(W# b) !(W# c) =
+minusWord2C (W# a) (W# b) (W# c) =
     let !sum = plusWord# b c
         !diff = minusWord# a sum
         !carry = if isTrue# (ltWord# a sum) then 1## else 0##
@@ -94,13 +94,13 @@ minusWord2C !(W# a) !(W# b) !(W# c) =
 
 {-# INLINE timesWord2 #-}
 timesWord2 :: Word -> Word -> (# Word, Word #)
-timesWord2 !(W# a) !(W# b) =
+timesWord2 (W# a) (W# b) =
     let (# !ovf, !prod #) = timesWord2# a b
     in (# W# ovf, W# prod #)
 
 {-# INLINE timesWord2C #-}
 timesWord2C :: Word -> Word -> Word -> (# Word, Word #)
-timesWord2C !(W# a) !(W# b) !(W# c) =
+timesWord2C (W# a) (W# b) (W# c) =
     let (# !ovf, !prod #) = timesWord2# a b
         (# !cry, !prodc #) = plusWord2# prod c
         !carry = plusWord# ovf cry
@@ -108,7 +108,7 @@ timesWord2C !(W# a) !(W# b) !(W# c) =
 
 {-# INLINE timesWord2CC #-}
 timesWord2CC :: Word -> Word -> Word -> Word -> (# Word, Word #)
-timesWord2CC !(W# a) !(W# b) !(W# c) !(W# d) =
+timesWord2CC (W# a) (W# b) (W# c) (W# d) =
     let (# !ovf, !prod #) = timesWord2# a b
         (# !c1, !sm #) = plusWord2# c d
         (# !cry, !prodc #) = plusWord2# prod sm
@@ -124,7 +124,7 @@ shiftLWord2# w s =
 
 {-# INLINE shiftRWord #-}
 shiftRWord :: Word -> Int -> Word
-shiftRWord !(W# w) !(I# i) = W# (uncheckedShiftRL# w i)
+shiftRWord (W# w) (I# i) = W# (uncheckedShiftRL# w i)
 
 {-# INLINE quotRemWord #-}
 quotRemWord :: Word -> Word -> (# Word, Word #)

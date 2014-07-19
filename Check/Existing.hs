@@ -53,11 +53,11 @@ testExistingInteger = do
     prop "Can encode to Double." $ \ (GSP g s) (int :: Int32) -> do
         let i = fromIntegral int
         boxDouble# (S.encodeDoubleInteger s (unboxInt i)) `shouldBe` boxDouble# (G.encodeDoubleInteger g (unboxInt i))
-    prop "Can quotRem Integers." $ \ (GSP ga sa, GSP gb sb) -> do
+    prop "Can quotRem Integers." $ \ (GSP ga sa, GSP gb sb) ->
         if show sb /= "0x0"
             then showUT2 (S.quotRemInteger sa sb) `shouldBe` showUT2 (G.quotRemInteger ga gb)
             else ("1", "2") `shouldBe` ("1", "2")
-    prop "Can divMod Integers." $ \ (GSP ga sa, GSP gb sb) -> do
+    prop "Can divMod Integers." $ \ (GSP ga sa, GSP gb sb) ->
         if show sb /= "0x0"
             then showUT2 (S.divModInteger sa sb) `shouldBe` showUT2 (G.divModInteger ga gb)
             else ("1", "2") `shouldBe` ("1", "2")

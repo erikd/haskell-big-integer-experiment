@@ -36,7 +36,7 @@ testNewInteger = do
     prop "Can convert to Int." $ \ i ->
         boxInt# (X.integerToInt (X.smallInteger (unboxInt i))) `shouldBe` i
 
-    it "Can create Integers." $ do
+    it "Can create Integers." $
         show (X.mkInteger True [0x7fffffff, 0x7fffffff, 0x3f]) `shouldBe` "+0xfffffffffffffffff"
     prop "Can create Integers." $ \ (GNP g s) ->
         show g == show s

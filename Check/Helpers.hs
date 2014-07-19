@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, MagicHash, UnboxedTuples #-}
+{-# LANGUAGE MagicHash, UnboxedTuples #-}
 module Check.Helpers where
 
 import Control.Applicative ((<$>))
@@ -12,7 +12,7 @@ import qualified System.Random as R
 -- Data generators.
 
 mkSmallIntRangeList :: Int -> (Int, Int) -> IO [Int]
-mkSmallIntRangeList count (upper, lower) = do
+mkSmallIntRangeList count (upper, lower) =
     fmap (take count . R.randomRs (upper, lower)) R.newStdGen
 
 
@@ -28,7 +28,7 @@ mkLargeIntegerList count range = do
     let mkIntList len =
             (take len . R.randomRs (0, 0x7fffffff)) <$> R.newStdGen
     ints <- mapM mkIntList lengths
-    return . take count $ zipWith (,) signs ints
+    return . take count $ zip signs ints
 
 
 boxTuple :: (# a, b #) -> (a, b)
@@ -36,13 +36,13 @@ boxTuple (# a, b #) = (a, b)
 
 -- The mkInteger functions expect values in range [0, 0x7fffffff].
 positive32bits :: [Int] -> [Int]
-positive32bits = map (\i -> (abs i) .&. 0x7fffffff)
+positive32bits = map (\i -> 0x7fffffff .&. abs i)
 
 
 shiftCount :: Word8 -> Int#
 shiftCount w =
-    let !(I# i) = fromIntegral w
-    in i
+    case fromIntegral w of
+        I# i -> i
 
 readInteger :: String -> Integer
 readInteger = read
