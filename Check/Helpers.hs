@@ -31,12 +31,6 @@ mkLargeIntegerList count range = do
     return . take count $ zipWith (,) signs ints
 
 
-unboxDouble :: Double -> Double#
-unboxDouble !(D# !d) = d
-
-boxDoubleHash :: Double# -> Double
-boxDoubleHash d = D# d
-
 boxTuple :: (# a, b #) -> (a, b)
 boxTuple (# a, b #) = (a, b)
 

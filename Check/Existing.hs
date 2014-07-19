@@ -52,7 +52,7 @@ testExistingInteger = do
         in show (G.shiftLInteger g bits) `shouldBe` show (S.shiftLInteger s bits)
     prop "Can encode to Double." $ \ (GSP g s) (int :: Int32) -> do
         let i = fromIntegral int
-        boxDoubleHash (S.encodeDoubleInteger s (unboxInt i)) `shouldBe` boxDoubleHash (G.encodeDoubleInteger g (unboxInt i))
+        boxDouble# (S.encodeDoubleInteger s (unboxInt i)) `shouldBe` boxDouble# (G.encodeDoubleInteger g (unboxInt i))
     prop "Can quotRem Integers." $ \ (GSP ga sa, GSP gb sb) -> do
         if show sb /= "0x0"
             then showUT2 (S.quotRemInteger sa sb) `shouldBe` showUT2 (G.quotRemInteger ga gb)

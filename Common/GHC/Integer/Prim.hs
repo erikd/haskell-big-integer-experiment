@@ -4,6 +4,7 @@
 
 module Common.GHC.Integer.Prim
     ( boxInt#, boxWord#, unboxInt, unboxWord
+    , boxDouble#, unboxDouble
     , plusWord, plusWord2, plusWord2C, plusWord3C
     , minusWord2, minusWord2C
     , timesWord2, timesWord2C, timesWord2CC
@@ -11,7 +12,8 @@ module Common.GHC.Integer.Prim
     , shiftLWord2#, shiftRWord
     ) where
 
-import GHC.Base (Word (..), Int (..))
+import GHC.Base (Int (..), Word (..))
+import GHC.Float (Double (..))
 import GHC.Types (isTrue#)
 import GHC.Prim
 
@@ -20,20 +22,28 @@ import GHC.Prim
 
 {-# INLINE boxInt# #-}
 boxInt# :: Int# -> Int
-boxInt# i# = (I# i#)
+boxInt# i# = I# i#
 
 {-# INLINE boxWord# #-}
 boxWord# :: Word# -> Word
-boxWord# w# = (W# w#)
+boxWord# w# = W# w#
+
+{-# INLINE boxDouble# #-}
+boxDouble# :: Double# -> Double
+boxDouble# d# = D# d#
 
 
 {-# INLINE unboxInt #-}
 unboxInt :: Int -> Int#
-unboxInt !(I# !w) = w
+unboxInt !(I# !i#) = i#
 
 {-# INLINE unboxWord #-}
 unboxWord :: Word -> Word#
-unboxWord !(W# !w) = w
+unboxWord !(W# !w#) = w#
+
+{-# INLINE unboxDouble #-}
+unboxDouble :: Double -> Double#
+unboxDouble !(D# !d#) = d#
 
 
 {-# INLINE plusWord #-}

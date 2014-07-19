@@ -210,12 +210,12 @@ testNewInteger = do
 
 #if (New3 || New4)
     it "Can encode to Double." $ do
-        boxDoubleHash (X.encodeDoubleInteger (X.smallInteger 3333#) 0#) `shouldBe` boxDoubleHash (G.encodeDoubleInteger (G.smallInteger 3333#) 0#)
-        boxDoubleHash (X.encodeDoubleInteger (X.mkInteger True [1,2,4,8]) 0#) `shouldBe` boxDoubleHash (G.encodeDoubleInteger (G.mkInteger True [1,2,4,8]) 0#)
+        boxDouble# (X.encodeDoubleInteger (X.smallInteger 3333#) 0#) `shouldBe` boxDouble# (G.encodeDoubleInteger (G.smallInteger 3333#) 0#)
+        boxDouble# (X.encodeDoubleInteger (X.mkInteger True [1,2,4,8]) 0#) `shouldBe` boxDouble# (G.encodeDoubleInteger (G.mkInteger True [1,2,4,8]) 0#)
 
     prop "Can encode to Double (QC)." $ \ (GNP g n) (int :: Int32) -> do
         let i = unboxInt (fromIntegral int)
-        boxDoubleHash (X.encodeDoubleInteger n i) `shouldBe` boxDoubleHash (G.encodeDoubleInteger g i)
+        boxDouble# (X.encodeDoubleInteger n i) `shouldBe` boxDouble# (G.encodeDoubleInteger g i)
 
     prop "Can decode Double to (Integer, Int)." $ \ d ->
         let (# xb, xe #) = X.decodeDoubleInteger (unboxDouble d)
