@@ -47,12 +47,12 @@ to compete.
 </p>
 
 <p>
-These tests are being carried out with ghc from git HEAD (currently 7.7.20140128)
-and the git HEAD versions of integer-gmp and integer-simple.
+These tests are being carried out with ghc 7.8.3 and the git HEAD versions of
+integer-gmp and integer-simple.
 </p>
 
 <p>
-New1, New2 and New3 use three slightly different definitions of the <tt>Integer</tt>
+New1, New2, New3 and New4 use three slightly different definitions of the <tt>Integer</tt>
 data structure to investigate how much difference that makes.
 </p>
 
