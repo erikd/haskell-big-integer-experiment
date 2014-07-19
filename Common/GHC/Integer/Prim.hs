@@ -75,8 +75,9 @@ minusWord2 !(W# a) !(W# b) =
 {-# INLINE minusWord2C #-}
 minusWord2C :: Word -> Word -> Word -> (# Word, Word #)
 minusWord2C !(W# a) !(W# b) !(W# c) =
-    let !diff = minusWord# a (plusWord# b c)
-        !carry = if isTrue# (ltWord# a b) then 1## else 0##
+    let !sum = plusWord# b c
+        !diff = minusWord# a sum
+        !carry = if isTrue# (ltWord# a sum) then 1## else 0##
     in (# W# carry, W# diff #)
 
 {-# INLINE timesWord2 #-}

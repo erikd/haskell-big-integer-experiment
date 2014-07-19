@@ -42,6 +42,11 @@ testNewInternal = do
             f1 = foldl1 G.plusInteger [G.wordToInteger (unboxWord w1), G.wordToInteger (unboxWord w2), G.wordToInteger (unboxWord c)]
             f2 = G.plusInteger (G.wordToInteger (unboxWord sm)) (G.shiftLInteger (G.wordToInteger (unboxWord cry)) 64#)
         in f2 `shouldBe` f1
+    prop "Can subtract Words with a carry and catch overflow." $ \ (w1, w2, c) ->
+        let (# cry, sm #) = minusWord2C w1 w2 c
+            f1 = G.minusInteger (G.wordToInteger (unboxWord w1)) (G.plusInteger (G.wordToInteger (unboxWord w2)) (G.wordToInteger (unboxWord c)))
+            f2 = G.minusInteger (G.wordToInteger (unboxWord sm)) (G.shiftLInteger (G.wordToInteger (unboxWord cry)) 64#)
+        in f2 `shouldBe` f1
     prop "Can multiply Words catching overflow." $ \ (w1, w2) ->
         let (# ov, prod #) = timesWord2 w1 w2
             f1 = G.timesInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))
