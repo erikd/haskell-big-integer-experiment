@@ -18,9 +18,8 @@ import GHC.Tuple ()
 import GHC.IntWord64
 #endif
 
-import Numeric (showHex) -- TODO: Remove when its working.
-import Debug.Trace
-
+import Common.GHC.Integer.Debug
+import Common.GHC.Integer.Loop
 import Common.GHC.Integer.Prim
 import Common.GHC.Integer.StrictPrim
 import New3.GHC.Integer.Sign
@@ -757,7 +756,7 @@ wordToNatural w = runStrictPrim $ do
 arrayShow :: Int -> WordArray -> String
 arrayShow !len !arr =
     let hexify w =
-            let x = showHex w ""
+            let x = showHexW w
             in replicate (16 - length x) '0' ++ x
         digits = dropWhile (== '0') . concatMap hexify . reverse $ unpackArray 0
     in if null digits then "0x0" else "0x" ++ digits
@@ -769,9 +768,6 @@ arrayShow !len !arr =
                 x : xs
         | otherwise = []
 
-
-hexShowW :: Word -> String
-hexShowW w = "0x" ++ showHex w ""
 
 signShow :: Sign -> String
 signShow Pos = "Pos"

@@ -3,7 +3,7 @@
 module Common.GHC.Integer.Debug where
 
 import Data.Word
-import Debug.Trace
+import qualified Debug.Trace as Debug
 import qualified Numeric
 
 import Common.GHC.Integer.StrictPrim
@@ -25,3 +25,6 @@ showHexI x = Numeric.showHex x ""
 
 errorLine :: Int -> String -> a
 errorLine linenum s = error $ "Line " ++ show linenum ++ ": " ++ s
+
+trace :: String -> a -> a
+trace = Debug.trace
