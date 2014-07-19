@@ -212,6 +212,8 @@ testNewInteger = do
     it "Can encode to Double." $ do
         boxDouble# (X.encodeDoubleInteger (X.smallInteger 3333#) 0#) `shouldBe` boxDouble# (G.encodeDoubleInteger (G.smallInteger 3333#) 0#)
         boxDouble# (X.encodeDoubleInteger (X.mkInteger True [1,2,4,8]) 0#) `shouldBe` boxDouble# (G.encodeDoubleInteger (G.mkInteger True [1,2,4,8]) 0#)
+        let a = [0x1f,0x8,0x14,0x4,0x1e,0x5,0x8,0xd,0x4,0x1,0x18,0xb,0xa,0xb,0x3,0xc,0xd,0xd,0x1a,0x1,0x1d,0x4,0x8,0x4,0x11,0x2,0x5,0x6,0x2,0x13]
+        boxDouble# (X.encodeDoubleInteger (X.mkInteger True a) (-1542#)) `shouldBe` boxDouble# (G.encodeDoubleInteger (G.mkInteger True a) (-1542#))
 
     prop "Can encode to Double (QC)." $ \ (GNP g n) (int :: Int32) -> do
         let i = unboxInt (fromIntegral int)
@@ -258,12 +260,16 @@ testNewInteger = do
         let (gb, xb) = (G.smallInteger (unboxInt b), X.smallInteger (unboxInt b))
         show (boxTuple (X.divModInteger xa xb)) `shouldBe` show (boxTuple (G.divModInteger ga gb))
 
-    prop "Can quotRemInteger big Integers. (QC)." $ \ (GNP ga xa, GNP gb xb) ->
+    it "Can quotRemInteger big Integers." $ do
+        let a = [0xb,0x12,0x5,0xa,0x5,0x8,0x2,0x11]
+            b = [0x12,0xf]
+        show (boxTuple (X.quotRemInteger (X.mkInteger True a) (X.mkInteger True b))) `shouldBe` show (boxTuple (G.quotRemInteger (G.mkInteger True a) (G.mkInteger True b)))
+
+    prop "Can quotRemInteger big Integers (QC)." $ \ (GNP ga xa, GNP gb xb) ->
         show (boxTuple (X.quotRemInteger xa xb)) `shouldBe` show (boxTuple (G.quotRemInteger ga gb))
 
-    prop "Can divModInteger big Integers. (QC)." $ \ (GNP ga xa, GNP gb xb) ->
+    prop "Can divModInteger big Integers (QC)." $ \ (GNP ga xa, GNP gb xb) ->
         show (boxTuple (X.divModInteger xa xb)) `shouldBe` show (boxTuple (G.divModInteger ga gb))
-
 #endif
 
 

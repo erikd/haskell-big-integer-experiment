@@ -21,6 +21,7 @@ import GHC.IntWord64
 import Numeric (showHex) -- TODO: Remove when its working.
 import Debug.Trace
 
+import Common.GHC.Integer.Loop
 import Common.GHC.Integer.Prim
 import Common.GHC.Integer.StrictPrim
 import New4.GHC.Integer.Sign
@@ -41,12 +42,11 @@ foreign import ccall unsafe "__word_encodeDouble"
 
 encodeDoubleNatural :: Natural -> Int# -> Double#
 encodeDoubleNatural !(NatS w) s = encodeDouble# (unboxWord w) s
-encodeDoubleNatural !(NatB !n arr) s
-    | isTrue# (s +# (unboxInt (n * 64)) ># 2500#) = 1.0## /## 0.0##
-    | isTrue# (s -# (unboxInt (n * 64)) <# -2500#) = 0.0##
-    | otherwise = (+##)
-            (encodeDouble# (unboxWord (indexWordArray arr (n - 1))) (s +# 64# *# unboxInt (n - 1)))
-            (encodeDouble# (unboxWord (indexWordArray arr (n - 2))) (s +# 64# *# unboxInt (n - 2)))
+encodeDoubleNatural (NatB !n !arr) e0 =
+    let (!res, _) = runStrictPrim $ intLoopState 0 (n - 1) (0.0, I# e0) $ \ i (D# d, e) -> do
+                        (W# w) <- indexWordArrayM arr i
+                        return (D# (d +## encodeDouble# w (unboxInt e)), e + WORD_SIZE_IN_BITS)
+    in unboxDouble res
 
 {-# NOINLINE decodeDoubleNatural #-}
 decodeDoubleNatural :: Double# -> (# Natural, Int# #)
