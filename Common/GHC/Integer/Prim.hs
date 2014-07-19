@@ -15,6 +15,8 @@ import GHC.Base (Word (..), Int (..))
 import GHC.Types (isTrue#)
 import GHC.Prim
 
+-- Many of these primitives are defined in compiler/prelude/primops.txt.pp
+-- from the GHC source tree (both the Git tree and the distribution tarball.
 
 {-# INLINE boxInt# #-}
 boxInt# :: Int# -> Int
