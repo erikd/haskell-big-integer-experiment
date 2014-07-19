@@ -70,16 +70,16 @@ ksliced : karatsubaSlice3D
 	./$+
 
 
-Check/New1.hs : Check/NewX.hs.tpl
+Check/New1.hs : Check/NewX.tpl.hs
 	sed "s/NewX/New1/" $+ > $@
 
-Check/New2.hs : Check/NewX.hs.tpl
+Check/New2.hs : Check/NewX.tpl.hs
 	sed "s/NewX/New2/" $+ > $@
 
-Check/New3.hs : Check/NewX.hs.tpl
+Check/New3.hs : Check/NewX.tpl.hs
 	sed "s/NewX/New3/" $+ > $@
 
-Check/New4.hs : Check/NewX.hs.tpl
+Check/New4.hs : Check/NewX.tpl.hs
 	sed "s/NewX/New4/" $+ > $@
 
 view-bench : new-bench-integer
