@@ -70,16 +70,16 @@ ksliced : karatsubaSlice3D
 	./$+
 
 
-Check/New1.hs : Check/NewX.tpl.hs
+Check/New1.hs : Check/NewX.template.hs
 	sed "s/NewX/New1/" $+ > $@
 
-Check/New2.hs : Check/NewX.tpl.hs
+Check/New2.hs : Check/NewX.template.hs
 	sed "s/NewX/New2/" $+ > $@
 
-Check/New3.hs : Check/NewX.tpl.hs
+Check/New3.hs : Check/NewX.template.hs
 	sed "s/NewX/New3/" $+ > $@
 
-Check/New4.hs : Check/NewX.tpl.hs
+Check/New4.hs : Check/NewX.template.hs
 	sed "s/NewX/New4/" $+ > $@
 
 view-bench : new-bench-integer
@@ -122,7 +122,7 @@ Stamp/ghc-version :
 
 
 clean :
-	@rm -f $(TARGETS) Check/New*.hs
+	@rm -f $(TARGETS) Check/New[1-9].hs
 	@find . -name \*.o -o -name \*.hi -o -name \*.s -o -name \*.ll -o -name \*.hcr | xargs rm -f
 
 hlint :
