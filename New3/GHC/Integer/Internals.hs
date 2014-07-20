@@ -313,9 +313,6 @@ plusInteger !x !y = case (# x, y #) of
     (# !SmallNeg !a, !SmallPos !b #) -> safeMinusWord b a
     (# !SmallNeg !a, !SmallNeg !b #) -> safePlusWord Neg a b
 
-    (# SmallPos 0##, b #) -> b
-    (# a, SmallPos 0## #) -> a
-
     (# !SmallPos !a, !Positive !n !arr #) -> fromNatural Pos (plusNaturalW (Natural n arr) (W# a))
     (# !SmallPos !a, !Negative !n !arr #) -> fromNatural Neg (minusNaturalW (Natural n arr) (W# a))
     (# !SmallNeg !a, !Positive !n !arr #) -> fromNatural Pos (minusNaturalW (Natural n arr) (W# a))
@@ -323,11 +320,11 @@ plusInteger !x !y = case (# x, y #) of
 
     (# !Positive !n !arr, !SmallPos !b #) -> fromNatural Pos (plusNaturalW (Natural n arr) (W# b))
     (# !Positive !n !arr, !SmallNeg !b #) -> fromNatural Pos (minusNaturalW (Natural n arr) (W# b))
-    (# !Positive !n1 !arr1, !Positive !n2 !arr2 #) -> fromNatural Pos (plusNatural (Natural n1 arr1) (Natural n2 arr2))
-    (# !Positive !n1 !arr1, !Negative !n2 !arr2 #) -> plusMinusNatural (Natural n1 arr1) (Natural n2 arr2)
-
     (# !Negative !n !arr, !SmallPos !b #) -> fromNatural Neg (minusNaturalW (Natural n arr) (W# b))
     (# !Negative !n !arr, !SmallNeg !b #) -> fromNatural Neg (plusNaturalW (Natural n arr) (W# b))
+
+    (# !Positive !n1 !arr1, !Positive !n2 !arr2 #) -> fromNatural Pos (plusNatural (Natural n1 arr1) (Natural n2 arr2))
+    (# !Positive !n1 !arr1, !Negative !n2 !arr2 #) -> plusMinusNatural (Natural n1 arr1) (Natural n2 arr2)
     (# !Negative !n1 !arr1, !Positive !n2 !arr2 #) -> plusMinusNatural (Natural n2 arr2) (Natural n1 arr1)
     (# !Negative !n1 !arr1, !Negative !n2 !arr2 #) -> fromNatural Neg (plusNatural (Natural n1 arr1) (Natural n2 arr2))
 
@@ -343,20 +340,20 @@ plusMinusNatural !a !b =
 {-# INLINE safePlusWord #-}
 safePlusWord :: Sign -> Word# -> Word# -> Integer
 safePlusWord !sign !w1 !w2 =
-    let (# !c, !s #) = plusWord2 (W# w1) (W# w2)
-    in case (# c == 0, sign #) of
-        (# True, Pos #) -> SmallPos (unboxWord s)
-        (# True, Neg #) -> SmallNeg (unboxWord s)
-        (# False, Pos #) -> mkPair Positive s c
-        (# False, Neg #) -> mkPair Negative s c
+    case plusWord2# w1 w2 of
+        (# 0##, s #) -> case sign of
+                        Pos -> SmallPos s
+                        Neg -> SmallNeg s
+        (# c, s #) -> case sign of
+                        Pos -> mkPair Positive (W# s) (W# c)
+                        Neg -> mkPair Negative (W# s) (W# c)
 
 {-# INLINE safeMinusWord #-}
 safeMinusWord :: Word# -> Word# -> Integer
 safeMinusWord !a !b =
-    case compare (W# a) (W# b) of
-        EQ -> zeroInteger
-        GT -> SmallPos (minusWord# a b)
-        LT -> SmallNeg (minusWord# b a)
+    case isTrue# (geWord# a b) of
+        True -> SmallPos (minusWord# a b)
+        False -> SmallNeg (minusWord# b a)
 
 {-# INLINE minusInteger #-}
 minusInteger :: Integer -> Integer -> Integer
@@ -366,9 +363,6 @@ minusInteger !x !y = case (# x, y #) of
     (# !SmallNeg !a, !SmallPos !b #) -> safePlusWord Neg a b
     (# !SmallNeg !a, !SmallNeg !b #) -> safeMinusWord b a
 
-    (# SmallPos 0##, b #) -> negateInteger b
-    (# a, SmallPos 0## #) -> a
-
     (# !SmallPos !a, !Positive !n !arr #) -> fromNatural Neg (minusNaturalW (Natural n arr) (W# a))
     (# !SmallPos !a, !Negative !n !arr #) -> fromNatural Pos (plusNaturalW (Natural n arr) (W# a))
     (# !SmallNeg !a, !Positive !n !arr #) -> fromNatural Neg (plusNaturalW (Natural n arr) (W# a))
@@ -376,11 +370,11 @@ minusInteger !x !y = case (# x, y #) of
 
     (# !Positive !n !arr, !SmallPos !b #) -> fromNatural Pos (minusNaturalW (Natural n arr) (W# b))
     (# !Positive !n !arr, !SmallNeg !b #) -> fromNatural Pos (plusNaturalW (Natural n arr) (W# b))
-    (# !Positive !n1 !arr1, !Positive !n2 !arr2 #) -> plusMinusNatural (Natural n1 arr1) (Natural n2 arr2)
-    (# !Positive !n1 !arr1, !Negative !n2 !arr2 #) -> fromNatural Pos (plusNatural (Natural n1 arr1) (Natural n2 arr2))
-
     (# !Negative !n !arr, !SmallPos !b #) -> fromNatural Neg (plusNaturalW (Natural n arr) (W# b))
     (# !Negative !n !arr, !SmallNeg !b #) -> fromNatural Neg (minusNaturalW (Natural n arr) (W# b))
+
+    (# !Positive !n1 !arr1, !Positive !n2 !arr2 #) -> plusMinusNatural (Natural n1 arr1) (Natural n2 arr2)
+    (# !Positive !n1 !arr1, !Negative !n2 !arr2 #) -> fromNatural Pos (plusNatural (Natural n1 arr1) (Natural n2 arr2))
     (# !Negative !n1 !arr1, !Positive !n2 !arr2 #) -> fromNatural Neg (plusNatural (Natural n1 arr1) (Natural n2 arr2))
     (# !Negative !n1 !arr1, !Negative !n2 !arr2 #) -> plusMinusNatural (Natural n2 arr2) (Natural n1 arr1)
 
