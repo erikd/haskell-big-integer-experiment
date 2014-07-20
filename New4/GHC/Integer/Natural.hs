@@ -7,7 +7,7 @@
 
 module New4.GHC.Integer.Natural where
 
-import Prelude hiding (Integer, abs, pi, sum, quot, rem) -- (all, error, otherwise, return, show, succ, (++))
+import Prelude hiding (Integer, abs, pi, sum, quot, rem, succ) -- (all, error, otherwise, return, show, (++))
 
 import Data.Bits
 
@@ -165,7 +165,7 @@ shiftLNatural !nat@(NatB !n !arr) !i
 
 smallShiftLArray :: Int -> WordArray -> (# Int, Int #) -> Natural
 smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
-    marr <- newWordArray (succ n)
+    marr <- newWordArray (n + 1)
     nlen <- loop marr 0 0
     narr <- unsafeFreezeWordArray marr
     return $! NatB nlen narr
@@ -274,7 +274,7 @@ largeShiftRArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
 plusNaturalW :: Natural -> Word -> Natural
 plusNaturalW !(NatS !a) !w = safePlusWord a w
 plusNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
-    marr <- newWordArray (succ n)
+    marr <- newWordArray (n + 1)
     x <- indexWordArrayM arr 0
     let (# !cry, !sm #) = plusWord2 x w
     writeWordArray marr 0 sm
@@ -316,7 +316,7 @@ plusNatural !n@(NatB _ _) !(NatS !w) = plusNaturalW n w
 plusNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
     | n1 < n2 = plusNatural b a
     | otherwise = runStrictPrim $ do
-        marr <- newWordArray (succ n1)
+        marr <- newWordArray (n1 + 1)
         nlen <- loop1 marr 0 0
         narr <- unsafeFreezeWordArray marr
         return $! NatB nlen narr
@@ -351,7 +351,7 @@ plusNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
 minusNaturalW :: Natural -> Word -> Natural
 minusNaturalW !(NatS !a) !w = NatS (a - w)
 minusNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
-    marr <- newWordArray (succ n)
+    marr <- newWordArray (n + 1)
     x <- indexWordArrayM arr 0
     let (# !c, !d #) = minusWord2 x w
     writeWordArray marr 0 d
@@ -383,7 +383,7 @@ minusNatural !n@(NatB _ _) !(NatS !w) = minusNaturalW n w
 minusNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
     | n1 < n2 = plusNatural b a
     | otherwise = runStrictPrim $ do
-        marr <- newWordArray (succ n1)
+        marr <- newWordArray (n1 + 1)
         nlen <- loop1 marr 0 0
         narr <- unsafeFreezeWordArray marr
         finalizeNatural nlen narr
@@ -418,7 +418,7 @@ minusNatural _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__
 {-# NOINLINE timesNaturalW #-}
 timesNaturalW :: Natural -> Word -> Natural
 timesNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
-    marr <- newWordArray (succ n)
+    marr <- newWordArray (n + 1)
     nlen <- loop marr 0 0
     narr <- unsafeFreezeWordArray marr
     return $! NatB nlen narr
@@ -460,13 +460,13 @@ timesNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
         | s2 < n2 = do
             w <- indexWordArrayM arr2 s2
             if w == 0
-                then outerLoop psumLen psum (succ s2)
+                then outerLoop psumLen psum (s2 + 1)
                 else do
-                    newPsumLen <- return (succ (max psumLen (n1 + succ s2)))
+                    newPsumLen <- return ((max psumLen (n1 + s2 + 1)) + 1)
                     marr <- cloneWordArrayExtend psumLen psum newPsumLen
                     possLen <- innerLoop1 marr psumLen psum 0 s2 w 0
                     narr <- unsafeFreezeWordArray marr
-                    outerLoop possLen narr (succ s2)
+                    outerLoop possLen narr (s2 + 1)
         | otherwise =
             return $! NatB psumLen psum
 
@@ -508,11 +508,11 @@ timesNaturalNew !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
                 then do
                     -- WTF? Need this to avoid laziness screwing things up!
                     _ <- innerLoop2 psumLen psum psumLen s2 s2 w 0
-                    outerLoop (succ s2) psumLen psum
+                    outerLoop (s2 + 1) psumLen psum
 
                 else do
                     possLen <- innerLoop1 psumLen psum 0 s2 s2 w 0
-                    outerLoop (succ s2) possLen psum
+                    outerLoop (s2 + 1) possLen psum
         | otherwise = do
             narr <- unsafeFreezeWordArray psum
             return $! NatB psumLen narr

@@ -31,7 +31,7 @@ module New3.GHC.Integer.Internals
 -}
     where
 
-import Prelude hiding (Integer, abs, pi, sum, rem) -- (all, error, otherwise, return, show, succ, (++))
+import Prelude hiding (Integer, abs, pi, sum, rem, succ) -- (all, error, otherwise, return, show, (++))
 
 import Data.Bits
 
@@ -225,7 +225,7 @@ shiftLInteger !(Negative !n !arr) !b = fromNatural Neg (shiftLNatural (Natural n
 
 smallShiftLArray :: Int -> WordArray -> (# Int, Int #) -> Natural
 smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
-    marr <- newWordArray (succ n)
+    marr <- newWordArray (n + 1)
     nlen <- loop marr 0 0
     narr <- unsafeFreezeWordArray marr
     return $! Natural nlen narr

@@ -30,7 +30,7 @@ module New1.GHC.Integer.Type
 -}
     where
 
-import Prelude hiding (Integer, abs, pi) -- (all, error, otherwise, return, show, succ, (++))
+import Prelude hiding (Integer, abs, pi, succ) -- (all, error, otherwise, return, show, (++))
 
 import Data.Bits
 import Data.Primitive.ByteArray
@@ -347,7 +347,7 @@ safePlusWord !sign !w1 !w2 =
 
 plusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
 plusArrayW !s !n !arr !w = runStrictPrim $ do
-    !marr <- newWordArray (succ n)
+    !marr <- newWordArray (n + 1)
     writeWordArray marr n 0
     !x <- indexWordArrayM arr 0
     let (# !cry, !sm #) = plusWord2 x w
@@ -378,7 +378,7 @@ plusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 plusArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray s n2 arr2 n1 arr1
     | otherwise = runStrictPrim $ do
-        marr <- newWordArray (succ n1)
+        marr <- newWordArray (n1 + 1)
         nlen <- loop1 marr 0 0
         narr <- unsafeFreezeWordArray marr
         finalizeLarge s nlen narr
@@ -452,7 +452,7 @@ minusInteger (Large Pos n1 arr1) (Large Neg n2 arr2) = plusArray Pos n1 arr1 n2 
 
 minusArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
 minusArrayW  !s !n !arr !w = runStrictPrim $ do
-    !marr <- newWordArray (succ n)
+    !marr <- newWordArray (n + 1)
     writeWordArray marr n 0
     !x <- indexWordArrayM arr 0
     let (# !c, !d #) = minusWord2 x w
@@ -483,7 +483,7 @@ minusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 minusArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray s n2 arr2 n1 arr1
     | otherwise = runStrictPrim $ do --
-        !marr <- newWordArray (succ n1)
+        !marr <- newWordArray (n1 + 1)
         !nlen <- loop1 marr 0 0
         !narr <- unsafeFreezeWordArray marr
         finalizeLarge s nlen narr
@@ -543,11 +543,11 @@ safeTimesWord !s !w1 !w2 =
 
 timesArrayW :: Sign -> Int -> ByteArray -> Word -> Integer
 timesArrayW !s !n !arr !w = runStrictPrim $ do
-    !marr <- newWordArrayCleared (succ n)
+    !marr <- newWordArrayCleared (n + 1)
     writeWordArray marr (n - 1) 0
     loop marr 0 0
     !narr <- unsafeFreezeWordArray marr
-    finalizeLarge s (succ n) narr
+    finalizeLarge s (n + 1) narr
   where
     loop !marr !i !carry
         | i < n = do
@@ -570,13 +570,13 @@ timesArray !s !n1 !arr1 !n2 !arr2
         | s2 < n2 = do
             !w <- indexWordArrayM arr2 s2
             if w == 0
-                then outerLoop psumLen psum (succ s2)
+                then outerLoop psumLen psum (s2 + 1)
                 else do
-                    let !newPsumLen = succ (max psumLen (n1 + succ s2))
+                    let !newPsumLen = (max psumLen (n1 + s2 + 1)) + 1
                     !marr <- cloneWordArrayExtend psumLen psum newPsumLen
                     !possLen <- innerLoop marr psumLen psum 0 s2 w 0
                     !narr <- unsafeFreezeWordArray marr
-                    outerLoop possLen narr (succ s2)
+                    outerLoop possLen narr (s2 + 1)
         | otherwise =
             finalizeLarge s psumLen psum
 
@@ -782,7 +782,7 @@ shiftLArray !s !n !arr !i
 
 smallShiftLArray :: Sign -> Int -> ByteArray -> (# Int, Int #) -> Integer
 smallShiftLArray !s !n !arr (# !si, !sj #) = runStrictPrim $ do
-    !marr <- newWordArray (succ n)
+    !marr <- newWordArray (n + 1)
     !nlen <- loop marr 0 0
     !narr <- unsafeFreezeWordArray marr
     finalizeLarge s nlen narr
