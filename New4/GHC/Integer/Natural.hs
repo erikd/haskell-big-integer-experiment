@@ -18,9 +18,7 @@ import GHC.Tuple ()
 import GHC.IntWord64
 #endif
 
-import Numeric (showHex) -- TODO: Remove when its working.
-import Debug.Trace
-
+import Common.GHC.Integer.Debug
 import Common.GHC.Integer.Loop
 import Common.GHC.Integer.Prim
 import Common.GHC.Integer.StrictPrim
@@ -809,7 +807,7 @@ wordToNatural !w = NatS w
 arrayShow :: Int -> WordArray -> String
 arrayShow !len !arr =
     let hexify w =
-            let x = showHex w ""
+            let x = showHexW w
             in replicate (16 - length x) '0' ++ x
         digits = dropWhile (== '0') . concatMap hexify . reverse $ unpackArray 0
     in if null digits then "0x0" else "0x" ++ digits
@@ -823,7 +821,7 @@ arrayShow !len !arr =
 
 
 showNatural :: Natural -> String
-showNatural (NatS w) = "0x" ++ showHex w ""
+showNatural (NatS w) = "0x" ++ showHexW w
 showNatural (NatB n arr) = arrayShow n arr
 
 
@@ -837,7 +835,7 @@ isMinimalNatural (NatB 0 _) = False
 isMinimalNatural (NatB n arr) = indexWordArray arr (n - 1) /= 0
 
 hexShowW :: Word -> String
-hexShowW w = "0x" ++ showHex w ""
+hexShowW w = "0x" ++ showHexW w
 
 signShow :: Sign -> String
 signShow Pos = "Pos"
@@ -845,10 +843,6 @@ signShow Neg = "Neg"
 
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
-
-debugPrint :: Int -> String -> StrictPrim s ()
-debugPrint line s = trace (show line ++ " : " ++ s) $ return ()
-
 
 debugWriteWordArray :: Int -> MutableWordArray (StrictPrim s) -> Int -> Word -> StrictPrim s ()
 # if 0
