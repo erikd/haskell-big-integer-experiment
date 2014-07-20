@@ -377,16 +377,16 @@ plusArrayW !s !n !arr !w = runStrictPrim $ do
 plusArray :: Sign -> Int -> ByteArray -> Int -> ByteArray -> Integer
 plusArray !s !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray s n2 arr2 n1 arr1
-    | otherwise = runStrictPrim $ do --
-        !marr <- newWordArray (succ n1)
-        loop1 marr 0 0
-        !narr <- unsafeFreezeWordArray marr
-        finalizeLarge s (succ n1) narr
+    | otherwise = runStrictPrim $ do
+        marr <- newWordArray (succ n1)
+        nlen <- loop1 marr 0 0
+        narr <- unsafeFreezeWordArray marr
+        finalizeLarge s nlen narr
   where
     loop1 !marr !i !carry
         | i < n2 = do
-            !x <- indexWordArrayM arr1 i
-            !y <- indexWordArrayM arr2 i
+            x <- indexWordArrayM arr1 i
+            y <- indexWordArrayM arr2 i
             let (# !cry, !sm #) = plusWord2C x y carry
             writeWordArray marr i sm
             loop1 marr (i + 1) cry
@@ -394,24 +394,19 @@ plusArray !s !n1 !arr1 !n2 !arr2
     loop2 !marr !i !carry
         | carry == 0 = loop3 marr i
         | i < n1 = do
-            !x <- indexWordArrayM arr1 i
+            x <- indexWordArrayM arr1 i
             let (# !cry, !sm #) = plusWord2 x carry
             writeWordArray marr i sm
             loop2 marr (i + 1) cry
         | otherwise = do
             writeWordArray marr i carry
-            loop4 marr (i + 1)
+            return (i + 1)
     loop3 !marr !i
         | i < n1 = do
-            !x <- indexWordArrayM arr1 i
+            x <- indexWordArrayM arr1 i
             writeWordArray marr i x
             loop3 marr (i + 1)
-        | otherwise = loop4 marr i
-    loop4 !marr !i
-        | i <= n1 = do
-            writeWordArray marr i 0
-            loop4 marr (i + 1)
-        | otherwise = return ()
+        | otherwise = return i
 
 
 {-# NOINLINE minusInteger #-}
