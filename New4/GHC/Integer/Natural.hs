@@ -652,19 +652,19 @@ quotRemNatural !numer@(NatB !nn !narr) !denom@(NatB !dn !darr)
                     if ltNatural numer denom
                         then (zeroNatural, numer)
                         else (oneNatural, minusNatural numer denom)
-    | otherwise = divideSimple numer denom
+    | otherwise = divideSimple nn narr dn darr
 
 
-divideSimple :: Natural -> Natural -> (Natural, Natural)
-divideSimple numer denom =
-    let !nd# = encodeDoubleNatural numer 0#
-        !dd# = encodeDoubleNatural denom 0#
+divideSimple :: Int -> WordArray -> Int -> WordArray -> (Natural, Natural)
+divideSimple !nn !narr !dn !darr =
+    let !nd# = fastEncodeDoubleNatural nn narr
+        !dd# = fastEncodeDoubleNatural dn darr
         !quot = natFromDouble (nd# /## dd#)
-        !rem = minusNatural numer (timesNatural quot denom)
-    in if ltNatural rem denom
+        !rem@(NatB rn rarr) = minusNatural (NatB nn narr) (timesNatural quot (NatB dn darr))
+    in if ltNatural rem (NatB dn darr)
             then (quot, rem)
             else
-                let (quot2, rem2) = divideSimple rem denom
+                let (quot2, rem2) = divideSimple rn rarr dn darr
                     !quot3 = plusNatural quot quot2
                 in (quot3, rem2)
 
@@ -682,6 +682,13 @@ natFromDouble d =
                 NatS 0 -> NatS 0
                 NatS 1 -> NatS 1
                 _ -> minusNaturalW dv 1
+
+
+fastEncodeDoubleNatural :: Int -> WordArray -> Double#
+fastEncodeDoubleNatural !n !arr =
+    (+##)   (encodeDouble# (unboxWord (indexWordArray arr (n - 1))) (64# *# unboxInt (n - 1)))
+            (encodeDouble# (unboxWord (indexWordArray arr (n - 2))) (64# *# unboxInt (n - 2)))
+
 
 eqNatural :: Natural -> Natural -> Bool
 eqNatural !(NatS !a) !(NatS !b) = a == b
