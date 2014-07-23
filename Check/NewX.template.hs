@@ -312,6 +312,8 @@ instance Arbitrary GmpNewPair where
                 sign <- arbitrary
                 pos <- fmap (positive32bits . take 30 . nonEmptyNonZero) arbitrary
                 return $! GNP (G.mkInteger sign pos) (X.mkInteger sign pos)
+    shrink (GNP g x) =
+        map (\i -> GNP (G.shiftLInteger g (unboxInt i)) (X.shiftLInteger x (unboxInt i))) [1..50]
 
 newtype NonEmptyNonZero a = NonEmptyNonZero { nonEmptyNonZero :: [a] }
 
