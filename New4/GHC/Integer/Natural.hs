@@ -671,31 +671,20 @@ divideSimple !nn !narr !dn !darr =
                 in (quot3, rem2)
 
 
-natFromDouble :: Double# -> Natural
-natFromDouble d =
-    case decodeDoubleNatural d of
-        (# nat, expn #) ->
-            if isTrue# (expn >=# 0#)
-                        then shiftLNatural nat (I# expn)
-                        else shiftRNatural nat (- (I# expn))
-
-
-estimateQuotNatural :: Natural -> Natural -> Natural
-estimateQuotNatural (NatB nn narr) (NatB dn darr) = estimateQuotient nn narr dn darr
-estimateQuotNatural _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
-
 estimateQuotient :: Int -> WordArray -> Int -> WordArray -> Natural
 estimateQuotient !nn !narr !dn !darr =
-    let !nd# = fastEncodeDoubleNatural nn narr 0# -- (unboxInt (64 * (nn - dn)))
-        !dd# = fastEncodeDoubleNatural dn darr 0#
-        !quot = natFromDouble (0.999999999999999## *## nd# /## dd#)
-    in quot
-
-
-fastEncodeDoubleNatural :: Int -> WordArray -> Int# -> Double#
-fastEncodeDoubleNatural !n !arr s =
-    (+##)   (encodeDouble# (unboxWord (indexWordArray arr (n - 1))) (s +# 64# *# unboxInt (n - 1)))
-            (encodeDouble# (unboxWord (indexWordArray arr (n - 2))) (s +# 64# *# unboxInt (n - 2)))
+    let !nd# = fastEncodeDoubleNatural nn narr
+        !dd# = fastEncodeDoubleNatural dn darr
+    in case decodeDoubleNatural (0.999999999999999## *## nd# /## dd#) of
+                (# nat, expn #) ->
+                    if isTrue# (expn >=# 0#)
+                        then shiftLNatural nat (I# expn)
+                        else shiftRNatural nat (- (I# expn))
+  where
+    fastEncodeDoubleNatural :: Int -> WordArray -> Double#
+    fastEncodeDoubleNatural !n !arr =
+        (+##)   (encodeDouble# (unboxWord (indexWordArray arr (n - 1))) (64# *# unboxInt (n - 1)))
+                (encodeDouble# (unboxWord (indexWordArray arr (n - 2))) (64# *# unboxInt (n - 2)))
 
 
 eqNatural :: Natural -> Natural -> Bool
