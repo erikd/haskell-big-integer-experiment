@@ -3,6 +3,7 @@ module Check.BenchX
     ( addSmallLoop
     , addBigLoop
     , timesSmallLoop
+    , timesBigLoop
     ) where
 
 #define BenchX   1
@@ -52,14 +53,28 @@ addBigLoop (count, up, down) =
     downInteger :: X.Integer
     downInteger = X.mkInteger False down
 
+
 timesSmallLoop :: Int -> X.Integer
 timesSmallLoop iter =
     loop iter count value
   where
-    value = X.smallInteger 3#
-    count = 32      -- 3 ^ 32 < 0x7fffffffffffffff
-
     loop :: Int -> Int -> X.Integer -> X.Integer
     loop !0 !0 !accum = accum
     loop !k !0 !_ = loop (k - 1) count value
     loop !k !j !accum = loop k (j - 1) (X.timesInteger accum value)
+
+    value = X.smallInteger 3#
+    count = 32      -- 3 ^ 32 < 0x7fffffffffffffff
+
+
+timesBigLoop :: Int -> X.Integer
+timesBigLoop iter =
+    loop iter count value
+  where
+    loop :: Int -> Int -> X.Integer -> X.Integer
+    loop !0 !0 !accum = accum
+    loop !k !0 !_ = loop (k - 1) count value
+    loop !k !j !accum = loop k (j - 1) (X.timesInteger accum value)
+
+    value = X.mkInteger True [ 0x300 .. 0x3ff ]
+    count = 10      -- 3 ^ 32 < 0x7fffffffffffffff
