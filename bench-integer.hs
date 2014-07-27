@@ -23,6 +23,7 @@ main = do
 
     addBigParam <- mkBigParam 10000 2000
 
+    let timeSmallLoopCount = 10000
     -- Run the benchmarks.
     C.defaultMain
         [ C.bgroup
@@ -44,6 +45,16 @@ main = do
             , C.bench "New2"    $ C.whnf Bench2.addBigLoop addBigParam
             , C.bench "New3"    $ C.whnf Bench3.addBigLoop addBigParam
             , C.bench "New4"    $ C.whnf Bench4.addBigLoop addBigParam
+            ]
+        , C.bgroup
+                ( "Small Integer multiplication"
+                )
+            [ C.bench "GMP"     $ C.whnf BenchG.timesSmallLoop timeSmallLoopCount
+            , C.bench "Simple"  $ C.whnf BenchS.timesSmallLoop timeSmallLoopCount
+            , C.bench "New1"    $ C.whnf Bench1.timesSmallLoop timeSmallLoopCount
+            , C.bench "New2"    $ C.whnf Bench2.timesSmallLoop timeSmallLoopCount
+            , C.bench "New3"    $ C.whnf Bench3.timesSmallLoop timeSmallLoopCount
+            , C.bench "New4"    $ C.whnf Bench4.timesSmallLoop timeSmallLoopCount
             ]
         ]
 
