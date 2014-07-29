@@ -129,9 +129,9 @@ matchBenchmarks name =
     -- can be held in a 64 bit machine word.
     addSmallParam = (10000000, 63, 62)
 
-    addBigParam = unsafePerformIO $ mkBigParam 10000 2000
+    addBigParam = unsafePerformIO $ mkBigParam 10000 1000
 
-    timesSmallLoopCount = 10000
+    timesSmallLoopCount = 20000
     timesBigLoopCount = 100
 
     plusSmallBenchList = [ addSmallBench addSmallParam ]
