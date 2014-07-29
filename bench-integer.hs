@@ -1,8 +1,13 @@
-{-# LANGUAGE CPP, MagicHash #-}
+{-# LANGUAGE CPP, MagicHash, ScopedTypeVariables #-}
 
 import Prelude hiding (Integer)
 
 import Control.Applicative ((<$>))
+import Control.Exception (SomeException, catch)
+import Data.List (nub, sort)
+import System.Environment
+import System.IO.Unsafe (unsafePerformIO)
+
 import qualified Criterion.Main as C
 import qualified System.Random as R
 
@@ -16,21 +21,16 @@ import Check.BenchG as BenchS
 
 main :: IO ()
 main = do
-    -- (loop count, increment, decrement) increment and decrement should be
-    -- chosen so that loop count * (increment - decrement) < maximum value that
-    -- can be held in a 64 bit machine word.
-    let addSmallParam = (10000000, 63, 62)
+    benchmarks <- findBenchmarks
+    C.defaultMain benchmarks
 
-    addBigParam <- mkBigParam 10000 2000
 
-    let timeSmallLoopCount = 10000
-    let timeBigLoopCount = 100
+--------------------------------------------------------------------------------
+-- The benchmarks.
 
-    -- Run the benchmarks.
-    C.defaultMain
-        [ C.bgroup
-                ( "Small Integer addition and subtraction"
-                )
+addSmallBench :: (Int, Int, Int) -> C.Benchmark
+addSmallBench addSmallParam =
+    C.bgroup "Small Integer addition and subtraction"
             [ C.bench "GMP"     $ C.whnf BenchG.addSmallLoop addSmallParam
             , C.bench "Simple"  $ C.whnf BenchS.addSmallLoop addSmallParam
             , C.bench "New1"    $ C.whnf Bench1.addSmallLoop addSmallParam
@@ -38,9 +38,10 @@ main = do
             , C.bench "New3"    $ C.whnf Bench3.addSmallLoop addSmallParam
             , C.bench "New4"    $ C.whnf Bench4.addSmallLoop addSmallParam
             ]
-        , C.bgroup
-                ( "Big Integer addition and subtraction"
-                )
+
+addBigBench :: (Int, [Int], [Int]) -> C.Benchmark
+addBigBench addBigParam =
+    C.bgroup "Big Integer addition and subtraction"
             [ C.bench "GMP"     $ C.whnf BenchG.addBigLoop addBigParam
             , C.bench "Simple"  $ C.whnf BenchS.addBigLoop addBigParam
             , C.bench "New1"    $ C.whnf Bench1.addBigLoop addBigParam
@@ -48,28 +49,101 @@ main = do
             , C.bench "New3"    $ C.whnf Bench3.addBigLoop addBigParam
             , C.bench "New4"    $ C.whnf Bench4.addBigLoop addBigParam
             ]
-        , C.bgroup
-                ( "Small Integer multiplication"
-                )
-            [ C.bench "GMP"     $ C.whnf BenchG.timesSmallLoop timeSmallLoopCount
-            , C.bench "Simple"  $ C.whnf BenchS.timesSmallLoop timeSmallLoopCount
-            , C.bench "New1"    $ C.whnf Bench1.timesSmallLoop timeSmallLoopCount
-            , C.bench "New2"    $ C.whnf Bench2.timesSmallLoop timeSmallLoopCount
-            , C.bench "New3"    $ C.whnf Bench3.timesSmallLoop timeSmallLoopCount
-            , C.bench "New4"    $ C.whnf Bench4.timesSmallLoop timeSmallLoopCount
-            ]
-        , C.bgroup
-                ( "Big Integer multiplication"
-                )
-            [ C.bench "GMP"     $ C.whnf BenchG.timesBigLoop timeBigLoopCount
-            , C.bench "Simple"  $ C.whnf BenchS.timesBigLoop timeBigLoopCount
-            , C.bench "New1"    $ C.whnf Bench1.timesBigLoop timeBigLoopCount
-            , C.bench "New2"    $ C.whnf Bench2.timesBigLoop timeBigLoopCount
-            , C.bench "New3"    $ C.whnf Bench3.timesBigLoop timeBigLoopCount
-            , C.bench "New4"    $ C.whnf Bench4.timesBigLoop timeBigLoopCount
-            ]
-        ]
 
+timesSmallBench :: Int -> C.Benchmark
+timesSmallBench loopCount =
+    C.bgroup "Small Integer multiplication"
+            [ C.bench "GMP"     $ C.whnf BenchG.timesSmallLoop loopCount
+            , C.bench "Simple"  $ C.whnf BenchS.timesSmallLoop loopCount
+            , C.bench "New1"    $ C.whnf Bench1.timesSmallLoop loopCount
+            , C.bench "New2"    $ C.whnf Bench2.timesSmallLoop loopCount
+            , C.bench "New3"    $ C.whnf Bench3.timesSmallLoop loopCount
+            , C.bench "New4"    $ C.whnf Bench4.timesSmallLoop loopCount
+            ]
+
+timesBigBench :: Int -> C.Benchmark
+timesBigBench loopCount =
+    C.bgroup "Big Integer multiplication"
+            [ C.bench "GMP"     $ C.whnf BenchG.timesBigLoop loopCount
+            , C.bench "Simple"  $ C.whnf BenchS.timesBigLoop loopCount
+            , C.bench "New1"    $ C.whnf Bench1.timesBigLoop loopCount
+            , C.bench "New2"    $ C.whnf Bench2.timesBigLoop loopCount
+            , C.bench "New3"    $ C.whnf Bench3.timesBigLoop loopCount
+            , C.bench "New4"    $ C.whnf Bench4.timesBigLoop loopCount
+            ]
+
+
+--------------------------------------------------------------------------------
+-- Command line handling.
+
+data BenchNames
+    = SmallPlus
+    | BigPlus
+    | Plus
+    | SmallTimes
+    | BigTimes
+    | Times
+    deriving (Eq, Ord, Read, Show)
+
+
+findBenchmarks :: IO [C.Benchmark]
+findBenchmarks =
+    (mapArgs . splitR) <$> catch
+                            (getEnv "INTEGER_BENCH")
+                            (\ (_ :: SomeException) -> return "")
+  where
+    splitR "" = []
+    splitR str =
+        case break (== ',') str of
+            (hd, []) -> [ hd ]
+            (hd, ',':rest) -> hd : splitR rest
+            current -> error $ "Bad value : " ++ show current
+
+
+mapArgs :: [String] -> [C.Benchmark]
+mapArgs [] = concatMap matchBenchmarks [ Plus, Times ]
+mapArgs args =
+    concatMap matchBenchmarks
+            . filterDupes Plus [ SmallPlus, BigPlus ]
+            . filterDupes Times [ SmallTimes, BigTimes ]
+            . nub . sort $ map read args
+  where
+    filterDupes x xs opts =
+        if x `elem` opts
+            then filter (`elem` xs) opts
+            else opts
+
+
+matchBenchmarks :: BenchNames -> [C.Benchmark]
+matchBenchmarks name =
+    case name of
+        SmallPlus -> plusSmallBenchList
+        BigPlus -> plusBigBenchList
+        Plus -> plusBenchList
+        SmallTimes -> timesSmallBenchList
+        BigTimes -> timesBigBenchList
+        Times -> timesBenchList
+  where
+    -- (loop count, increment, decrement) increment and decrement should be
+    -- chosen so that loop count * (increment - decrement) < maximum value that
+    -- can be held in a 64 bit machine word.
+    addSmallParam = (10000000, 63, 62)
+
+    addBigParam = unsafePerformIO $ mkBigParam 10000 2000
+
+    timesSmallLoopCount = 10000
+    timesBigLoopCount = 100
+
+    plusSmallBenchList = [ addSmallBench addSmallParam ]
+    plusBigBenchList = [ addBigBench addBigParam ]
+
+    timesSmallBenchList = [ timesSmallBench timesSmallLoopCount ]
+    timesBigBenchList = [ timesBigBench timesBigLoopCount ]
+
+    plusBenchList = plusSmallBenchList ++ plusBigBenchList
+    timesBenchList = timesSmallBenchList ++ timesBigBenchList
+
+--------------------------------------------------------------------------------
 -- | A function to create a a set of test parameters to pass to addBigLoop.
 -- The three parameter are; a loop count, and two lists of 31 bit Ints to be
 -- passed to the mkInteger function of the Integer API.
