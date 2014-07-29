@@ -52,7 +52,7 @@ integer-gmp and integer-simple.
 </p>
 
 <p>
-New1, New2, New3 and New4 use three slightly different definitions of the <tt>Integer</tt>
+New1, New2, New3 and New4 use slightly different definitions of the <tt>Integer</tt>
 data structure to investigate how much difference that makes.
 </p>
 
