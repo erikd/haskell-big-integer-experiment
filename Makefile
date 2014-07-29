@@ -38,15 +38,6 @@ check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.
 bench-integer : bench-integer.hs Stamp/copy $(hsfiles) $(bench_hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
 
-times-bench : times-bench.hs $(hsfiles)
-	$(GHC) $(GHCFLAGS) --make $< -o $@
-
-times-check : times-check.hs $(hsfiles)
-	$(GHC) $(GHCFLAGS) --make $< -o $@
-
-int-bench : int-bench.hs Stamp/copy $(hsfiles)
-	$(GHC) $(GHCFLAGS) --make $< -o $@
-
 karatsubaSlice : karatsubaSlice.hs $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
 
@@ -105,11 +96,6 @@ view-bench : bench-integer
 	./bench-integer --no-gc -o bench-integer.html --template=Criterion/report.tpl
 	chmod a+r bench-integer.html
 	$(BROWSER) bench-integer.html
-
-view-times : times-bench times-check
-	./times-check
-	./times-bench --no-gc -o times-bench.html --template=Criterion/report.tpl
-	$(BROWSER) times-bench.html
 
 # Update the local copies of integer-simple and integer-gmp and patch them
 # to work in this framework.
