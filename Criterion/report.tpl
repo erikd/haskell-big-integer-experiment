@@ -3,16 +3,11 @@
  <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>criterion report</title>
-    <!--[if lte IE 8]>
-      <script language="javascript" type="text/javascript">
-        {{#include}}js/excanvas-r3.min.js{{/include}}
-      </script>
-    <![endif]-->
     <script language="javascript" type="text/javascript">
-      {{#include}}js/jquery-1.6.4.min.js{{/include}}
+      {{#include}}js/jquery-2.1.1.min.js{{/include}}
     </script>
     <script language="javascript" type="text/javascript">
-      {{#include}}js/jquery.flot-0.7.min.js{{/include}}
+      {{#include}}js/jquery.flot-0.8.3.min.js{{/include}}
     </script>
     <script language="javascript" type="text/javascript">
       {{#include}}js/jquery.criterion.js{{/include}}
@@ -21,7 +16,7 @@
 {{#include}}criterion.css{{/include}}
     </style>
     <style type="text/css">
-        h3 {
+        h2 {
           font-size: 20px;
           font-weight: 300;
           margin-bottom: .3em;
@@ -62,7 +57,7 @@ data structure to investigate how much difference that makes.
 <div id="overview" class="ovchart" style="width:900px;height:100px;"></div>
 
 {{#report}}
-<h3><a name="b{{number}}">{{name}}</a></h3>
+<h2><a name="b{{number}}">{{name}}</a></h2>
  <table width="100%">
   <tbody>
    <tr>
@@ -84,16 +79,28 @@ data structure to investigate how much difference that makes.
   </thead>
   <tbody>
    <tr>
+    <td>OLS regression</td>
+    <td><span class="confinterval olstimelb{{number}}">xxx</span></td>
+    <td><span class="olstimept{{number}}">xxx</span></td>
+    <td><span class="confinterval olstimeub{{number}}">xxx</span></td>
+   </tr>
+   <tr>
+    <td>R&#xb2; goodness-of-fit</td>
+    <td><span class="confinterval olsr2lb{{number}}">xxx</span></td>
+    <td><span class="olsr2pt{{number}}">xxx</span></td>
+    <td><span class="confinterval olsr2ub{{number}}">xxx</span></td>
+   </tr>
+   <tr>
     <td>Mean execution time</td>
-    <td><span class="citime">{{anMean.estLowerBound}}</span></td>
+    <td><span class="confinterval citime">{{anMean.estLowerBound}}</span></td>
     <td><span class="time">{{anMean.estPoint}}</span></td>
-    <td><span class="citime">{{anMean.estUpperBound}}</span></td>
+    <td><span class="confinterval citime">{{anMean.estUpperBound}}</span></td>
    </tr>
    <tr>
     <td>Standard deviation</td>
-    <td><span class="citime">{{anStdDev.estLowerBound}}</span></td>
+    <td><span class="confinterval citime">{{anStdDev.estLowerBound}}</span></td>
     <td><span class="time">{{anStdDev.estPoint}}</span></td>
-    <td><span class="citime">{{anStdDev.estUpperBound}}</span></td>
+    <td><span class="confinterval citime">{{anStdDev.estUpperBound}}</span></td>
    </tr>
   </tbody>
  </table>
@@ -108,10 +115,9 @@ data structure to investigate how much difference that makes.
  <h2><a name="grokularation">understanding this report</a></h2>
 
  <p>In this report, each function benchmarked by criterion is assigned
-   a section of its own.  In each section, we display two charts, each
-   with an <i>x</i> axis that represents measured execution time.
-   These charts are active; if you hover your mouse over data points
-   and annotations, you will see more details.</p>
+   a section of its own.  The charts in each section are active; if
+   you hover your mouse over data points and annotations, you will see
+   more details.</p>
 
  <ul>
    <li>The chart on the left is a
@@ -123,19 +129,41 @@ data structure to investigate how much difference that makes.
      measurement was repeated.</li>
 
    <li>The chart on the right is the raw data from which the kernel
-     density estimate is built.  Measurements are displayed on
-     the <i>y</i> axis in the order in which they occurred.</li>
+     density estimate is built.  The <i>x</i> axis indicates the
+     number of loop iterations, while the <i>y</i> axis shows measured
+     execution time for the given number of loop iterations.  The
+     line behind the values is the linear regression prediction of
+     execution time for a given number of iterations. Ideally, all
+     measurements will be on (or very near) this line.</li>
  </ul>
 
- <p>Under the charts is a small table displaying the mean and standard
-   deviation of the measurements.  We use a statistical technique
-   called
+ <p>Under the charts is a small table.
+   The first two rows are the results of a linear regression run
+     on the measurements displayed in the right-hand chart.</p>
+
+ <ul>
+   <li><i>OLS regression</i> indicates the
+     time estimated for a single loop iteration using an ordinary
+     least-squares regression model.  This number is more accurate
+     than the <i>mean</i> estimate below it, as it more effectively
+     eliminates measurement overhead and other constant factors.</li>
+   <li><i>R&#xb2; goodness-of-fit</i> is a measure of how
+     accurately the linear regression model fits the observed
+     measurements.  If the measurements are not too noisy, R&#xb2;
+     should lie between 0.99 and 1, indicating an excellent fit. If
+     the number is below 0.99, something is confounding the accuracy
+     of the linear model.</li>
+   <li><i>Mean execution time</i> and <i>standard deviation</i> are
+     statistics calculated from execution time
+     divided by number of iterations.</li>
+ </ul>
+
+ <p>We use a statistical technique called
    the <a href="http://en.wikipedia.org/wiki/Bootstrapping_(statistics)">bootstrap</a>
-   to provide confidence intervals on our estimates of these values.
-   The bootstrap-derived upper and lower bounds on the mean and
-   standard deviation let you see how accurate we believe those
-   estimates to be.  (Hover the mouse over the table headers to see
-   the confidence levels.)</p>
+   to provide confidence intervals on our estimates.  The
+   bootstrap-derived upper and lower bounds on estimates let you see
+   how accurate we believe those estimates to be.  (Hover the mouse
+   over the table headers to see the confidence levels.)</p>
 
  <p>A noisy benchmarking environment can cause some or many
    measurements to fall far from the mean.  These outlying
@@ -146,20 +174,50 @@ data structure to investigate how much difference that makes.
 
 <script type="text/javascript">
 $(function () {
-  function mangulate(number, name, mean, times, kdetimes, kdepdf) {
+  function mangulate(rpt) {
+    var measured = function(key) {
+      var idx = rpt.reportKeys.indexOf(key);
+      return rpt.reportMeasured.map(function(r) { return r[idx]; });
+    };
+    var number = rpt.reportNumber;
+    var name = rpt.reportName;
+    var mean = rpt.reportAnalysis.anMean.estPoint;
+    var iters = measured("iters");
+    var times = measured("time");
+    var kdetimes = rpt.reportKDEs[0].kdeValues;
+    var kdepdf = rpt.reportKDEs[0].kdePDF;
+
     var meanSecs = mean;
     var units = $.timeUnits(mean);
+    var rgrs = rpt.reportAnalysis.anRegress[0];
     var scale = units[0];
-    units = units[1];
+    var olsTime = rgrs.regCoeffs.iters;
+    $(".olstimept" + number).text(function() {
+        return $.renderTime(olsTime.estPoint);
+      });
+    $(".olstimelb" + number).text(function() {
+        return $.renderTime(olsTime.estLowerBound);
+      });
+    $(".olstimeub" + number).text(function() {
+        return $.renderTime(olsTime.estUpperBound);
+      });
+    $(".olsr2pt" + number).text(function() {
+        return rgrs.regRSquare.estPoint.toFixed(3);
+      });
+    $(".olsr2lb" + number).text(function() {
+        return rgrs.regRSquare.estLowerBound.toFixed(3);
+      });
+    $(".olsr2ub" + number).text(function() {
+        return rgrs.regRSquare.estUpperBound.toFixed(3);
+      });
     mean *= scale;
     kdetimes = $.scaleBy(scale, kdetimes);
-    var ts = $.scaleBy(scale, times);
     var kq = $("#kde" + number);
     var k = $.plot(kq,
            [{ label: name + " time densities",
               data: $.zip(kdetimes, kdepdf),
               }],
-           { xaxis: { tickFormatter: $.unitFormatter(units) },
+           { xaxis: { tickFormatter: $.unitFormatter(scale) },
              yaxis: { ticks: false },
              grid: { borderColor: "#777",
                      hoverable: true, markings: [ { color: '#6fd3fb',
@@ -169,28 +227,71 @@ $(function () {
     kq.append('<div class="meanlegend" title="' + $.renderTime(meanSecs) +
               '" style="position:absolute;left:' + (o.left + 4) +
               'px;bottom:139px;">mean</div>');
-    var timepairs = new Array(ts.length);
-    for (var i = 0; i < ts.length; i++)
-      timepairs[i] = [ts[i],i];
+    $.addTooltip("#kde" + number,
+                 function(secs) { return $.renderTime(secs / scale); });
+    var timepairs = new Array(times.length);
+    var lastiter = iters[iters.length-1];
+    var olspairs = [[0,0], [lastiter, lastiter * scale * olsTime.estPoint]];
+    for (var i = 0; i < times.length; i++)
+      timepairs[i] = [iters[i],times[i]*scale];
+    iterFormatter = function() {
+      var denom = 0;
+      return function(iters) {
+	if (iters == 0)
+          return '';
+	if (denom > 0)
+	  return (iters / denom).toFixed();
+        var power;
+	if (iters >= 1e9) {
+	    denom = '1e9'; power = '&#x2079;';
+        }
+	if (iters >= 1e6) {
+	    denom = '1e6'; power = '&#x2076;';
+        }
+        else if (iters >= 1e3) {
+            denom = '1e3'; power = '&#xb3;';
+        }
+        else denom = 1;
+        if (denom > 1) {
+          iters = (iters / denom).toFixed();
+	  iters += '&times;10' + power + ' iters';
+        } else {
+          iters += ' iters';
+        }
+        return iters;
+      };
+    };
     $.plot($("#time" + number),
-           [{ label: name + " times",
-              data: timepairs }],
-           { points: { show: true },
-             grid: { borderColor: "#777", hoverable: true },
-             xaxis: { min: kdetimes[0], max: kdetimes[kdetimes.length-1],
-                      tickFormatter: $.unitFormatter(units) },
-             yaxis: { ticks: false },
-           });
-    $.addTooltip("#kde" + number, function(x,y) { return x + ' ' + units; });
-    $.addTooltip("#time" + number, function(x,y) { return x + ' ' + units; });
+           [{ label: "regression", data: olspairs,
+              lines: { show: true } },
+            { label: name + " times", data: timepairs,
+              points: { show: true } }],
+            { grid: { borderColor: "#777", hoverable: true },
+              xaxis: { tickFormatter: iterFormatter() },
+              yaxis: { tickFormatter: $.unitFormatter(scale) } });
+    $.addTooltip("#time" + number,
+		 function(iters,secs) {
+		   return ($.renderTime(secs / scale) + ' / ' +
+			   iters.toLocaleString() + ' iters');
+		 });
+    if (0) {
+      var cyclepairs = new Array(cycles.length);
+      for (var i = 0; i < cycles.length; i++)
+	cyclepairs[i] = [cycles[i],i];
+      $.plot($("#cycle" + number),
+	     [{ label: name + " cycles",
+		data: cyclepairs }],
+	     { points: { show: true },
+	       grid: { borderColor: "#777", hoverable: true },
+	       xaxis: { tickFormatter:
+			function(cycles,axis) { return cycles + ' cycles'; }},
+	       yaxis: { ticks: false },
+	     });
+      $.addTooltip("#cycles" + number, function(x,y) { return x + ' cycles'; });
+    }
   };
-  {{#report}}
-  mangulate({{number}}, "{{name}}",
-            {{anMean.estPoint}},
-            [{{#times}}{{x}},{{/times}}],
-            [{{#kdetimes}}{{x}},{{/kdetimes}}],
-            [{{#kdepdf}}{{x}},{{/kdepdf}}]);
-  {{/report}}
+  var reports = {{json}};
+  reports.map(mangulate);
 
   var benches = [{{#report}}"{{name}}",{{/report}}];
   var ylabels = [{{#report}}[-{{number}},'<a href="#b{{number}}">{{name}}</a>'],{{/report}}];
@@ -243,13 +344,14 @@ for (var pix in  prefixes){
   var benches = data[p].benches;
   var means = $.scaleTimes(data[p].means) ;
   // console.log(means);
-  var meansLabel = means[1];
-  // console.log("label is " + meansLabel);
+  var meansLabel = $.timeUnits($.mean(data[p].means))[1];
+  console.log("label is " + meansLabel);
 
    ylabels = data[p].ylabels;
    _ylabels = [];
 
-  $("#overview").before('<style>.tickLabel {width: 100px;}</style>')
+
+
 
   for (var i = 0; i < means[0].length; i++) {
     var label = benches[i].split('/')[1];
@@ -257,12 +359,11 @@ for (var pix in  prefixes){
     var alabel = ylabels[i][1].replace(p+'/','');
     _ylabels.push([-i, alabel] );
   }
-
-  $("#overview").before('<h3>'+p+'</h2><div id="overview_' + pix + '" class="ovchart" style="width:900px;height:200px;"></div>');
+  $("#overview").before('<h2>'+p+'</h2><div id="overview_' + pix + '" class="ovchart" style="width:900px;height:200px;"></div>');
 
   var oq = $("#overview_" + pix  );
   var o = $.plot(oq, xs, { bars: { show: true, horizontal: true,
-      barWidth: 0.5, align: "center" },
+      barWidth: 0.75, align: "center" },
       grid: { borderColor: "#777", hoverable: true },
       legend: { show: false/*xs.length > 1*/ },
       xaxis: { max: Math.max.apply(undefined,means[0]) * 1.02 },
@@ -275,7 +376,9 @@ for (var pix in  prefixes){
   o.draw();
   // that function scope trick
 
-  (function(label) { $.addTooltip("#overview_"+pix, function(x,y) { return x + ' ' + label; });} )(meansLabel);
+  (function(scaler) {
+      $.addTooltip("#overview_"+pix,
+          function(x,y) { return $.renderTime(x/scaler); });} )(means[1] );
 };
 
 $("#overview").remove();
@@ -298,7 +401,7 @@ $(document).ready(function () {
   <div id="footer">
     <div class="body">
      <div class="footfirst">
-      <h3>colophon</h2>
+      <h2>colophon</h2>
       <p>This report was created using the
 	<a href="http://hackage.haskell.org/package/criterion">criterion</a>
 	benchmark execution and performance analysis tool.</p>
