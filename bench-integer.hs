@@ -16,7 +16,7 @@ import Check.Bench1 as Bench1
 import Check.Bench2 as Bench2
 import Check.Bench3 as Bench3
 import Check.Bench4 as Bench4
-import Check.BenchG as BenchS
+import Check.BenchS as BenchS
 
 
 main :: IO ()
