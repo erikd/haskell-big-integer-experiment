@@ -11,11 +11,11 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Criterion.Main as C
 import qualified System.Random as R
 
-import Check.BenchG as BenchG
 import Check.Bench1 as Bench1
 import Check.Bench2 as Bench2
 import Check.Bench3 as Bench3
 import Check.Bench4 as Bench4
+import Check.BenchG as BenchG
 import Check.BenchS as BenchS
 
 
@@ -127,12 +127,12 @@ matchBenchmarks name =
     -- (loop count, increment, decrement) increment and decrement should be
     -- chosen so that loop count * (increment - decrement) < maximum value that
     -- can be held in a 64 bit machine word.
-    addSmallParam = (10000000, 63, 62)
+    addSmallParam = (2000, 63, 62)
 
-    addBigParam = unsafePerformIO $ mkBigParam 10000 1000
+    addBigParam = unsafePerformIO $ mkBigParam 100 100
 
-    timesSmallLoopCount = 20000
-    timesBigLoopCount = 100
+    timesSmallLoopCount = 200
+    timesBigLoopCount = 10
 
     plusSmallBenchList = [ addSmallBench addSmallParam ]
     plusBigBenchList = [ addBigBench addBigParam ]
