@@ -63,9 +63,8 @@ timesSmallBench loopCount =
 
 timesBigBench :: Int -> C.Benchmark
 timesBigBench loopCount =
-    C.bgroup "Big Integer multiplication"
+    C.bgroup "Big Integer multiplication (dropped Simple, too slow)"
             [ C.bench "GMP"     $ C.whnf BenchG.timesBigLoop loopCount
-            , C.bench "Simple"  $ C.whnf BenchS.timesBigLoop loopCount
             , C.bench "New1"    $ C.whnf Bench1.timesBigLoop loopCount
             , C.bench "New2"    $ C.whnf Bench2.timesBigLoop loopCount
             , C.bench "New3"    $ C.whnf Bench3.timesBigLoop loopCount
