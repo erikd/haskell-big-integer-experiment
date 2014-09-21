@@ -135,7 +135,7 @@ Stamp/ghc-version :
 
 
 clean :
-	@rm -f $(TARGETS) Check/Bench[GS0-9].hs Check/New[0-9].hs
+	@rm -f $(TARGETS) bench-integer.html Check/Bench[GS0-9].hs Check/New[0-9].hs
 	@find . -name \*.o -o -name \*.hi -o -name \*.s -o -name \*.ll -o -name \*.hcr | xargs rm -f
 
 hlint :
