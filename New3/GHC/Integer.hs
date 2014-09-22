@@ -34,9 +34,8 @@ module New3.GHC.Integer (
     shiftLInteger, shiftRInteger,
     hashInteger,
 
-#if TESTING
+    -- Testing only.
     isMinimal
-#endif
     ) where
 
 import New3.GHC.Integer.Internals
