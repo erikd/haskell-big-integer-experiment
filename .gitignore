@@ -2,7 +2,8 @@
 *.hcr
 *.html
 *.ll
-*.s
+*.o
+*.hi
 bench-integer
 check-integer
 check.log
