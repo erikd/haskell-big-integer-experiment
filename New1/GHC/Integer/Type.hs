@@ -43,6 +43,7 @@ import GHC.IntWord64
 #endif
 
 import Common.GHC.Integer.Debug
+import Common.GHC.Integer.Loop
 import Common.GHC.Integer.Prim
 import Common.GHC.Integer.StrictPrim
 import New1.GHC.Integer.Array
@@ -127,7 +128,18 @@ int64ToInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: I
 
 {-# NOINLINE encodeDoubleInteger #-}
 encodeDoubleInteger :: Integer -> Int# -> Double#
-encodeDoubleInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+encodeDoubleInteger (Small Pos (W# w)) i = encodeDouble# w i
+encodeDoubleInteger (Small Neg (W# w)) i = negateDouble# (encodeDouble# w i)
+
+encodeDoubleInteger (Large Pos n arr) i = encodeArrayToDouble n arr i
+encodeDoubleInteger (Large Neg n arr) i = negateDouble# (encodeArrayToDouble n arr i)
+
+encodeArrayToDouble :: Int -> ByteArray -> Int# -> Double#
+encodeArrayToDouble n arr e0 =
+    let (!res, _) = runStrictPrim $ intLoopState 0 (n - 1) (0.0, I# e0) $ \ i (D# d, e) -> do
+                        (W# w) <- indexWordArrayM arr i
+                        return (D# (d +## encodeDouble# w (unboxInt e)), e + WORD_SIZE_IN_BITS)
+    in unboxDouble res
 
 {-# NOINLINE encodeFloatInteger #-}
 encodeFloatInteger :: Integer -> Int# -> Float#
@@ -137,12 +149,14 @@ encodeFloatInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ 
 decodeFloatInteger :: Float# -> (# Integer, Int# #)
 decodeFloatInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
--- XXX This could be optimised better, by either (word-size dependent)
--- using single 64bit value for the mantissa, or doing the multiplication
--- by just building the Digits directly
 {-# NOINLINE decodeDoubleInteger #-}
 decodeDoubleInteger :: Double# -> (# Integer, Int# #)
-decodeDoubleInteger = error ("New1/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+decodeDoubleInteger d# =
+    case decodeDouble_2Int# d# of
+        (# isign, mantHigh, mantLow, expn #) ->
+            let sign = if isTrue# (isign <# 0#) then Neg else Pos
+            in (# Small sign (W# (plusWord# mantLow (uncheckedShiftL# mantHigh 32#))), expn #)
+
 
 {-# NOINLINE doubleFromInteger #-}
 doubleFromInteger :: Integer -> Double#

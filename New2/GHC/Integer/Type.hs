@@ -45,6 +45,7 @@ import GHC.IntWord64
 import Numeric (showHex) -- TODO: Remove when its working.
 
 import Common.GHC.Integer.Prim
+import Common.GHC.Integer.Loop
 import Common.GHC.Integer.StrictPrim
 import New2.GHC.Integer.Array
 import New2.GHC.Integer.Sign
@@ -138,7 +139,18 @@ int64ToInteger = error $ "New2/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: 
 
 {-# NOINLINE encodeDoubleInteger #-}
 encodeDoubleInteger :: Integer -> Int# -> Double#
-encodeDoubleInteger = error ("New2/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+encodeDoubleInteger (Positive n) i = encodeNaturalDouble n i
+encodeDoubleInteger (Negative n) i = negateDouble# (encodeNaturalDouble n i)
+
+encodeNaturalDouble :: Natural -> Int# -> Double#
+encodeNaturalDouble (Small (W# w)) i = encodeDouble# w i
+encodeNaturalDouble (Large n arr) e0 =
+    let (!res, _) = runStrictPrim $ intLoopState 0 (n - 1) (0.0, I# e0) $ \ i (D# d, e) -> do
+                        (W# w) <- indexWordArrayM arr i
+                        return (D# (d +## encodeDouble# w (unboxInt e)), e + WORD_SIZE_IN_BITS)
+    in unboxDouble res
+
+
 
 {-# NOINLINE encodeFloatInteger #-}
 encodeFloatInteger :: Integer -> Int# -> Float#
@@ -148,12 +160,13 @@ encodeFloatInteger = error ("New2/GHC/Integer/Type.hs: line " ++ show (__LINE__ 
 decodeFloatInteger :: Float# -> (# Integer, Int# #)
 decodeFloatInteger = error ("New2/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
--- XXX This could be optimised better, by either (word-size dependent)
--- using single 64bit value for the mantissa, or doing the multiplication
--- by just building the Digits directly
 {-# NOINLINE decodeDoubleInteger #-}
 decodeDoubleInteger :: Double# -> (# Integer, Int# #)
-decodeDoubleInteger = error ("New2/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
+decodeDoubleInteger d# =
+    case decodeDouble_2Int# d# of
+        (# isign, mantHigh, mantLow, expn #) ->
+            let sign = if isTrue# (isign <# 0#) then Negative else Positive
+            in (# sign (Small (W# (plusWord# mantLow (uncheckedShiftL# mantHigh 32#)))), expn #)
 
 {-# NOINLINE doubleFromInteger #-}
 doubleFromInteger :: Integer -> Double#

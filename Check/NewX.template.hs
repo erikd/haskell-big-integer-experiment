@@ -24,9 +24,7 @@ import Check.Helpers
 
 #define NewX   1
 
-#if (New3 || New4)
 import GHC.Int (Int32)
-#endif
 
 
 testNewInteger :: Spec
@@ -208,7 +206,6 @@ testNewInteger = do
         let bits = unboxInt (int .&. 0x7f)
         X.isMinimal (X.shiftLInteger s bits) `shouldBe` True
 
-#if (New3 || New4)
     it "Can encode to Double." $ do
         boxDouble# (X.encodeDoubleInteger (X.smallInteger 3333#) 0#) `shouldBe` boxDouble# (G.encodeDoubleInteger (G.smallInteger 3333#) 0#)
         boxDouble# (X.encodeDoubleInteger (X.mkInteger True [1,2,4,8]) 0#) `shouldBe` boxDouble# (G.encodeDoubleInteger (G.mkInteger True [1,2,4,8]) 0#)
@@ -223,7 +220,6 @@ testNewInteger = do
         let (# xb, xe #) = X.decodeDoubleInteger (unboxDouble d)
             (# gb, ge #) = G.decodeDoubleInteger (unboxDouble d)
         in show (xb, boxInt# xe) `shouldBe` show (gb, boxInt# ge)
-#endif
 
 #if New4
     prop "Can quotRemInteger small Integers." $ \ (a, NonZero b) -> do
