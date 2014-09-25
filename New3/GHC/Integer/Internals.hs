@@ -162,13 +162,13 @@ floatFromInteger = error ("New3/GHC/Integer/Internals.hs: line " ++ show (__LINE
 
 {-# NOINLINE andInteger #-}
 andInteger :: Integer -> Integer -> Integer
-andInteger !(SmallPos 0##) _ = zeroInteger
-andInteger _ !(SmallPos 0##) = zeroInteger
-
 andInteger (SmallPos a) (SmallPos b) = fromSmall SmallPos (boxWord# (and# a b))
 andInteger (SmallPos a) (SmallNeg b) = fromSmall SmallPos (boxWord# (and# a (not# (minusWord# b 1##))))
 andInteger (SmallNeg a) (SmallPos b) = fromSmall SmallPos (boxWord# (not# (and# (minusWord# a 1##) b)))
 andInteger (SmallNeg a) (SmallNeg b) = fromSmall SmallNeg (boxWord# (plusWord# (or# (minusWord# a 1##) (minusWord# b 1##)) 1##))
+
+andInteger !(SmallPos 0##) _ = zeroInteger
+andInteger _ !(SmallPos 0##) = zeroInteger
 
 andInteger (SmallPos a) (Positive n arr) = fromSmall SmallPos ((W# a) .&. zerothWordOfNatural (Natural n arr))
 andInteger (Positive n arr) (SmallPos b) = fromSmall SmallPos (zerothWordOfNatural (Natural n arr) .&. (W# b))
@@ -381,13 +381,13 @@ minusInteger !x !y = case (# x, y #) of
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
 timesInteger !x !y = case (# x, y #) of
-    (# SmallPos 0##, _ #) -> zeroInteger
-    (# _, SmallPos 0## #) -> zeroInteger
-
     (# SmallPos a, SmallPos b #) -> safeTimesWord Pos a b
     (# SmallPos a, SmallNeg b #) -> safeTimesWord Neg a b
     (# SmallNeg a, SmallPos b #) -> safeTimesWord Neg a b
     (# SmallNeg a, SmallNeg b #) -> safeTimesWord Pos a b
+
+    (# SmallPos 0##, _ #) -> zeroInteger
+    (# _, SmallPos 0## #) -> zeroInteger
 
     (# SmallPos a, Positive n arr #) -> fromNatural Pos (timesNaturalW (Natural n arr) (W# a))
     (# SmallPos a, Negative n arr #) -> fromNatural Neg (timesNaturalW (Natural n arr) (W# a))
