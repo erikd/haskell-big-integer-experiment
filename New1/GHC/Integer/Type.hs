@@ -764,13 +764,13 @@ mkLarge (Small Neg w) = mkSingletonArray Neg w
 mkLarge a = a
 
 mkPair :: Sign -> Word -> Word -> Integer
-mkPair !sign !sm !carry = runStrictPrim mkLargePair
+mkPair !sign !lo !hi = runStrictPrim mkLargePair
   where
     mkLargePair :: StrictPrim s Integer
     mkLargePair = do
         !marr <- newWordArray 2
-        writeWordArray marr 0 sm
-        writeWordArray marr 1 carry
+        writeWordArray marr 0 lo
+        writeWordArray marr 1 hi
         !narr <- unsafeFreezeWordArray marr
         return $ Large sign 2 narr
 

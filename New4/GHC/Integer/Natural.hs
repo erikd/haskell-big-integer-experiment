@@ -755,13 +755,13 @@ zerothWordOfNatural !(NatS !x) = x
 zerothWordOfNatural !(NatB !_ !arr) = indexWordArray arr 0
 
 mkPair :: Word -> Word -> Natural
-mkPair !sm !carry = runStrictPrim mkNatPair
+mkPair !lo !hi = runStrictPrim mkNatPair
   where
     mkNatPair :: StrictPrim s Natural
     mkNatPair = do
         marr <- newWordArray 2
-        writeWordArray marr 0 sm
-        writeWordArray marr 1 carry
+        writeWordArray marr 0 lo
+        writeWordArray marr 1 hi
         narr <- unsafeFreezeWordArray marr
         return $ NatB 2 narr
 

@@ -601,13 +601,13 @@ fromNatural !s !(Natural !n !arr)
     | otherwise = Negative n arr
 
 mkPair :: (Int -> WordArray -> Integer) -> Word -> Word -> Integer
-mkPair !ctor !sm !carry = runStrictPrim mkNatPair
+mkPair !ctor !lo !hi = runStrictPrim mkNatPair
   where
     mkNatPair :: StrictPrim s Integer
     mkNatPair = do
         marr <- newWordArray 2
-        writeWordArray marr 0 sm
-        writeWordArray marr 1 carry
+        writeWordArray marr 0 lo
+        writeWordArray marr 1 hi
         narr <- unsafeFreezeWordArray marr
         return $ ctor 2 narr
 

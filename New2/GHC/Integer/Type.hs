@@ -734,13 +734,13 @@ mkLarge (Small w) = mkSingletonArray w
 mkLarge a = a
 
 mkPair :: Word -> Word -> Natural
-mkPair !sm !carry = runStrictPrim mkLargePair
+mkPair !lo !hi = runStrictPrim mkLargePair
   where
     mkLargePair :: StrictPrim s Natural
     mkLargePair = do
         !marr <- newWordArray 2
-        writeWordArray marr 0 sm
-        writeWordArray marr 1 carry
+        writeWordArray marr 0 lo
+        writeWordArray marr 1 hi
         !narr <- unsafeFreezeWordArray marr
         return $ Large 2 narr
 
