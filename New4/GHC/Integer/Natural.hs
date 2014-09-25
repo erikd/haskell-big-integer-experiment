@@ -35,9 +35,6 @@ naturalToWord :: Natural -> Word
 naturalToWord !(NatS w) = w
 naturalToWord !(NatB !_ !arr) = indexWordArray arr 0
 
-foreign import ccall unsafe "__word_encodeDouble"
-    encodeDouble# :: Word# -> Int# -> Double#
-
 encodeDoubleNatural :: Natural -> Int# -> Double#
 encodeDoubleNatural !(NatS w) s = encodeDouble# (unboxWord w) s
 encodeDoubleNatural (NatB !n !arr) e0 =

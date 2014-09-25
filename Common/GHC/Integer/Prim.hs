@@ -10,6 +10,8 @@ module Common.GHC.Integer.Prim
     , timesWord2, timesWord2C, timesWord2CC
     , quotRemWord, quotRemWord2
     , shiftLWord2#, shiftRWord
+
+    , encodeDouble#
     ) where
 
 import GHC.Base (Int (..), Word (..))
@@ -137,3 +139,6 @@ quotRemWord2 :: Word -> Word -> Word -> (# Word, Word #)
 quotRemWord2 (W# xhi) (W# xlo) (W# y) =
     let (# q, r #) = quotRemWord2# xhi xlo y
     in (# W# q, W# r #)
+
+foreign import ccall unsafe "__word_encodeDouble"
+    encodeDouble# :: Word# -> Int# -> Double#

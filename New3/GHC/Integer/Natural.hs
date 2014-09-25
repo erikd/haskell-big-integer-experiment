@@ -37,9 +37,6 @@ encodeDoubleNatural !(Natural !n !arr) e0 =
                         return (D# (d +## encodeDouble# w (unboxInt e)), e + WORD_SIZE_IN_BITS)
     in unboxDouble res
 
-foreign import ccall unsafe "__word_encodeDouble"
-        encodeDouble# :: Word# -> Int# -> Double#
-
 andNatural :: Natural -> Natural -> Natural
 andNatural (Natural n1 arr1) (Natural n2 arr2) = andArray (min n1 n2) arr1 arr2
 
