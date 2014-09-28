@@ -10,11 +10,7 @@ module Check.BenchX
 
 import Common.GHC.Integer.Prim
 
-import qualified NewX.GHC.Integer.Type as X
-
-#if (Bench3 || Bench4)
-import qualified NewX.Integer as X
-#endif
+import qualified NewX.GHC.Integer as X
 
 -- | addSmallLoop : Benchmarking function to test the speed of addition/
 -- subtraction of Integer values where the inputs,t all intermediate and the
