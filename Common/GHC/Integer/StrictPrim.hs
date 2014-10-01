@@ -11,17 +11,21 @@ State monad from Base to get StrictPrim.
 -}
 
 {-# LANGUAGE BangPatterns, CPP, MagicHash, NoImplicitPrelude, RankNTypes,
-    TypeFamilies, UnboxedTuples #-}
+    TypeFamilies, UnboxedTuples, UnliftedFFITypes #-}
 
 module Common.GHC.Integer.StrictPrim
-    ( StrictPrim
+    ( StrictPrim (..)
     , runStrictPrim
     ) where
 
-import GHC.Base
+#if __GLASGOW_HASKELL__ < 709
 import Control.Applicative
-import Control.Monad.Primitive
+import GHC.Base
+#else
+import GHC.Base hiding (($!)) -- Want to use the local definition of ($!)regardless.
+#endif
 
+import Control.Monad.Primitive
 
 newtype StrictPrim s a
     = StrictPrim (State# s -> (# State# s, a #))
@@ -31,7 +35,7 @@ instance Applicative (StrictPrim s) where
     pure = return
 
     {-# INLINE (<*>) #-}
-    (<*>) a b = do f <- a ; v <- b ; return $! (f $! v)
+    (<*>) !a !b = do !f <- a ; !v <- b ; return $! (f $! v)
 
 instance Functor (StrictPrim s) where
     {-# INLINE fmap #-}
@@ -51,8 +55,8 @@ instance Monad (StrictPrim s) where
     (StrictPrim !m) >>= (!k) =
         StrictPrim ( \ !s ->
             case m s of
-                (# new_s, r #) -> case k r of
-                    StrictPrim k2 -> k2 new_s
+                (# !new_s, !r #) -> case k r of
+                    StrictPrim !k2 -> k2 new_s
             )
 
 instance PrimMonad (StrictPrim s) where
@@ -67,11 +71,12 @@ instance PrimMonad (StrictPrim s) where
 runStrictPrim :: (forall s. StrictPrim s a) -> a
 runStrictPrim !st =
     case st of
-        StrictPrim st_rep ->
+        StrictPrim !st_rep ->
             case st_rep realWorld# of
                 (# _, !r #) -> r
 
-
--- Grab this from Prelude (part of Base) because Base depends on this code.
+{-# INLINE ($!) #-}
 ($!) :: (a -> b) -> a -> b
-f $! x  = let !vx = x in f vx
+($!) !f !x =
+    let !ey = f x
+    in ey
