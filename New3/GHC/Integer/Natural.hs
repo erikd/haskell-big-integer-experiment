@@ -391,95 +391,6 @@ timesNatural :: Natural -> Natural -> Natural
 timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = timesNatural b a
     | otherwise = runStrictPrim $ do
-        psum <- newPlaceholderWordArray
-        outerLoop 0 psum 0
-  where
-    outerLoop !psumLen !psum !s2
-        | s2 < n2 = do
-            w <- indexWordArrayM arr2 s2
-            if w == 0
-                then outerLoop psumLen psum (s2 + 1)
-                else do
-                    newPsumLen <- return ((max psumLen (n1 + s2 + 1)) + 1)
-                    marr <- cloneWordArrayExtend psumLen psum newPsumLen
-                    possLen <- innerLoop1 marr psumLen psum 0 s2 w 0
-                    narr <- unsafeFreezeWordArray marr
-                    outerLoop possLen narr (s2 + 1)
-        | otherwise =
-            return $! Natural psumLen psum
-
-    innerLoop1 !marr !pn !psum !s1 !s2 !hw !carry
-        | s1 + s2 < pn = do
-            ps <- indexWordArrayM psum (s1 + s2)
-            x <- indexWordArrayM arr1 s1
-            let (# !hc, !hp #) = timesWord2CC x hw carry ps
-            writeWordArray marr (s1 + s2) hp
-            innerLoop1 marr pn psum (s1 + 1) s2 hw hc
-        | otherwise = innerLoop2 marr pn psum s1 s2 hw carry
-
-    innerLoop2 !marr !pn !psum !s1 !s2 !hw !carry
-        | s1 < n1 = do
-            x <- indexWordArrayM arr1 s1
-            let (# !hc, !hp #) = timesWord2C x hw carry
-            writeWordArray marr (s1 + s2) hp
-            innerLoop2 marr pn psum (s1 + 1) s2 hw hc
-        | carry /= 0 = do
-            writeWordArray marr (s1 + s2) carry
-            return (s1 + s2 + 1)
-        | otherwise = return (s1 + s2)
-
-{-# NOINLINE timesNaturalNew #-}
-timesNaturalNew :: Natural -> Natural -> Natural
-timesNaturalNew !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
-    | n1 < n2 = timesNaturalNew b a
-    | otherwise = runStrictPrim $ do
-        maxOutLen <- return (1 + n1 + n2)
-        psum <- newWordArray maxOutLen
-        writeWordArray psum 0 0
-        outerLoop 0 0 psum
-  where
-    outerLoop !s2 !psumLen !psum
-        | s2 < n2 = do
-            w <- indexWordArrayM arr2 s2
-            if w == 0
-                then do
-                    -- WTF? Need this to avoid laziness screwing things up!
-                    _ <- innerLoop2 psumLen psum psumLen s2 s2 w 0
-                    outerLoop (s2 + 1) psumLen psum
-
-                else do
-                    possLen <- innerLoop1 psumLen psum 0 s2 s2 w 0
-                    outerLoop (s2 + 1) possLen psum
-        | otherwise = do
-            narr <- unsafeFreezeWordArray psum
-            return $! Natural psumLen narr
-
-    innerLoop1 !pn !psum !s1 !d1 !s2 !w !carry
-        | d1 < pn = do
-            ps <- readWordArray psum d1
-            x <- indexWordArrayM arr1 s1
-            let (# !cry, !prod #) = timesWord2CC x w carry ps
-            writeWordArray psum d1 prod
-            innerLoop1 pn psum (s1 + 1) (d1 + 1) s2 w cry
-        | otherwise = innerLoop2 pn psum s1 d1 s2 w carry
-
-    innerLoop2 !pn !psum !s1 !d1 !s2 !w !carry
-        | s1 < n1 = do
-            x <- indexWordArrayM arr1 s1
-            let (# !cry, !prod #) = timesWord2C x w carry
-            writeWordArray psum d1 prod
-            innerLoop2 pn psum (s1 + 1) (d1 + 1) s2 w cry
-        | carry /= 0 = do
-            writeWordArray psum d1 carry
-            return $! d1 + 1
-        | otherwise = return d1
-
-
-{-# NOINLINE timesNaturalNewest #-}
-timesNaturalNewest :: Natural -> Natural -> Natural
-timesNaturalNewest !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
-    | n1 < n2 = timesNaturalNewest b a
-    | otherwise = runStrictPrim $ do
         maxOutLen <- return (1 + n1 + n2)
         marr <- newWordArray maxOutLen
         len <- preLoop marr
@@ -507,27 +418,35 @@ timesNaturalNewest !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
             outerLoop1a (nx + 1) marr cryhi crylo
         | otherwise = outerLoop2 nx marr carryhi carrylo
 
-    innerLoop1xi !xi !yi !carryhi !carrylo !sum
-        | xi >= 0 = do
-            x <- indexWordArrayM arr1 xi
-            y <- indexWordArrayM arr2 yi
-            let (# !cry0, !prod #) = timesWord2 x y
-                (# !cry1, !sum1 #) = plusWord2 prod sum
-                (# !tcryhi, !crylo #) = plusWord2C carrylo cry0 cry1
-                !cryhi = plusWord carryhi tcryhi
-            innerLoop1xi (xi - 1) (yi + 1) cryhi crylo sum1
-        | otherwise = return $! (carryhi, carrylo, sum)
+    innerLoop1xi !xi !yi !carryhi !carrylo !sum =
+        StrictPrim $ \s ->
+            if xi >= 0
+                then
+                    let StrictPrim go = do
+                        x <- indexWordArrayM arr1 xi
+                        y <- indexWordArrayM arr2 yi
+                        let (# !cry0, !prod #) = timesWord2 x y
+                            (# !cry1, !sum1 #) = plusWord2 prod sum
+                            (# !tcryhi, !crylo #) = plusWord2C carrylo cry0 cry1
+                            !cryhi = plusWord carryhi tcryhi
+                        innerLoop1xi (xi - 1) (yi + 1) cryhi crylo sum1
+                    in go s
+                else (# s, (carryhi, carrylo, sum) #)
 
-    innerLoop1yi !xi !yi !carryhi !carrylo !sum
-        | yi < n2 = do
-            x <- indexWordArrayM arr1 xi
-            y <- indexWordArrayM arr2 yi
-            let (# !cry0, !prod #) = timesWord2 x y
-                (# !cry1, !sum1 #) = plusWord2 prod sum
-                (# !tcryhi, !crylo #) = plusWord2C carrylo cry0 cry1
-                !cryhi = plusWord carryhi tcryhi
-            innerLoop1yi (xi - 1) (yi + 1) cryhi crylo sum1
-        | otherwise = return $! (carryhi, carrylo, sum)
+    innerLoop1yi !xi !yi !carryhi !carrylo !sum =
+        StrictPrim $ \s ->
+            if yi < n2
+                then
+                    let StrictPrim go = do
+                        x <- indexWordArrayM arr1 xi
+                        y <- indexWordArrayM arr2 yi
+                        let (# !cry0, !prod #) = timesWord2 x y
+                            (# !cry1, !sum1 #) = plusWord2 prod sum
+                            (# !tcryhi, !crylo #) = plusWord2C carrylo cry0 cry1
+                            !cryhi = plusWord carryhi tcryhi
+                        innerLoop1yi (xi - 1) (yi + 1) cryhi crylo sum1
+                    in go s
+                else (# s, (carryhi, carrylo, sum) #)
 
     outerLoop2 !nx !marr !carryhi !carrylo
         | nx < n1 + n2 - 1 = do
@@ -539,16 +458,20 @@ timesNaturalNewest !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
             return $! nx + 1
         | otherwise = return $! nx
 
-    innerLoop2 !xi !yi !carryhi !carrylo !sum
-        | yi < n2 = do
-            x <- indexWordArrayM arr1 xi
-            y <- indexWordArrayM arr2 yi
-            let (# !cry0, !prod #) = timesWord2 x y
-                (# !cry1, !sum1 #) = plusWord2 prod sum
-                (# !tcryhi, !crylo #) = plusWord2C carrylo cry0 cry1
-                !cryhi = plusWord carryhi tcryhi
-            innerLoop2 (xi - 1) (yi + 1) cryhi crylo sum1
-        | otherwise = do return $! (carryhi, carrylo, sum)
+    innerLoop2 !xi !yi !carryhi !carrylo !sum =
+        StrictPrim $ \s ->
+            if yi < n2
+                then
+                    let StrictPrim go = do
+                        x <- indexWordArrayM arr1 xi
+                        y <- indexWordArrayM arr2 yi
+                        let (# !cry0,   !prod  #) = timesWord2 x y
+                            (# !cry1,   !sum1  #) = plusWord2  prod sum
+                            (# !tcryhi, !crylo #) = plusWord2C carrylo cry0 cry1
+                            !cryhi                = plusWord   carryhi tcryhi
+                        innerLoop2 (xi - 1) (yi + 1) cryhi crylo sum1
+                    in go s
+                else (# s, (carryhi, carrylo, sum) #)
 
 
 quotRemNaturalW :: Natural -> Word -> (Natural, Word)
