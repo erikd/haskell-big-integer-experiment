@@ -127,9 +127,9 @@ matchBenchmarks name =
     -- (loop count, increment, decrement) increment and decrement should be
     -- chosen so that loop count * (increment - decrement) < maximum value that
     -- can be held in a 64 bit machine word.
-    addSmallParam = (2000, 63, 62)
+    addSmallParam = (3000, 163, 162)
 
-    addBigParam = unsafePerformIO $ mkBigParam 100 100
+    addBigParam = unsafePerformIO $ mkBigParam 100 200
 
     timesSmallLoopCount = 200
     timesBigLoopCount = 10
