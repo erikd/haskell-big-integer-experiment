@@ -64,14 +64,7 @@ mkInteger _ [] = zeroInteger
 mkInteger True [I# i] = smallInteger i
 mkInteger False [I# i] = smallInteger (negateInt# i)
 mkInteger nonNegative is =
-    let abs = f is
-    in if nonNegative
-        then abs
-        else negateInteger abs
-  where
-    f [] = zeroInteger
-    f [I# x] = smallInteger x
-    f (I# x : xs) = smallInteger x `orInteger` shiftLInteger (f xs) 31#
+    fromNatural (if nonNegative then Pos else Neg) (mkNatural is)
 
 {-# NOINLINE smallInteger #-}
 smallInteger :: Int# -> Integer

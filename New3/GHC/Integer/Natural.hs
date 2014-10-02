@@ -30,6 +30,13 @@ import New3.GHC.Integer.WordArray
 
 --------------------------------------------------------------------------------
 
+mkNatural :: [Int] -> Natural
+mkNatural = f
+  where
+    f [] = zeroNatural
+    f [I# x] = mkSingletonNat (W# (int2Word# x))
+    f (I# x : xs) = (shiftLNatural (f xs) 31) `orNaturalW` (W# (int2Word# x))
+
 encodeDoubleNatural :: Natural -> Int# -> Double#
 encodeDoubleNatural !(Natural !n !arr) e0 =
     let (!res, _) = runStrictPrim $ intLoopState 0 (n - 1) (0.0, I# e0) $ \ i (D# d, e) -> do
@@ -238,7 +245,7 @@ largeShiftRArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
             loop marr (i - 1) (unsafeShiftL x sj)
         | otherwise = return ()
 
-{-# INLINE plusNaturalW #-}
+{-# NOINLINE plusNaturalW #-}
 plusNaturalW :: Natural -> Word -> Natural
 plusNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
     marr <- newWordArray (n + 1)
@@ -302,7 +309,7 @@ plusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
         | otherwise = return i
 
 
-{-# INLINE minusNaturalW #-}
+{-# NOINLINE minusNaturalW #-}
 minusNaturalW :: Natural -> Word -> Natural
 minusNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
     marr <- newWordArray (n + 1)
@@ -331,7 +338,7 @@ minusNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
         | otherwise = return n
 
 
-{-# INLINE minusNatural #-}
+{-# NOINLINE minusNatural #-}
 minusNatural :: Natural -> Natural -> Natural
 minusNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = plusNatural b a
