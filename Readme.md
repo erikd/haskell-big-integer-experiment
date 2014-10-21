@@ -16,6 +16,12 @@ inclusion in the GHC tree.
 __This is still very much a work in progress. Patches and pull requests more
 than welcome.__
 
+## Benchmarks
+
+Benchmarks comparing the four versions of this library with integer-gmp and
+integer-simple are available [here][benchmarks].
+
+
 ## Requirements
 
 Since we need to benchmark against the very latest versions of the integer-simple
@@ -51,10 +57,9 @@ you set with the $BROWSER environment variable.
 
 This is the TODO list, with highest priority first.
 
-* Get division working (divMod, quotRem, div, mod, quot, rem).
-* Fix criterion benchmarks to make the speed graphs smooth (and valid) rather
-  than spikey (and invalid) as they are now.
-
+* Improve Big Integer multiplication.
+* Benchmark division operatiosn.
 
 
 [reason]: http://www.mega-nerd.com/erikd/Blog/CodeHacking/Haskell/integer_pt1.html
+[benchmarks]: http://www.mega-nerd.com/haskell-big-integer-experiment/

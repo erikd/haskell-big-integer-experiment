@@ -19,6 +19,8 @@ import Check.BenchG as BenchG
 import Check.BenchS as BenchS
 
 
+-- BigTimes and HugeTimes? pidigits?
+
 main :: IO ()
 main = do
     benchmarks <- findBenchmarks
