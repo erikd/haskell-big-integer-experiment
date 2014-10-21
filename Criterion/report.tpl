@@ -51,6 +51,13 @@ New1, New2, New3 and New4 use slightly different definitions of the <tt>Integer<
 data structure to investigate how much difference that makes.
 </p>
 
+<p>
+The Small Integer benchmarks work on Integer values where the input values and
+the result fit within a single 64 bit machine word.
+The Big Integer benchmarks operate on values that require multiple 64 machine
+words.
+</p>
+
 
 <p><a href="#grokularation">want to understand this report?</a></p>
 
