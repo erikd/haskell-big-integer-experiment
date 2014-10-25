@@ -589,7 +589,8 @@ fromSmall !ctor !(W# w#)
 fromNatural :: Sign -> Natural -> Integer
 fromNatural !s !(Natural !n !arr)
     | n == 0 = zeroInteger
-    | n == 1 && indexWordArray arr 0 == 0 = zeroInteger -- TODO: See if this can be removed.
+    | n == 1 = let !(W# x) = indexWordArray arr 0
+                in if s == Pos then SmallPos x else SmallNeg x
     | s == Pos = Positive n arr
     | otherwise = Negative n arr
 
