@@ -121,7 +121,9 @@ testNewInteger = do
         let a5 = [1,0,4,0,16,0,64,0,256,0,1024]
             b5 = [1,0,0,0,32,0,192,0,1024]
         show (X.timesInteger (X.mkInteger True a5) (X.mkInteger True b5)) `shouldBe` "+0x4000000000000000700000000000000090000000000000009000000000000000a000000000000000a0000000000000006000000000000000300000000000000010000000000000001"
-
+        let a6 = [0x1,0,0x3,0,0xc]
+            b6 = [0x2,0,0x3,0,0xe]
+        show (X.timesInteger (X.mkInteger True a6) (X.mkInteger True b6)) `shouldBe` show (G.timesInteger (G.mkInteger True a6) (G.mkInteger True b6))
 
     prop "Can multiply two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (X.timesInteger sa sb) `shouldBe` show (G.timesInteger ga gb)
@@ -192,6 +194,13 @@ testNewInteger = do
         show (X.complementInteger (X.mkInteger True [0])) `shouldBe` "-0x1"
 
         show (X.mkInteger True [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1]) `shouldBe` show (G.mkInteger True [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1])
+
+    it "mkInteger results are minimal." $ do
+        X.isMinimal (X.mkInteger True [1, 2]) `shouldBe` True
+        X.isMinimal (X.mkInteger True [1, 2, 4]) `shouldBe` True
+
+    prop "mkInteger results are minimal (QC)." $ \ (GNP _ a) ->
+        X.isMinimal a `shouldBe` True
 
     it "Addition results are minimal." $
         X.isMinimal (X.plusInteger (X.mkInteger True [0x3,0x0,0x4]) (X.mkInteger False [0x3,0x2])) `shouldBe` True
