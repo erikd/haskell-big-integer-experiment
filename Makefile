@@ -1,9 +1,11 @@
 TARGETS = check-integer bench-integer
 
-GHC = ghc
+GHC = cabal exec -- ghc
 GHCFLAGS = -Wall -Werror -fwarn-tabs -funbox-strict-fields -fPIC -O3 $(PRAGMAS)
 
-hsfiles = $(shell find Common/ Check/ GMP/ New*/ Simple/ -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
+hsdirs = Common/ Check/ GMP/ New*/ Simple/
+
+hsfiles = $(shell find $(hsdirs) -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
 
 bench_hsfiles = Check/BenchG.hs Check/Bench1.hs Check/Bench2.hs Check/Bench3.hs Check/Bench4.hs Check/BenchS.hs
 
@@ -135,11 +137,12 @@ Stamp/ghc-version :
 
 
 clean :
+	@rm -f $(TARGETS) *.o *.hi bench-integer.html Check/Bench[GS0-9].hs Check/New[0-9].hs
 	@rm -f $(TARGETS) bench-integer.html Check/Bench[GS0-9].hs Check/New[0-9].hs
-	@find . -name \*.o -o -name \*.hi -o -name \*.s -o -name \*.ll -o -name \*.hcr | xargs rm -f
+	@find $(hsdirs) -name \*.o -o -name \*.hi -o -name \*.s -o -name \*.ll -o -name \*.hcr | xargs rm -f
 
 hlint :
-	hlint $(shell find Common/ Check/ Hnew*/ -name \*.hs)
+	hlint Common/ Check/ New*/
 
 realclean :
 	@rm -f Stamp/*
