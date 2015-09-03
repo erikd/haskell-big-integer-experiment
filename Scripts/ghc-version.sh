@@ -2,10 +2,8 @@
 
 version=$(ghc --numeric-version | sed 's/\.[0-9]$//')
 
-echo $version
-
-if test ${version} != "7.8" ; then
-	echo "Error : We need GHC 7.8.* for this."
+if test ${version} != "7.10" ; then
+	echo "Error : We need GHC 7.10.* for this."
 	exit 1
 	fi
 
