@@ -2,7 +2,6 @@
 
 module Common.GHC.Integer.Debug where
 
-import Data.Word
 import qualified Debug.Trace as Debug
 import qualified Numeric
 

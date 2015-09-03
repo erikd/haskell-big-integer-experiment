@@ -3,7 +3,6 @@ module New2.GHC.Integer.Array where
 
 import Control.Monad.Primitive
 import Data.Primitive
-import GHC.Word (Word)
 
 
 newtype MutableWordArray m = MWA (MutableByteArray (PrimState m))

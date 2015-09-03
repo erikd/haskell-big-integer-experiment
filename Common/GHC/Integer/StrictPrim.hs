@@ -63,8 +63,6 @@ instance PrimMonad (StrictPrim s) where
     type PrimState (StrictPrim s) = s
     {-# INLINE primitive #-}
     primitive = StrictPrim
-    {-# INLINE internal #-}
-    internal (StrictPrim !p) = p
 
 
 {-# INLINE runStrictPrim #-}

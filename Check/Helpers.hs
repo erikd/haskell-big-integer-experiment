@@ -1,9 +1,11 @@
 {-# LANGUAGE MagicHash, UnboxedTuples #-}
 module Check.Helpers where
 
-import Control.Applicative ((<$>))
 import Data.Bits
 import GHC.Base
+#if __GLASGOW_HASKELL__ >= 710
+        hiding (mapM)
+#endif
 import GHC.Word (Word8)
 
 import qualified System.Random as R

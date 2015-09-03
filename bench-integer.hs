@@ -2,7 +2,6 @@
 
 import Prelude hiding (Integer)
 
-import Control.Applicative ((<$>))
 import Control.Exception (SomeException, catch)
 import Data.List (nub, sort)
 import System.Environment

@@ -9,7 +9,7 @@ hsfiles = $(shell find $(hsdirs) -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
 
 bench_hsfiles = Check/BenchG.hs Check/Bench1.hs Check/Bench2.hs Check/Bench3.hs Check/Bench4.hs Check/BenchS.hs
 
-gmp_cmm_files = -IGMP GMP/gmp-wrappers.cmm
+gmp_cmm_files = -IGMP GMP/gmp-wrappers.cmm GMP/*.c
 
 checkfiles = Check/New1.hs Check/New2.hs Check/New3.hs Check/New4.hs
 

@@ -3,9 +3,7 @@ module New4.GHC.Integer.WordArray where
 
 import Control.Monad.Primitive
 import Data.Primitive
-import GHC.Word (Word)
 
--- import New4.GHC.Integer.StrictPrim
 
 newtype WordArray = WA ByteArray
 

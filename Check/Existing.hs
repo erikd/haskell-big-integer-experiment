@@ -6,7 +6,6 @@ module Check.Existing
 
 import Prelude hiding (Integer)
 
-import Control.Applicative ((<$>))
 import Data.Bits ((.&.))
 import GHC.Int
 import Test.Hspec
