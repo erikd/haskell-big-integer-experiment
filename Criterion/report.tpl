@@ -42,7 +42,7 @@ to compete.
 </p>
 
 <p>
-These tests are being carried out with ghc 7.8.3 and the git HEAD versions of
+These tests are being carried out with ghc 7.10.2 and the git HEAD versions of
 integer-gmp and integer-simple.
 </p>
 
