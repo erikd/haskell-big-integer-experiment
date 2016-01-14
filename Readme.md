@@ -26,7 +26,7 @@ integer-simple are available [here][benchmarks].
 
 Since we need to benchmark against the very latest versions of the integer-simple
 and inetger-gmp we need to run the latest versions of GHC which at the time of
-writing is 7.8.x (7.6 will not work).
+writing is 7.10.x (other versions will not work).
 
 GNU Make is used for the build system.
 
