@@ -30,13 +30,10 @@ writing is 7.10.x (other versions will not work).
 
 GNU Make is used for the build system.
 
-You will also need the following Haskell libraries install:
+The project is designed to use a cabal sandbox. The sandbox can be set up (and
+re-initialialized) using:
 
-* criterion
-* hspec
-* primitive
-* random
-
+	make sandbox-reinit
 
 ## Kicking the tires
 

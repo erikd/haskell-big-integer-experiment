@@ -146,3 +146,8 @@ hlint :
 
 realclean :
 	@rm -f Stamp/*
+
+sandbox-reinit:
+	cabal sandbox delete
+	cabal sandbox init
+	cabal install criterion hspec primitive
