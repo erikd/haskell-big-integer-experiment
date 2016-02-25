@@ -36,10 +36,10 @@ llvm3 :
 	$(GHC) $(GHCFLAGS) -fllvm -keep-llvm-files New3/GHC/Integer/Internals.hs
 	less New3/GHC/Integer/Internals.ll
 
-check-integer : check-integer.hs Stamp/copy $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs Check/New4.hs
+check-integer : check-integer.hs Stamp/ready $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs Check/New4.hs
 	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
 
-bench-integer : bench-integer.hs Stamp/copy $(hsfiles) $(bench_hsfiles)
+bench-integer : bench-integer.hs Stamp/ready $(hsfiles) $(bench_hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
 
 karatsubaSlice : karatsubaSlice.hs $(hsfiles)
@@ -112,6 +112,10 @@ date-bench : bench-integer.html
 view-bench : bench-integer.html
 	$(BROWSER) bench-integer.html
 
+GMP/GmpDerivedConstants.h : integer-gmp/mkGmpDerivedConstants/mkGmpDerivedConstants.c
+	gcc -Wall $< -o mkGmpDerivedConstants
+	./mkGmpDerivedConstants > $@
+	rm -f mkGmpDerivedConstants
 
 # Update the local copies of integer-simple and integer-gmp and patch them
 # to work in this framework.
@@ -137,6 +141,9 @@ Stamp/copy : Stamp/update  Stamp/ghc-version
 	cp integer-gmp/cbits/gmp-wrappers.cmm GMP/
 	@touch $@
 
+Stamp/ready : Stamp/copy GMP/GmpDerivedConstants.h
+	@touch $@
+
 Stamp/ghc-version :
 	Scripts/ghc-version.sh
 	touch $@
@@ -145,6 +152,7 @@ Stamp/ghc-version :
 clean :
 	@rm -f $(TARGETS) *.o *.hi bench-integer.html Check/Bench[GS0-9].hs Check/New[0-9].hs
 	@rm -f $(TARGETS) bench-integer.html Check/Bench[GS0-9].hs Check/New[0-9].hs
+	@rm -f GMP/GmpDerivedConstants.h
 	@find $(hsdirs) -name \*.o -o -name \*.hi -o -name \*.s -o -name \*.ll -o -name \*.hcr | xargs rm -f
 
 hlint :

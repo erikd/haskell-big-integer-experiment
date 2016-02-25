@@ -1,3 +1,4 @@
+.cabal-sandbox
 .geany
 *.hcr
 *.html
@@ -5,10 +6,12 @@
 *.o
 *.hi
 bench-integer
+cabal.sandbox.config
 check-integer
 check.log
 Check/Bench[GS0-9].hs
 Check/New[0-9].hs
+GMP/GmpDerivedConstants.h
 half-test
 int-bench
 integer-gmp

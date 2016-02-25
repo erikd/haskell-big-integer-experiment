@@ -24,6 +24,7 @@ expect intensive use of either Int64 or Word64 types.
 */
 
 #include "Rts.h"
+#include "gmp.h"
 
 #if WORD_SIZE_IN_BITS < 64
 
