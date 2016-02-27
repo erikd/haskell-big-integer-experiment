@@ -8,9 +8,6 @@ module New3.GHC.Integer.Type where
 
 import GHC.Prim
 import GHC.Types
-#if WORD_SIZE_IN_BITS < 64
-import GHC.IntWord64
-#endif
 
 
 import New3.GHC.Integer.WordArray

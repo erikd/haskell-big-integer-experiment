@@ -38,9 +38,6 @@ import Data.Primitive.ByteArray
 import GHC.Prim
 import GHC.Types
 import GHC.Tuple ()
-#if WORD_SIZE_IN_BITS < 64
-import GHC.IntWord64
-#endif
 
 import Numeric (showHex) -- TODO: Remove when its working.
 
