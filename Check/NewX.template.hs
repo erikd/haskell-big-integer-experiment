@@ -108,8 +108,8 @@ testNewInteger = do
         show (X.timesInteger (X.mkInteger True [1, 2, 4]) (X.mkInteger True [1, 2])) `shouldBe` "+0x1000000020000000200000001"
         show (X.timesInteger (X.mkInteger True [1, 2, 4, 8]) (X.mkInteger True [1, 2, 4, 8])) `shouldBe` "+0x1000000020000000300000004000000030000000200000001"
         show (X.timesInteger (X.mkInteger True [0x7ffffffe, 0x7ffffffe, 4]) (X.mkInteger True [0x7ffffffe, 0x7ffffffe, 4])) `shouldBe` "+0x18ffffffebffffffb4000000200000004"
-        show (X.timesInteger (X.mkInteger False [0, 0x7fffffff]) (X.mkInteger False [0, 0xfffffffe])) `shouldBe` "+0x1fffffff800000008000000000000000"
-        show (X.timesInteger (X.mkInteger False [1, 0x7fffffff]) (X.mkInteger False [1, 0xfffffffe])) `shouldBe` "+0x1fffffff800000013ffffffe80000001"
+        show (X.timesInteger (X.mkInteger False [0, 0x7fffffff]) (X.readInteger "-9223372032559808512")) `shouldBe` "+0x1fffffff800000008000000000000000"
+        show (X.timesInteger (X.mkInteger False [1, 0x7fffffff]) (X.readInteger "-9223372032559808513")) `shouldBe` "+0x1fffffff800000013ffffffe80000001"
         show (X.timesInteger (X.mkInteger False [0x3b129743, 0x6b866650]) (X.mkInteger False [0x18865e53,0x6295e0a])) `shouldBe` "+0xa5a19af9c4da2c1eaac6f46fa3a4b9"
         show (X.timesInteger (X.mkInteger True [1, 1, 6]) (X.mkInteger True [1, 1, 6])) `shouldBe` "+0x240000001800000034000000100000001"
         show (X.timesInteger (X.mkInteger True [ 0, 0, 0, 4, 8, 1 ]) (X.mkInteger True [ 0, 0, 0, 8 ])) `shouldBe` "+0x800000080000000800000000000000000000000000000000000000000000000"
@@ -178,7 +178,7 @@ testNewInteger = do
         show (X.shiftRInteger s bits) `shouldBe` show (G.shiftRInteger g bits)
 
     it "Get correct result at boundaries." $ do
-        let maxSmall = X.wordToInteger (unboxWord 0xffffffffffffffff)
+        let maxSmall = X.readInteger "18446744073709551615"
             oneSmall = X.wordToInteger (unboxWord 1)
             twoSmall = X.wordToInteger (unboxWord 2)
         show (X.plusInteger maxSmall oneSmall) `shouldBe` "+0x10000000000000000"

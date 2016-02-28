@@ -1,12 +1,16 @@
-{-# LANGUAGE NoImplicitPrelude, MagicHash #-}
+{-# LANGUAGE BangPatterns, NoImplicitPrelude, MagicHash #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module New2.Integer
     ( module New2.GHC.Integer
     , hexShow
+    , readInteger
     ) where
 
 import Prelude hiding (Integer)
+import Data.Char (ord)
+import Data.List (foldl')
+import GHC.Types
 import Numeric
 
 import New2.GHC.Integer
@@ -20,7 +24,7 @@ instance Num Integer where
     (*) = timesInteger
     abs = absInteger
     signum = signumInteger
-    fromInteger = error "New2.Integer: fromInteger"
+    fromInteger = readInteger . show
 
 
 instance Show Integer where
@@ -39,3 +43,14 @@ hexShowNatural sign (Large n arr) =
         then "0x0"
         else sign : arrayShow n arr
 
+readInteger :: String -> Integer
+readInteger [] = 0
+readInteger ('-':xs) = -1 * readInteger xs
+readInteger ('+':xs) = readInteger xs
+readInteger s =
+    foldl' (\acc c -> acc * (smallInteger 10#) + readChar c) (smallInteger 0#) s
+  where
+    readChar :: Char -> Integer
+    readChar c =
+        let !(I# i) = ord c - 48
+        in smallInteger i
