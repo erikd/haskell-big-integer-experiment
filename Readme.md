@@ -54,8 +54,10 @@ you set with the $BROWSER environment variable.
 
 This is the TODO list, with highest priority first.
 
+* Make it work with ghc-8.0 (work in progress).
+* Make it work on 32 bit CPUs (work in progress).
 * Improve Big Integer multiplication.
-* Benchmark division operatiosn.
+* Benchmark division operations.
 
 
 [reason]: http://www.mega-nerd.com/erikd/Blog/CodeHacking/Haskell/integer_pt1.html
