@@ -42,8 +42,8 @@ to compete.
 </p>
 
 <p>
-These tests are being carried out with ghc 7.10.3 and the git HEAD versions of
-integer-gmp and integer-simple on x86_64/linux.
+These tests are being carried out with ghc @GHC_VERSION@ and the git HEAD versions of
+integer-gmp and integer-simple on @CPU_NAME@/@OS_NAME@.
 </p>
 
 <p>

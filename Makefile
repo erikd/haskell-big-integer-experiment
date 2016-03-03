@@ -96,9 +96,15 @@ Check/Bench4.hs : Check/BenchX.template.hs
 	sed "s/BenchX/Bench4/;s/NewX/New4/" $+ > $@
 
 
-bench-integer.html : bench-integer
+bench-integer.html : bench-integer Criterion/report.tpl
 	./bench-integer --no-gc -o bench-integer.html --template=Criterion/report.tpl
 	chmod a+r bench-integer.html
+
+
+Criterion/report.tpl : Criterion/report.tpl.in
+	sed "s/@GHC_VERSION@/$$(ghc --numeric-version)/;s/@OS_NAME@/$$(uname -s | tr 'A-Z' 'a-z')/g;s/@CPU_NAME@/$$(uname -m)/g" $< > $@
+
+
 
 date-bench : bench-integer.html
 	cp $< bench-integer-$(today).html
