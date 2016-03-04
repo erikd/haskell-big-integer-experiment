@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, CPP, MagicHash, NoImplicitPrelude, UnboxedTuples #-}
+{-# LANGUAGE BangPatterns, MagicHash, NoImplicitPrelude, UnboxedTuples #-}
 
 #include "MachDeps.h"
 
@@ -10,6 +10,7 @@ module Common.GHC.Integer.Prim
     , timesWord2, timesWord2C, timesWord2CC
     , quotRemWord, quotRemWord2
     , shiftLWord2#, shiftRWord
+    , wordSizeInBits, wordSizeInBytes
 
     , encodeDouble#
     ) where
@@ -140,5 +141,16 @@ quotRemWord2 (W# xhi) (W# xlo) (W# y) =
     let (# q, r #) = quotRemWord2# xhi xlo y
     in (# W# q, W# r #)
 
+
+{-# INLINE wordSizeInBits #-}
+wordSizeInBits :: Int
+wordSizeInBits = I# WORD_SIZE_IN_BITS#
+
+{-# INLINE wordSizeInBytes #-}
+wordSizeInBytes :: Int
+wordSizeInBytes = I# (word2Int# (uncheckedShiftRL# WORD_SIZE_IN_BITS## 3#))
+
+
+{-# INLINE encodeDouble# #-}
 foreign import ccall unsafe "__word_encodeDouble"
     encodeDouble# :: Word# -> Int# -> Double#
