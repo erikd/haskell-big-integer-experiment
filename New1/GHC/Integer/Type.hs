@@ -300,7 +300,7 @@ shiftRInteger (Large Pos n arr) b = shiftRArray Pos n arr (I# b)
 shiftRInteger (Small Neg a) b = Small Neg (((a - 1) `shiftR` (I# b)) + 1)
 shiftRInteger (Large Neg n arr) b =
     case minusArrayW Pos n arr 1 of
-        Small _ _ -> Small Neg 42
+        Small _ a -> Small Neg ((a `shiftR` (I# b)) + 1)
         Large _ !n1 !arr1 ->
             case shiftRArray Pos n1 arr1 (I# b) of
                 Small _ a2 -> Small Neg (a2 + 1)
