@@ -219,62 +219,6 @@ shiftLInteger !(SmallNeg !a) !b = fromNatural Neg (shiftLNatural (mkSingletonNat
 shiftLInteger !(Positive !n !arr) !b = fromNatural Pos (shiftLNatural (Natural n arr) (I# b))
 shiftLInteger !(Negative !n !arr) !b = fromNatural Neg (shiftLNatural (Natural n arr) (I# b))
 
-smallShiftLArray :: Int -> WordArray -> (# Int, Int #) -> Natural
-smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
-    marr <- newWordArray (n + 1)
-    nlen <- loop marr 0 0
-    narr <- unsafeFreezeWordArray marr
-    return $! Natural nlen narr
-  where
-    loop !marr !i !mem
-        | i < n =  do
-            x <- indexWordArrayM arr i
-            writeWordArray marr i ((unsafeShiftL x si) .|. mem)
-            loop marr (i + 1) (unsafeShiftR x sj)
-        | mem /= 0 = do
-            writeWordArray marr i mem
-            return $ i + 1
-        | otherwise = return n
-
--- | TODO : Use copy here? Check benchmark results.
-wordShiftLArray :: Int -> WordArray -> Int -> Natural
-wordShiftLArray !n !arr !q = runStrictPrim $ do
-    marr <- newWordArray (n + q)
-    loop1 marr 0
-    narr <- unsafeFreezeWordArray marr
-    return $! Natural (n + q) narr
-  where
-    loop1 !marr !i
-        | i < q = do
-            writeWordArray marr i 0
-            loop1 marr (i + 1)
-        | otherwise = loop2 marr 0
-    loop2 !marr !i
-        | i < n =  do
-            x <- indexWordArrayM arr i
-            writeWordArray marr (q + i) x
-            loop2 marr (i + 1)
-        | otherwise = return ()
-
-largeShiftLArray :: Int -> WordArray-> (# Int, Int, Int #) -> Natural
-largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
-    marr <- newWordArray (n + q + 1)
-    setWordArray marr 0 q 0
-    nlen <- loop1 marr 0 0
-    narr <- unsafeFreezeWordArray marr
-    return $! Natural nlen narr
-  where
-    loop1 !marr !i !mem
-        | i < n =  do
-            x <- indexWordArrayM arr i
-            writeWordArray marr (q + i) ((unsafeShiftL x si) .|. mem)
-            loop1 marr (i + 1) (unsafeShiftR x sj)
-        | mem /= 0 = do
-            writeWordArray marr (q + i) mem
-            return (q + i + 1)
-        | otherwise = return (q + i)
-
-
 {-# NOINLINE shiftRInteger #-}
 shiftRInteger :: Integer -> Int# -> Integer
 shiftRInteger !(SmallPos 0##) _ = zeroInteger
