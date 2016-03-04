@@ -806,7 +806,7 @@ arrayShow :: Int -> WordArray -> String
 arrayShow !len !arr =
     let hexify w =
             let x = showHexW w
-            in replicate (16 - length x) '0' ++ x
+            in replicate (2 * wordSizeInBytes - length x) '0' ++ x
         digits = dropWhile (== '0') . concatMap hexify . reverse $ unpackArray 0
     in if null digits then "0x0" else "0x" ++ digits
   where
