@@ -37,7 +37,6 @@ import Data.Bits
 
 import GHC.Prim
 import GHC.Types
-import GHC.Tuple ()
 
 import Numeric (showHex) -- TODO: Remove when its working.
 
@@ -129,10 +128,17 @@ encodeDoubleInteger (Negative n arr) s = negateDouble# (encodeDoubleNatural (Nat
 decodeDoubleInteger :: Double# -> (# Integer, Int# #)
 decodeDoubleInteger d =
     case decodeDouble_2Int# d of
-        (# mantSign, mantHigh, mantLow, expn #) ->
-            let !signf = if isTrue# (mantSign ># 0#) then SmallPos else SmallNeg
-            in  (# signf (plusWord# mantLow (uncheckedShiftL# mantHigh 32#))
-                , expn #)
+        (# isign, mantHigh, mantLow, expn #) ->
+#if WORD_SIZE_IN_BITS == 64
+            let !signf = if isTrue# (isign ># 0#) then SmallPos else SmallNeg
+            in  (# signf (plusWord# mantLow (uncheckedShiftL# mantHigh 32#)), expn #)
+#else
+            if isTrue# (mantLow `eqWord#` 0##) && isTrue# (mantHigh `eqWord#` 0##)
+                then (# zeroInteger, expn #)
+                else
+                    let sign = if isTrue# (isign <# 0#) then Negative else Positive
+                    in (# mkPair sign (W# mantLow) (W# mantHigh), expn #)
+#endif
 
 {-# NOINLINE encodeFloatInteger #-}
 encodeFloatInteger :: Integer -> Int# -> Float#

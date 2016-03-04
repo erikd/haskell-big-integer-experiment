@@ -163,7 +163,13 @@ decodeDoubleInteger d# =
     case decodeDouble_2Int# d# of
         (# isign, mantHigh, mantLow, expn #) ->
             let sign = if isTrue# (isign <# 0#) then Negative else Positive
+#if WORD_SIZE_IN_BITS == 64
             in (# sign (Small (W# (plusWord# mantLow (uncheckedShiftL# mantHigh 32#)))), expn #)
+#else
+            in if isTrue# (mantLow `eqWord#` 0##) && isTrue# (mantHigh `eqWord#` 0##)
+                    then (# sign (Small 0), expn #)
+                    else (# sign (mkPair (W# mantLow) (W# mantHigh)), expn #)
+#endif
 
 {-# NOINLINE doubleFromInteger #-}
 doubleFromInteger :: Integer -> Double#

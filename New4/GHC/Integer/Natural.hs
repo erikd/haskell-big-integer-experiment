@@ -45,8 +45,14 @@ decodeDoubleNatural :: Double# -> (# Natural, Int# #)
 decodeDoubleNatural d =
     case decodeDouble_2Int# d of
         (# _, mantHigh, mantLow, expn #) ->
+#if WORD_SIZE_IN_BITS == 64
             (# NatS (W# (plusWord# mantLow (uncheckedShiftL# mantHigh 32#))), expn #)
-
+#else
+            let int = if isTrue# (mantLow `eqWord#` 0##) && isTrue# (mantHigh `eqWord#` 0##)
+                        then zeroNatural
+                        else mkPair (W# mantLow) (W# mantHigh)
+            in (# int, expn #)
+#endif
 
 andNatural :: Natural -> Natural -> Natural
 andNatural !(NatS !a) !(NatS !b) = NatS (a .&. b)
@@ -795,11 +801,11 @@ nonZeroLen !len !arr
 
 
 zeroNatural, oneNatural :: Natural
-zeroNatural = wordToNatural 0
-oneNatural = wordToNatural 1
+zeroNatural = wordToNatural 0##
+oneNatural = wordToNatural 1##
 
-wordToNatural :: Word -> Natural
-wordToNatural !w = NatS w
+wordToNatural :: Word# -> Natural
+wordToNatural !w = NatS (W# w)
 
 
 arrayShow :: Int -> WordArray -> String
