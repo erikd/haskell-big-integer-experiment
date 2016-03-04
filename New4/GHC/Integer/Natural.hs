@@ -683,8 +683,9 @@ estimateQuotient !nn !narr !dn !darr =
   where
     fastEncodeDoubleNatural :: Int -> WordArray -> Double#
     fastEncodeDoubleNatural !n !arr =
-        (+##)   (encodeDouble# (unboxWord (indexWordArray arr (n - 1))) (64# *# unboxInt (n - 1)))
-                (encodeDouble# (unboxWord (indexWordArray arr (n - 2))) (64# *# unboxInt (n - 2)))
+        (+##)   (encodeDouble# (unboxWord (indexWordArray arr (n - 1))) (wordSizeInBits# *# unboxInt (n - 1)))
+                (encodeDouble# (unboxWord (indexWordArray arr (n - 2))) (wordSizeInBits# *# unboxInt (n - 2)))
+    wordSizeInBits# = unboxInt wordSizeInBits
 
 
 eqNatural :: Natural -> Natural -> Bool
