@@ -84,8 +84,8 @@ minusWord2 :: Word -> Word -> (# Word, Word #)
 minusWord2 (W# a) (W# b) =
     let !diff = minusWord# a b
         -- TODO : Really need a minusWord2# PrimOp.
-        !carry = if isTrue# (ltWord# a b) then 1## else 0##
-    in (# W# carry, W# diff #)
+        !borrow = if isTrue# (ltWord# a b) then 1## else 0##
+    in (# W# borrow, W# diff #)
 
 {-# INLINE minusWord2C #-}
 minusWord2C :: Word -> Word -> Word -> (# Word, Word #)
