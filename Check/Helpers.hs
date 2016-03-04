@@ -1,5 +1,7 @@
-{-# LANGUAGE MagicHash, UnboxedTuples #-}
+{-# LANGUAGE CPP, MagicHash, UnboxedTuples #-}
 module Check.Helpers where
+
+#include "MachDeps.h"
 
 import Data.Bits
 import GHC.Base
@@ -72,3 +74,14 @@ log2WordSlow =
     loop acc# w#
         | isTrue# (word2Int# w# ==# 0#) = acc#
         | otherwise = loop (acc# +# 1#) (uncheckedShiftRL# w# 1#)
+
+bitsPerWord :: Int
+bitsPerWord =
+#ifndef WORD_SIZE_IN_BITS
+    Error: missing WORD_SIZE_IN_BITS #define
+#elif  WORD_SIZE_IN_BITS < 64
+    32
+#else
+    64
+#endif
+
