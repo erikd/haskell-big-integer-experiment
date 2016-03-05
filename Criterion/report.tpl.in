@@ -42,8 +42,8 @@ to compete.
 </p>
 
 <p>
-These tests are being carried out with ghc @GHC_VERSION@ and the git HEAD versions of
-integer-gmp and integer-simple on @CPU_NAME@/@OS_NAME@.
+These tests are being carried out with <b>GHC @GHC_VERSION@</b> and the git
+HEAD versions of integer-gmp and integer-simple on <b>@CPU_NAME@/@OS_NAME@</b>.
 </p>
 
 <p>
@@ -53,8 +53,9 @@ data structure to investigate how much difference that makes.
 
 <p>
 The Small Integer benchmarks work on Integer values where the input values and
-the result fit within a single 64 bit machine word.
-The Big Integer benchmarks operate on values that require multiple 64 machine
+the result fit within a single machine word (eg 32 bits on 32 bit CPUs, 64 bits
+on 64 bit CPUs).
+The Big Integer benchmarks operate on values that require multiple machine
 words.
 </p>
 
