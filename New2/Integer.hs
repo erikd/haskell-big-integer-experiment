@@ -13,6 +13,7 @@ import Data.List (foldl')
 import GHC.Types
 import Numeric
 
+import Common.GHC.Integer.Prim
 import New2.GHC.Integer
 import New2.GHC.Integer.Array
 import New2.GHC.Integer.Type
@@ -47,6 +48,7 @@ readInteger :: String -> Integer
 readInteger [] = 0
 readInteger ('-':xs) = -1 * readInteger xs
 readInteger ('+':xs) = readInteger xs
+readInteger ('0':'x':xs) = readIntegerHex xs
 readInteger s =
     foldl' (\acc c -> acc * (smallInteger 10#) + readChar c) (smallInteger 0#) s
   where
@@ -54,3 +56,14 @@ readInteger s =
     readChar c =
         let !(I# i) = ord c - 48
         in smallInteger i
+
+
+readIntegerHex :: String -> Integer
+readIntegerHex s =
+    foldl' (\acc c -> acc * (smallInteger 16#) + readChar (ord c)) (smallInteger 0#) s
+  where
+    readChar :: Int -> Integer
+    readChar c
+        | c >= 0x30 && c <= 0x39 = smallInteger (unboxInt (c - 0x30))
+        | c >= 0x41 && c <= 0x46 = smallInteger (unboxInt (10 + c - 0x41))
+        | otherwise = smallInteger (unboxInt (10 + c - 0x61))
