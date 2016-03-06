@@ -32,9 +32,8 @@ testCommon = do
             f1 = G.minusInteger (G.wordToInteger (unboxWord w1)) (G.wordToInteger (unboxWord w2))
             f2 = G.minusInteger (G.wordToInteger (unboxWord sm)) (G.shiftLInteger (G.wordToInteger (unboxWord cry)) (unboxInt bitsPerWord))
         in f2 `shouldBe` f1
-    prop "Can subtract Words with a carry and catch overflow." $ \ (w1, w2, ic) ->
-        let c = ic `mod` 256
-            (# cry, sm #) = minusWord2C w1 w2 c
+    prop "Can subtract Words with a carry and catch overflow." $ \ (w1, w2, c) ->
+        let (# cry, sm #) = minusWord2C w1 w2 c
             f1 = G.minusInteger (G.wordToInteger (unboxWord w1)) (G.plusInteger (G.wordToInteger (unboxWord w2)) (G.wordToInteger (unboxWord c)))
             f2 = G.minusInteger (G.wordToInteger (unboxWord sm)) (G.shiftLInteger (G.wordToInteger (unboxWord cry)) (unboxInt bitsPerWord))
         in f2 `shouldBe` f1

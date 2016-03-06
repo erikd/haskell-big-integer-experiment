@@ -90,9 +90,9 @@ minusWord2 (W# a) (W# b) =
 {-# INLINE minusWord2C #-}
 minusWord2C :: Word -> Word -> Word -> (# Word, Word #)
 minusWord2C (W# a) (W# b) (W# c) =
-    let !sum = plusWord# b c
+    let (# W# c1, W# sum #) = plusWord2 (W# b) (W# c)
         !diff = minusWord# a sum
-        !carry = if isTrue# (ltWord# a sum) then 1## else 0##
+        !carry = if isTrue# (ltWord# a sum) then plusWord# c1 1## else c1
     in (# W# carry, W# diff #)
 
 {-# INLINE timesWord2 #-}

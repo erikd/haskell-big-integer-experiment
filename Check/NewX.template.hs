@@ -76,7 +76,13 @@ testNewInteger = do
     prop "Can add two Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (X.plusInteger sa sb) `shouldBe` show (G.plusInteger ga gb)
 
-    prop "Can subtract two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+    it "Can subtract two Integers." $ do
+        let (a, b) = (X.readInteger "0x10000000000cafe31", X.readInteger "0xffffffffffffffff")
+        show (X.minusInteger a b) `shouldBe` "+0xcafe32"
+        let (c, d) = (X.readInteger "0x100000000000000000000000000cafe63", X.readInteger "+0xffffffffffffffffffffffffffffffff")
+        show (X.minusInteger c d) `shouldBe` "+0xcafe64"
+
+    prop "Can subtract two Integers (QC)." $ \ (GNP ga sa, GNP gb sb) ->
         show (X.minusInteger sa sb) `shouldBe` show (G.minusInteger ga gb)
 
     it "Can AND known pairs of positive Integers." $ do
