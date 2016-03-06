@@ -39,6 +39,11 @@ testNewInteger = do
     prop "Can create Integers." $ \ (GNP g s) ->
         show g == show s
 
+    it "Can read an Integer." $ do
+        show (X.readInteger "256") `shouldBe` "+0x100"
+        let b = "+0x12" in show (X.readInteger b) `shouldBe` b
+        let c = "+0x1234" in show (X.readInteger c) `shouldBe` c
+
     prop "Can complement an Integer." $ \ (GNP g s) ->
         show (X.complementInteger s) `shouldBe` show (G.complementInteger g)
     prop "Can negate an Integer." $ \ (GNP g s) ->
