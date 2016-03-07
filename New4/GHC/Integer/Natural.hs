@@ -27,6 +27,26 @@ import New4.GHC.Integer.WordArray
 
 --------------------------------------------------------------------------------
 
+mkNatural :: [Int]  -- absolute value in 31 bit chunks, least significant first
+                    -- ideally these would be Words rather than Ints, but
+                    -- we don't have Word available at the moment.
+          -> Natural
+mkNatural [] = zeroNatural
+mkNatural [I# i] = smallNatural i
+mkNatural is =
+    build is
+  where
+    build [] = zeroNatural
+    build [I# x] = smallNatural x
+    build (I# x : xs) = smallNatural x `orNatural` shiftLNatural (build xs) 31
+
+{-# NOINLINE smallNatural #-}
+smallNatural :: Int# -> Natural
+smallNatural i
+    | isTrue# (i ==# 0#) = zeroNatural
+    | otherwise = NatS (W# (int2Word# i))
+
+
 {-# INLINE naturalToWord #-}
 naturalToWord :: Natural -> Word
 naturalToWord !(NatS w) = w

@@ -57,24 +57,12 @@ mkInteger :: Bool   -- non-negative?
                     -- ideally these would be Words rather than Ints, but
                     -- we don't have Word available at the moment.
           -> Integer
-mkInteger _ [] = zeroInteger
-mkInteger True [I# i] = smallInteger i
-mkInteger False [I# i] = smallInteger (negateInt# i)
-mkInteger nonNegative is =
-    let abs = f is
+mkInteger nonNegative xs =
+    let abs = mkNatural xs
     in if nonNegative
-        then abs
-        else negateInteger abs
-  where
-    f [] = zeroInteger
-    f [I# x] = smallInteger x
-    f (I# x : xs) = smallInteger x `orInteger` shiftLInteger (f xs) 31#
+        then Positive abs
+        else Negative abs
 
-mkNatural :: [Int] -> Natural
-mkNatural ws =
-    case mkInteger True ws of
-        Positive a -> a
-        Negative a -> a
 
 {-# NOINLINE smallInteger #-}
 smallInteger :: Int# -> Integer
