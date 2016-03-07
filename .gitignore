@@ -1,7 +1,6 @@
 .cabal-sandbox
 .geany
 *.hcr
-*.html
 *.ll
 *.o
 *.hi

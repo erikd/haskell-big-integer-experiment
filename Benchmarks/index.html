@@ -129,7 +129,14 @@ that aims to compete.
 As the new library improves, the results are linked from here.
 </p>
 
-<h3><a href="bench-integer-20141001.html">2014/10/10 (Latest)</a></h3>
+<h3><a href="bench-integer-20160307.html">2016/02/07</a></h3>
+<p>Found some time to work on this recently and found that the performance had
+improved significantly, partly due to improvements in the 7.10.2/7.10.3 release
+of GHC and partly due to unboxing strict fields. The pure haskell version now
+beats integer-gmp on a number of benchmarks. Still a lot of work to do to fix
+the poor performance of multiplication.</p>
+
+<h3><a href="bench-integer-20141001.html">2014/10/10</a></h3>
 <p>This version had significant improvements on Big Integer multiplication due
 to the hack in
 	<a href="https://github.com/erikd/haskell-big-integer-experiment/commit/553c3a4db838cc62922e421d563b1e59abe29d10">this commit</a>
