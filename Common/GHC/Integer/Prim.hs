@@ -1,4 +1,5 @@
-{-# LANGUAGE BangPatterns, MagicHash, NoImplicitPrelude, UnboxedTuples #-}
+{-# LANGUAGE BangPatterns, CPP, ForeignFunctionInterface, MagicHash,
+        NoImplicitPrelude, UnboxedTuples, UnliftedFFITypes #-}
 
 #include "MachDeps.h"
 
@@ -10,7 +11,7 @@ module Common.GHC.Integer.Prim
     , timesWord2, timesWord2C, timesWord2CC
     , quotRemWord, quotRemWord2
     , shiftLWord2#, shiftRWord
-    , wordSizeInBits, wordSizeInBytes
+    , wordSizeInBits, wordSizeInBytes, highestSetBit
 
     , encodeDouble#
     ) where
@@ -150,6 +151,9 @@ wordSizeInBits = I# WORD_SIZE_IN_BITS#
 wordSizeInBytes :: Int
 wordSizeInBytes = I# (word2Int# (uncheckedShiftRL# WORD_SIZE_IN_BITS## 3#))
 
+{-# INLINE highestSetBit #-}
+highestSetBit :: Word -> Int
+highestSetBit (W# w) = I# (word2Int# (minusWord# WORD_SIZE_IN_BITS## (clz# w)))
 
 {-# INLINE encodeDouble# #-}
 foreign import ccall unsafe "__word_encodeDouble"
