@@ -17,7 +17,7 @@ today := $(shell date "+%Y%m%d")
 
 PRAGMAS = -XCPP -XMagicHash -XUnboxedTuples -XUnliftedFFITypes
 
-BROWSER ?= firefox
+BROWSER ?= firefox -no-remote
 
 
 all : $(TARGETS)
@@ -152,7 +152,7 @@ Stamp/ghc-version :
 clean :
 	@rm -f $(TARGETS) *.o *.hi bench-integer.html Check/Bench[GS0-9].hs Check/New[0-9].hs
 	@rm -f $(TARGETS) bench-integer.html Check/Bench[GS0-9].hs Check/New[0-9].hs
-	@rm -f GMP/GmpDerivedConstants.h
+	@rm -f GMP/GmpDerivedConstants.h Criterion/report.tpl
 	@find $(hsdirs) -name \*.o -o -name \*.hi -o -name \*.s -o -name \*.ll -o -name \*.hcr | xargs rm -f
 
 hlint :
