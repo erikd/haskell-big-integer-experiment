@@ -22,7 +22,8 @@ BROWSER ?= firefox -no-remote
 
 all : $(TARGETS)
 
-check : check-integer
+check : check-integer test-internals
+	./test-internals
 	./check-integer # | tee check.log
 
 core3 :
@@ -38,6 +39,9 @@ llvm3 :
 
 check-integer : check-integer.hs Stamp/ready $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs Check/New4.hs
 	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
+
+test-internals : test-internals.hs
+	$(GHC) $(GHCFLAGS) --make $< -o $@
 
 bench-integer : bench-integer.hs Stamp/ready $(hsfiles) $(bench_hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@

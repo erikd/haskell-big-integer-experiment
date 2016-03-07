@@ -13,7 +13,6 @@ import Data.Bits
 
 import GHC.Prim
 import GHC.Types
-import GHC.Tuple ()
 
 import Common.GHC.Integer.Debug
 import Common.GHC.Integer.Loop
@@ -171,7 +170,9 @@ xorArray !n1 !arr1 !n2 !arr2
 
 
 shiftLNatural :: Natural -> Int -> Natural
-shiftLNatural !(NatS !w) !i = shiftLNatural (mkSingletonNat w) i
+shiftLNatural !(NatS !w) !i
+    | highestSetBit w + i <= wordSizeInBits = NatS (unsafeShiftL w i)
+    | otherwise = shiftLNatural (mkSingletonNat w) i
 shiftLNatural !nat@(NatB !n !arr) !i
     | i <= 0 = nat
     | i < WORD_SIZE_IN_BITS =
@@ -708,6 +709,45 @@ estimateQuotient !nn !narr !dn !darr =
     wordSizeInBits# = unboxInt wordSizeInBits
 
 
+-- | wordShiftApprox provides a compact approximation of a Natural such that
+-- the result, (word, shift) obeys the following property:
+--
+--        (word << shift) <= natural <= ((word + 1) << shift)
+--
+-- It is used to provide a fast approximation for a partial quotient.
+
+wordShiftApprox :: Natural -> (Word, Int)
+wordShiftApprox !(NatS 0) = (0, 0)
+
+wordShiftApprox !(NatS !a) =
+    let lshift = wordSizeInBits - highestSetBit a
+    in (a `shiftL` lshift, -lshift)
+
+wordShiftApprox !(NatB !n !arr) = do
+    let !upper = indexWordArray arr (n - 1)
+        !upperCount = highestSetBit upper
+    if upperCount >= wordSizeInBits
+        then (upper, wordSizeInBits * (n - 1))
+        else
+            let !lower = indexWordArray arr (n - 2)
+                shft = wordSizeInBits - upperCount
+            in (upper `shiftL` shft + lower `shiftR` (wordSizeInBits - shft), wordSizeInBits * (n - 1) - shft)
+
+wordShiftUndo :: (Word, Int) -> Natural
+wordShiftUndo (0, 0) = NatS 0
+wordShiftUndo (w, s)
+    | s <= 0 = NatS (w `shiftR` (-s))
+    | otherwise = shiftLNatural (wordToNatural (unboxWord w)) s
+
+isSmall :: Natural -> Bool
+isSmall (NatS _) = True
+isSmall (NatB _ _) = False
+
+wordCountNatural :: Natural -> Int
+wordCountNatural !(NatS _) = 1
+wordCountNatural !(NatB !n _) = n
+
+
 eqNatural :: Natural -> Natural -> Bool
 eqNatural !(NatS !a) !(NatS !b) = a == b
 eqNatural !(NatB !_ !_) !(NatS !_) = False
@@ -769,6 +809,12 @@ gtNatural !(NatB !n1 !arr1) !(NatB !n2 !arr2)
                         else indexWordArray arr1 i > indexWordArray arr2 i
             in check (n1 - 1)
 
+
+leNatural :: Natural -> Natural -> Bool
+leNatural a b = not $ gtNatural a b
+
+geNatural :: Natural -> Natural -> Bool
+geNatural a b = not $ ltNatural a b
 
 --------------------------------------------------------------------------------
 -- Helpers (not part of the API).
