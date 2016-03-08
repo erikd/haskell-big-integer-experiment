@@ -40,7 +40,7 @@ llvm3 :
 check-integer : check-integer.hs Stamp/ready $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs Check/New4.hs
 	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
 
-test-internals : test-internals.hs
+test-internals : test-internals.hs $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
 
 bench-integer : bench-integer.hs Stamp/ready $(hsfiles) $(bench_hsfiles)
