@@ -691,23 +691,25 @@ divideSimple !nn !narr !dn !darr =
                     !quot3 = plusNatural quot quot2
                 in (quot3, rem2)
 
-
+-- Extimate a quotient such that for all numer >= denom:
+--
+--       denom * quot <= numer
+--
+-- Do this by converting the numerator and denominator into a psuedo floating
+-- point represention; a (Word, Int) pair modifying the denominator
+-- representation so that its Word part is guaranteed to be less that the
+-- numerator's Word, doing the division and the converting the (Word, Int)
+-- result back into a Natural.
+-- In order to *guarantee* that the resulting quotient is not too big, its is
+-- necessary to subtract 1 from the Word part.
+-- Finally, the subtract 1 trick above sometimes results in an estimated
+-- quotient value of 0, for which we return 1 instead.
 estimateQuotient :: Int -> WordArray -> Int -> WordArray -> Natural
 estimateQuotient !nn !narr !dn !darr =
-    let !nd# = fastEncodeDoubleNatural nn narr
-        !dd# = fastEncodeDoubleNatural dn darr
-    in case decodeDoubleNatural (0.999999999999999## *## nd# /## dd#) of
-                (# nat, expn #) ->
-                    if isTrue# (expn >=# 0#)
-                        then shiftLNatural nat (I# expn)
-                        else shiftRNatural nat (- (I# expn))
-  where
-    fastEncodeDoubleNatural :: Int -> WordArray -> Double#
-    fastEncodeDoubleNatural !n !arr =
-        (+##)   (encodeDouble# (unboxWord (indexWordArray arr (n - 1))) (wordSizeInBits# *# unboxInt (n - 1)))
-                (encodeDouble# (unboxWord (indexWordArray arr (n - 2))) (wordSizeInBits# *# unboxInt (n - 2)))
-    wordSizeInBits# = unboxInt wordSizeInBits
-
+    let !(wn, sn) = wordShiftApprox (NatB nn narr)
+        !(wd, sd) = wordShiftApprox (NatB dn darr)
+        !(wq, sq) = (wn `div` (wd `shiftR` 1) - 1, sn - sd - 1)
+    in wordShiftUndo (wq, sq)
 
 -- | wordShiftApprox provides a compact approximation of a Natural such that
 -- the result, (word, shift) obeys the following property:
@@ -715,6 +717,9 @@ estimateQuotient !nn !narr !dn !darr =
 --        (word << shift) <= natural <= ((word + 1) << shift)
 --
 -- It is used to provide a fast approximation for a partial quotient.
+--
+-- TODO : Change to type to:
+--       wordShiftApprox :: Int -> WordArray -> (Word, Int)
 
 wordShiftApprox :: Natural -> (Word, Int)
 wordShiftApprox !(NatS 0) = (0, 0)
