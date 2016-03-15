@@ -708,8 +708,11 @@ estimateQuotient :: Int -> WordArray -> Int -> WordArray -> Natural
 estimateQuotient !nn !narr !dn !darr =
     let !(wn, sn) = wordShiftApprox (NatB nn narr)
         !(wd, sd) = wordShiftApprox (NatB dn darr)
-        !(wq, sq) = (wn `div` (wd `shiftR` 1) - 1, sn - sd - 1)
-    in wordShiftUndo (wq, sq)
+        !(wq, sq) = (wn `div` (wd `shiftR` 1), sn - sd - 1)
+    in case wordShiftUndo (if wq > 1 then wq - 1 else 1, sq) of
+            NatS 0 -> NatS 1
+            x -> x
+
 
 -- | wordShiftApprox provides a compact approximation of a Natural such that
 -- the result, (word, shift) obeys the following property:
