@@ -2,6 +2,8 @@
 
 module New4.GHC.Integer.Sign where
 
+import Prelude (otherwise)
+
 import GHC.Classes
 import GHC.Types
 
@@ -33,8 +35,8 @@ instance Ord Sign where
     min a b = if a <= b then a else b
 
 negateSign :: Sign -> Sign
-negateSign !Pos = Neg
-negateSign !Neg = Pos
+negateSign Pos = Neg
+negateSign Neg = Pos
 
 timesSign :: Sign -> Sign -> Sign
 timesSign !a !b = if a == b then Pos else Neg
@@ -42,4 +44,4 @@ timesSign !a !b = if a == b then Pos else Neg
 signOfInt :: Int -> Sign
 signOfInt !x
     | x < 0 = Neg
-    | True = Pos
+    | otherwise = Pos

@@ -1,8 +1,4 @@
-{-# LANGUAGE CPP, MagicHash, ForeignFunctionInterface, NoImplicitPrelude,
-             BangPatterns, UnboxedTuples, UnliftedFFITypes #-}
-
-
-#include "MachDeps.h"
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module New4.GHC.Integer.Type where
 

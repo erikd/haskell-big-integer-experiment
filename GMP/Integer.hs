@@ -34,7 +34,7 @@ hexShow i
     | eqInteger i (smallInteger 0#) = "0x0"
     | otherwise = signHex i : '0' : 'x' : reverse (inner (absInteger i))
   where
-    signHex x = if (ltInteger x (smallInteger 0#)) then '-' else '+'
+    signHex x = if ltInteger x (smallInteger 0#) then '-' else '+'
     inner x
         | eqInteger x (smallInteger 0#) = []
         | otherwise =

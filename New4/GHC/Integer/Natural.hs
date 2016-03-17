@@ -48,11 +48,11 @@ smallNatural i
 
 {-# INLINE naturalToWord #-}
 naturalToWord :: Natural -> Word
-naturalToWord !(NatS w) = w
-naturalToWord !(NatB !_ !arr) = indexWordArray arr 0
+naturalToWord (NatS w) = w
+naturalToWord (NatB !_ !arr) = indexWordArray arr 0
 
 encodeDoubleNatural :: Natural -> Int# -> Double#
-encodeDoubleNatural !(NatS w) s = encodeDouble# (unboxWord w) s
+encodeDoubleNatural (NatS w) s = encodeDouble# (unboxWord w) s
 encodeDoubleNatural (NatB !n !arr) e0 =
     let (!res, _) = runStrictPrim $ intLoopState 0 (n - 1) (0.0, I# e0) $ \ i (D# d, e) -> do
                         (W# w) <- indexWordArrayM arr i
@@ -74,10 +74,10 @@ decodeDoubleNatural d =
 #endif
 
 andNatural :: Natural -> Natural -> Natural
-andNatural !(NatS !a) !(NatS !b) = NatS (a .&. b)
-andNatural !(NatS !a) !(NatB !_ arr) = NatS (a .&. indexWordArray arr 0)
-andNatural !(NatB !_ arr) !(NatS !b) = NatS (indexWordArray arr 0 .&. b)
-andNatural !(NatB !n1 arr1) !(NatB !n2 arr2) = andArray (min n1 n2) arr1 arr2
+andNatural (NatS !a) (NatS !b) = NatS (a .&. b)
+andNatural (NatS !a) (NatB !_ arr) = NatS (a .&. indexWordArray arr 0)
+andNatural (NatB !_ arr) (NatS !b) = NatS (indexWordArray arr 0 .&. b)
+andNatural (NatB !n1 arr1) (NatB !n2 arr2) = andArray (min n1 n2) arr1 arr2
 
 andArray :: Int -> WordArray -> WordArray -> Natural
 andArray n arr1 arr2 = runStrictPrim $ do
@@ -100,14 +100,14 @@ andArray n arr1 arr2 = runStrictPrim $ do
         | otherwise = return (i + 1)
 
 orNatural :: Natural -> Natural -> Natural
-orNatural !(NatS !a) !(NatS !b) = NatS (a .|. b)
-orNatural !(NatS !w) !nat@(NatB _ _) = orNaturalW nat w
-orNatural !nat@(NatB _ _) !(NatS !w) = orNaturalW nat w
-orNatural !(NatB !n1 !arr1) (NatB !n2 !arr2) = orArray n1 arr1 n2 arr2
+orNatural (NatS !a) (NatS !b) = NatS (a .|. b)
+orNatural (NatS !w) !nat@(NatB _ _) = orNaturalW nat w
+orNatural !nat@(NatB _ _) (NatS !w) = orNaturalW nat w
+orNatural (NatB !n1 !arr1) (NatB !n2 !arr2) = orArray n1 arr1 n2 arr2
 
 
 orNaturalW :: Natural -> Word -> Natural
-orNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
+orNaturalW (NatB !n !arr) !w = runStrictPrim $ do
     marr <- newWordArray n
     copyWordArray marr 1 arr 1 (n - 1)
     x <- indexWordArrayM arr 0
@@ -170,7 +170,7 @@ xorArray !n1 !arr1 !n2 !arr2
 
 
 shiftLNatural :: Natural -> Int -> Natural
-shiftLNatural !(NatS !w) !i
+shiftLNatural (NatS !w) !i
     | highestSetBit w + i <= wordSizeInBits = NatS (unsafeShiftL w i)
     | otherwise = shiftLNatural (mkSingletonNat w) i
 shiftLNatural !nat@(NatB !n !arr) !i
@@ -242,10 +242,10 @@ largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
 
 shiftRNatural :: Natural -> Int -> Natural
 shiftRNatural !n !0 = n
-shiftRNatural !(NatS !w) !i
+shiftRNatural (NatS !w) !i
     | i >= WORD_SIZE_IN_BITS = zeroNatural
     | otherwise = NatS (unsafeShiftR w i)
-shiftRNatural !(NatB !n !arr) !i
+shiftRNatural (NatB !n !arr) !i
     | i < WORD_SIZE_IN_BITS =
             smallShiftRArray n arr (# i, WORD_SIZE_IN_BITS - i #)
     | otherwise = do
@@ -266,7 +266,7 @@ smallShiftRArray !n !arr (# !si, !sj #) = runStrictPrim $ do
     loop !marr !i !mem
         | i >= 0 =  do
             x <- indexWordArrayM arr i
-            writeWordArray marr i ((unsafeShiftR x si) .|. mem)
+            writeWordArray marr i (unsafeShiftR x si .|. mem)
             loop marr (i - 1) (unsafeShiftL x sj)
         | otherwise = return ()
 
@@ -293,8 +293,8 @@ largeShiftRArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
 
 {-# INLINE plusNaturalW #-}
 plusNaturalW :: Natural -> Word -> Natural
-plusNaturalW !(NatS !a) !w = safePlusWord a w
-plusNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
+plusNaturalW (NatS !a) !w = safePlusWord a w
+plusNaturalW (NatB !n !arr) !w = runStrictPrim $ do
     marr <- newWordArray (n + 1)
     x <- indexWordArrayM arr 0
     let (# !cry, !sm #) = plusWord2 x w
@@ -324,17 +324,15 @@ plusNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
 safePlusWord :: Word -> Word -> Natural
 safePlusWord !w1 !w2 =
     let (# !c, !s #) = plusWord2 w1 w2
-    in case c == 0 of
-            True -> NatS s
-            False -> mkPair s c
+    in if c == 0 then NatS s else mkPair s c
 
 
 {-# NOINLINE plusNatural #-}
 plusNatural :: Natural -> Natural -> Natural
-plusNatural !(NatS !a) !(NatS !b) = safePlusWord a b
-plusNatural !(NatS !w) !n@(NatB _ _) = plusNaturalW n w
-plusNatural !n@(NatB _ _) !(NatS !w) = plusNaturalW n w
-plusNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
+plusNatural (NatS !a) (NatS !b) = safePlusWord a b
+plusNatural (NatS !w) n@(NatB _ _) = plusNaturalW n w
+plusNatural n@(NatB _ _) (NatS !w) = plusNaturalW n w
+plusNatural a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
     | n1 < n2 = plusNatural b a
     | otherwise = runStrictPrim $ do
         marr <- newWordArray (n1 + 1)
@@ -370,8 +368,8 @@ plusNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
 
 {-# INLINE minusNaturalW #-}
 minusNaturalW :: Natural -> Word -> Natural
-minusNaturalW !(NatS !a) !w = NatS (a - w)
-minusNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
+minusNaturalW (NatS !a) !w = NatS (a - w)
+minusNaturalW (NatB !n !arr) !w = runStrictPrim $ do
     marr <- newWordArray (n + 1)
     x <- indexWordArrayM arr 0
     let (# !c, !d #) = minusWord2 x w
@@ -399,9 +397,9 @@ minusNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
 
 {-# INLINE minusNatural #-}
 minusNatural :: Natural -> Natural -> Natural
-minusNatural !(NatS !a) !(NatS !b) = NatS (a - b)
-minusNatural !n@(NatB _ _) !(NatS !w) = minusNaturalW n w
-minusNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
+minusNatural (NatS !a) (NatS !b) = NatS (a - b)
+minusNatural n@(NatB _ _) (NatS !w) = minusNaturalW n w
+minusNatural a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
     | n1 < n2 = plusNatural b a
     | otherwise = runStrictPrim $ do
         marr <- newWordArray (n1 + 1)
@@ -438,7 +436,7 @@ minusNatural _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__
 
 {-# NOINLINE timesNaturalW #-}
 timesNaturalW :: Natural -> Word -> Natural
-timesNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
+timesNaturalW (NatB !n !arr) !w = runStrictPrim $ do
     marr <- newWordArray (n + 1)
     nlen <- loop marr 0 0
     narr <- unsafeFreezeWordArray marr
@@ -461,17 +459,15 @@ timesNaturalW _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE_
 safeTimesWord :: Word -> Word -> Natural
 safeTimesWord !w1 !w2 =
     let (# !ovf, !prod #) = timesWord2 w1 w2
-    in case ovf == 0 of
-            False -> mkPair prod ovf
-            True -> NatS prod
+    in if ovf == 0 then NatS prod else mkPair prod ovf
 
 
 {-# NOINLINE timesNatural #-}
 timesNatural :: Natural -> Natural -> Natural
-timesNatural !(NatS !a) !(NatS !b) = safeTimesWord a b
-timesNatural !(NatS !w) !n@(NatB _ _) = timesNaturalW n w
-timesNatural !n@(NatB _ _) !(NatS !w)  = timesNaturalW n w
-timesNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
+timesNatural (NatS !a) (NatS !b) = safeTimesWord a b
+timesNatural (NatS !w) n@(NatB _ _) = timesNaturalW n w
+timesNatural n@(NatB _ _) (NatS !w)  = timesNaturalW n w
+timesNatural a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
     | n1 < n2 = timesNatural b a
     | otherwise = runStrictPrim $ do
         psum <- newPlaceholderWordArray
@@ -483,7 +479,7 @@ timesNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
             if w == 0
                 then outerLoop psumLen psum (s2 + 1)
                 else do
-                    newPsumLen <- return ((max psumLen (n1 + s2 + 1)) + 1)
+                    let !newPsumLen = max psumLen (n1 + s2 + 1) + 1
                     marr <- cloneWordArrayExtend psumLen psum newPsumLen
                     possLen <- innerLoop1 marr psumLen psum 0 s2 w 0
                     narr <- unsafeFreezeWordArray marr
@@ -514,10 +510,10 @@ timesNatural !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
 
 {-# NOINLINE timesNaturalNew #-}
 timesNaturalNew :: Natural -> Natural -> Natural
-timesNaturalNew !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
+timesNaturalNew a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
     | n1 < n2 = timesNaturalNew b a
     | otherwise = runStrictPrim $ do
-        maxOutLen <- return (1 + n1 + n2)
+        let !maxOutLen = 1 + n1 + n2
         psum <- newWordArray maxOutLen
         writeWordArray psum 0 0
         outerLoop 0 0 psum
@@ -562,10 +558,10 @@ timesNaturalNew _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LIN
 
 {-# NOINLINE timesNaturalNewest #-}
 timesNaturalNewest :: Natural -> Natural -> Natural
-timesNaturalNewest !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
+timesNaturalNewest a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
     | n1 < n2 = timesNaturalNewest b a
     | otherwise = runStrictPrim $ do
-        maxOutLen <- return (1 + n1 + n2)
+        let !maxOutLen = 1 + n1 + n2
         marr <- newWordArray maxOutLen
         len <- preLoop marr
         narr <- unsafeFreezeWordArray marr
@@ -633,12 +629,12 @@ timesNaturalNewest !a@(NatB !n1 !arr1) !b@(NatB !n2 !arr2)
                 (# !tcryhi, !crylo #) = plusWord2C carrylo cry0 cry1
                 !cryhi = plusWord carryhi tcryhi
             innerLoop2 (xi - 1) (yi + 1) cryhi crylo sum1
-        | otherwise = do return $! (carryhi, carrylo, sum)
+        | otherwise = return $! (carryhi, carrylo, sum)
 
 timesNaturalNewest _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
 
 quotRemNaturalW :: Natural -> Word -> (Natural, Word)
-quotRemNaturalW !(NatB !n !arr) !w = runStrictPrim $ do
+quotRemNaturalW (NatB !n !arr) !w = runStrictPrim $ do
     qlen <- return $! if w > indexWordArray arr (n - 1) then n - 1 else n
     qmarr <- newWordArray qlen
     rem <- loop (n - 1) qmarr 0
@@ -663,10 +659,10 @@ http://en.wikipedia.org/wiki/Euclidean_division
 -}
 
 quotRemNatural :: Natural -> Natural -> (Natural, Natural)
-quotRemNatural !(NatS !a) !(NatS !b) = case quotRemWord a b of (# q, r #) -> (NatS q, NatS r)
-quotRemNatural !numer@(NatB !_ !_) !(NatS !d) = case quotRemNaturalW numer d of (q, r) -> (q, NatS r)
-quotRemNatural !(NatS !n) !(NatB !_ !_) = (zeroNatural, NatS n)
-quotRemNatural !numer@(NatB !nn !narr) !denom@(NatB !dn !darr)
+quotRemNatural (NatS !a) (NatS !b) = case quotRemWord a b of (# q, r #) -> (NatS q, NatS r)
+quotRemNatural numer@(NatB !_ !_) (NatS !d) = case quotRemNaturalW numer d of (q, r) -> (q, NatS r)
+quotRemNatural (NatS !n) (NatB !_ !_) = (zeroNatural, NatS n)
+quotRemNatural numer@(NatB !nn !narr) denom@(NatB !dn !darr)
     | dn > nn = (zeroNatural, numer)
     | dn == nn && indexWordArray narr (nn - 1) < indexWordArray darr (nn - 1) = (zeroNatural, numer)
     | dn == nn && indexWordArray narr (nn - 1) == indexWordArray darr (nn - 1) =
@@ -725,13 +721,13 @@ estimateQuotient !nn !narr !dn !darr =
 --       wordShiftApprox :: Int -> WordArray -> (Word, Int)
 
 wordShiftApprox :: Natural -> (Word, Int)
-wordShiftApprox !(NatS 0) = (0, 0)
+wordShiftApprox (NatS 0) = (0, 0)
 
-wordShiftApprox !(NatS !a) =
+wordShiftApprox (NatS !a) =
     let lshift = wordSizeInBits - highestSetBit a
     in (a `shiftL` lshift, -lshift)
 
-wordShiftApprox !(NatB !n !arr) = do
+wordShiftApprox (NatB !n !arr) = do
     let !upper = indexWordArray arr (n - 1)
         !upperCount = highestSetBit upper
     if upperCount >= wordSizeInBits
@@ -752,15 +748,15 @@ isSmall (NatS _) = True
 isSmall (NatB _ _) = False
 
 wordCountNatural :: Natural -> Int
-wordCountNatural !(NatS _) = 1
-wordCountNatural !(NatB !n _) = n
+wordCountNatural (NatS _) = 1
+wordCountNatural (NatB !n _) = n
 
 
 eqNatural :: Natural -> Natural -> Bool
-eqNatural !(NatS !a) !(NatS !b) = a == b
-eqNatural !(NatB !_ !_) !(NatS !_) = False
-eqNatural !(NatS !_) !(NatB !_ !_) = False
-eqNatural !(NatB !n1 !arr1) !(NatB !n2 !arr2)
+eqNatural (NatS !a) (NatS !b) = a == b
+eqNatural (NatB !_ !_) (NatS !_) = False
+eqNatural (NatS !_) (NatB !_ !_) = False
+eqNatural (NatB !n1 !arr1) (NatB !n2 !arr2)
     | n1 /= n2 = False
     | otherwise =
         let eqArray !idx
@@ -770,10 +766,10 @@ eqNatural !(NatB !n1 !arr1) !(NatB !n2 !arr2)
         in eqArray (n1 - 1)
 
 compareNatural :: Natural -> Natural -> Ordering
-compareNatural !(NatS !a) !(NatS !b) = compare a b
-compareNatural !(NatB !_ !_) !(NatS !_) = GT
-compareNatural !(NatS !_) !(NatB !_ !_) = LT
-compareNatural !(NatB !n1 !arr1) !(NatB !n2 !arr2)
+compareNatural (NatS !a) (NatS !b) = compare a b
+compareNatural (NatB !_ !_) (NatS !_) = GT
+compareNatural (NatS !_) (NatB !_ !_) = LT
+compareNatural (NatB !n1 !arr1) (NatB !n2 !arr2)
     | n1 < n2 = LT
     | n1 > n2 = GT
     | otherwise =
@@ -787,10 +783,10 @@ compareNatural !(NatB !n1 !arr1) !(NatB !n2 !arr2)
 
 
 ltNatural :: Natural -> Natural -> Bool
-ltNatural !(NatS !a) !(NatS !b) = a < b
-ltNatural !(NatB !_ !_) !(NatS !_) = False
-ltNatural !(NatS !_) !(NatB !_ !_) = True
-ltNatural !(NatB !n1 !arr1) !(NatB !n2 !arr2)
+ltNatural (NatS !a) (NatS !b) = a < b
+ltNatural (NatB !_ !_) (NatS !_) = False
+ltNatural (NatS !_) (NatB !_ !_) = True
+ltNatural (NatB !n1 !arr1) (NatB !n2 !arr2)
     | n1 < n2 = True
     | n1 > n2 = False
     | otherwise =
@@ -803,10 +799,10 @@ ltNatural !(NatB !n1 !arr1) !(NatB !n2 !arr2)
 
 
 gtNatural :: Natural -> Natural -> Bool
-gtNatural !(NatS !a) !(NatS !b) = a > b
-gtNatural !(NatB !_ !_) !(NatS !_) = True
-gtNatural !(NatS !_) !(NatB !_ !_) = False
-gtNatural !(NatB !n1 !arr1) !(NatB !n2 !arr2)
+gtNatural (NatS !a) (NatS !b) = a > b
+gtNatural (NatB !_ !_) (NatS !_) = True
+gtNatural (NatS !_) (NatB !_ !_) = False
+gtNatural (NatB !n1 !arr1) (NatB !n2 !arr2)
     | n1 > n2 = True
     | n1 < n2 = False
     | otherwise =
@@ -829,8 +825,8 @@ geNatural a b = not $ ltNatural a b
 
 {-# INLINE zerothWordOfNatural #-}
 zerothWordOfNatural :: Natural -> Word
-zerothWordOfNatural !(NatS !x) = x
-zerothWordOfNatural !(NatB !_ !arr) = indexWordArray arr 0
+zerothWordOfNatural (NatS !x) = x
+zerothWordOfNatural (NatB !_ !arr) = indexWordArray arr 0
 
 mkPair :: Word -> Word -> Natural
 mkPair !lo !hi = runStrictPrim mkNatPair
@@ -929,7 +925,7 @@ debugWriteWordArray line marr i x = do
     debugPrint line $ "writing " ++ hexShowW x ++ " at " ++ show i
     writeWordArray marr i x
 #else
-debugWriteWordArray _ marr i x = writeWordArray marr i x
+debugWriteWordArray _ = writeWordArray
 #endif
 
 errorLine :: Int -> String -> a

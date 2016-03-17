@@ -52,16 +52,17 @@ readInteger ('-':xs) = -1 * readInteger xs
 readInteger ('+':xs) = readInteger xs
 readInteger ('0':'x':xs) = readIntegerHex xs
 readInteger s =
-    foldl' (\acc c -> acc * (smallInteger 10#) + readChar c) (smallInteger 0#) s
+    foldl' (\ !acc c -> acc * ten + readChar c) (smallInteger 0#) s
   where
+    ten = smallInteger 10#
     readChar :: Char -> Integer
     readChar c =
         let !(I# i) = ord c - 48
         in smallInteger i
 
 readIntegerHex :: String -> Integer
-readIntegerHex s =
-    foldl' (\acc c -> acc * (smallInteger 16#) + readChar (ord c)) (smallInteger 0#) s
+readIntegerHex =
+    foldl' (\ !acc c -> acc * smallInteger 16# + readChar (ord c)) (smallInteger 0#)
   where
     readChar :: Int -> Integer
     readChar c

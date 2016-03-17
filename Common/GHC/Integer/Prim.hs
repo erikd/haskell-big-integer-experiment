@@ -26,15 +26,15 @@ import GHC.Prim
 
 {-# INLINE boxInt# #-}
 boxInt# :: Int# -> Int
-boxInt# i# = I# i#
+boxInt# = I#
 
 {-# INLINE boxWord# #-}
 boxWord# :: Word# -> Word
-boxWord# w# = W# w#
+boxWord# = W#
 
 {-# INLINE boxDouble# #-}
 boxDouble# :: Double# -> Double
-boxDouble# d# = D# d#
+boxDouble# = D#
 
 
 {-# INLINE unboxInt #-}
