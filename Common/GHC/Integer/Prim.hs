@@ -155,6 +155,6 @@ wordSizeInBytes = I# (word2Int# (uncheckedShiftRL# WORD_SIZE_IN_BITS## 3#))
 highestSetBit :: Word -> Int
 highestSetBit (W# w) = I# (word2Int# (minusWord# WORD_SIZE_IN_BITS## (clz# w)))
 
-{-# INLINE encodeDouble# #-}
+
 foreign import ccall unsafe "__word_encodeDouble"
     encodeDouble# :: Word# -> Int# -> Double#
