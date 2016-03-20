@@ -11,7 +11,7 @@
 -- See also
 -- <https://ghc.haskell.org/trac/ghc/wiki/Commentary/Libraries/Integer GHC Commentary: Libraries/Integer>.
 
-module GMP.GHC.Integer.GMP.Internals
+module GMP.GHC7.Integer.GMP.Internals
     ( -- * The 'Integer' type
       Integer(..)
 
@@ -37,4 +37,4 @@ module GMP.GHC.Integer.GMP.Internals
     , exportIntegerToAddr
     ) where
 
-import GMP.GHC.Integer.Type
+import GMP.GHC7.Integer.Type

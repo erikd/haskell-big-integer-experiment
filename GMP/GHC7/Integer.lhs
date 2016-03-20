@@ -3,7 +3,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  GMP.GHC.Integer
+-- Module      :  GMP.GHC7.Integer
 -- Copyright   :  (c) The University of Glasgow 1994-2008
 -- License     :  see libraries/integer-gmp/LICENSE
 --
@@ -14,14 +14,14 @@
 -- The 'Integer' type.
 --
 -- This module exposes the /portable/ 'Integer' API.  See
--- "GMP.GHC.Integer.GMP.Internals" for the GMP-specific internal
+-- "GMP.GHC7.Integer.GMP.Internals" for the GMP-specific internal
 -- representation of 'Integer' as well as optimized GMP-specific
 -- operations.
 -----------------------------------------------------------------------------
 
 #include "MachDeps.h"
 
-module GMP.GHC.Integer (
+module GMP.GHC7.Integer (
     Integer,
 
     -- * Construct 'Integer's
@@ -59,7 +59,7 @@ module GMP.GHC.Integer (
     hashInteger,
  ) where
 
-import GMP.GHC.Integer.Type
+import GMP.GHC7.Integer.Type
 
 default ()
 \end{code}

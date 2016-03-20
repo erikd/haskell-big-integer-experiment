@@ -30,7 +30,7 @@
 #error Unknown SIZEOF_HSWORD; can't define INT_MINBOUND and NEG_INT_MINBOUND
 #endif
 
-module GMP.GHC.Integer.Type where
+module GMP.GHC7.Integer.Type where
 
 import GHC.Prim (
     -- Other types we use, convert from, or convert to
@@ -46,7 +46,7 @@ import GHC.Prim (
     and#, or#, xor#,
  )
 
-import GMP.GHC.Integer.GMP.Prim (
+import GMP.GHC7.Integer.GMP.Prim (
     -- GMP-related primitives
     MPZ#,
     cmpInteger#, cmpIntegerInt#,
@@ -218,7 +218,7 @@ smartJ# s# mb# = J# s# mb#
 -- IMPORTANT: The 'ByteArray#' element MUST NOT be accessed unless the
 -- size-element indicates more than one limb!
 --
--- See notes at definition site of 'MPZ#' in "GMP.GHC.Integer.GMP.Prim"
+-- See notes at definition site of 'MPZ#' in "GMP.GHC7.Integer.GMP.Prim"
 -- for more details.
 mpzToInteger :: MPZ# -> Integer
 mpzToInteger (# 0#, _, _ #) = S# 0#

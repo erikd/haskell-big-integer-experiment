@@ -3,7 +3,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 
 #include "MachDeps.h"
-module GMP.GHC.Integer.GMP.Prim (
+module GMP.GHC7.Integer.GMP.Prim (
     MPZ#,
 
     cmpInteger#,
@@ -113,7 +113,7 @@ default ()
 -- in case the `mpz_t` wasn't grown beyond 1 limb by the GMP
 -- operation.
 --
--- See also the 'GMP.GHC.Integer.Type.mpzToInteger' function which ought
+-- See also the 'GMP.GHC7.Integer.Type.mpzToInteger' function which ought
 -- to be used for converting 'MPZ#'s to 'Integer's and the
 -- @MP_INT_1LIMB_RETURN()@ macro in @gmp-wrappers.cmm@ which
 -- constructs 'MPZ#' values in the first place for implementation

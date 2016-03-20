@@ -82,7 +82,7 @@ Check/New4.hs : Check/NewX.template.hs
 
 
 Check/BenchG.hs : Check/BenchX.template.hs
-	sed "s/BenchX/BenchG/;s/NewX/GMP/" $+ > $@
+	sed "s/BenchX/BenchG/;s/NewX.GHC/GMP.GHC7/" $+ > $@
 
 Check/BenchS.hs : Check/BenchX.template.hs
 	sed "s/BenchX/BenchS/;s/NewX/Simple/" $+ > $@
@@ -116,7 +116,7 @@ date-bench : bench-integer.html
 view-bench : bench-integer.html
 	$(BROWSER) bench-integer.html
 
-GMP/GmpDerivedConstants.h : integer-gmp/mkGmpDerivedConstants/mkGmpDerivedConstants.c
+GMP/GmpDerivedConstants.h : integer-gmp-7.10/mkGmpDerivedConstants/mkGmpDerivedConstants.c
 	gcc -Wall $< -o mkGmpDerivedConstants
 	./mkGmpDerivedConstants > $@
 	rm -f mkGmpDerivedConstants
@@ -129,20 +129,20 @@ update :
 
 Stamp/update :
 	mkdir -p Stamp
-	@if test ! -d integer-gmp ; then \
-		git clone http://git.haskell.org/packages/integer-gmp.git ; \
+	@if test ! -d integer-gmp-7.10 ; then \
+		git clone http://git.haskell.org/packages/integer-gmp.git integer-gmp-7.10 ; \
 		fi
 	@if test ! -d integer-simple ; then \
 		git clone http://git.haskell.org/packages/integer-simple.git ; \
 		fi
-	(cd integer-gmp && git checkout master && git pull --rebase)
+	(cd integer-gmp-7.10 && git checkout master && git pull --rebase)
 	(cd integer-simple && git checkout master && git pull --rebase)
 	@touch $@
 
 Stamp/copy : Stamp/update  Stamp/ghc-version
 	Scripts/copy_modify.sh integer-simple Simple
-	Scripts/copy_modify.sh integer-gmp GMP
-	cp integer-gmp/cbits/gmp-wrappers.cmm GMP/
+	Scripts/copy_modify.sh integer-gmp-7.10 GMP
+	cp integer-gmp-7.10/cbits/gmp-wrappers.cmm GMP/
 	@touch $@
 
 Stamp/ready : Stamp/copy GMP/GmpDerivedConstants.h
