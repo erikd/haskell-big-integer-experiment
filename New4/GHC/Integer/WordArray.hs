@@ -11,12 +11,12 @@ newtype WordArray = WA ByteArray
 newtype MutableWordArray m = MWA (MutableByteArray (PrimState m))
 
 {-# INLINE newWordArray #-}
-newWordArray :: (Monad m, PrimMonad m) => Int -> m (MutableWordArray m)
+newWordArray :: PrimMonad m => Int -> m (MutableWordArray m)
 newWordArray !len = do
     !marr <- newByteArray (len * sizeOf (0 :: Word))
     return $ MWA marr
 
-newWordArrayCleared :: (Monad m, PrimMonad m) => Int -> m (MutableWordArray m)
+newWordArrayCleared :: PrimMonad m => Int -> m (MutableWordArray m)
 newWordArrayCleared !len = do
     !marr <- newByteArray (len * sizeOf (0 :: Word))
     let !wmarr = MWA marr
@@ -26,12 +26,12 @@ newWordArrayCleared !len = do
 -- | newPlaceholderWordArray : Create a place holder ByteArray for timesInteger
 -- where a zero length ByteArray is needed. Memory is actually allocated, but
 -- nothing is written to it os it will actually contain junk data.
-newPlaceholderWordArray :: (Monad m, PrimMonad m) => m WordArray
+newPlaceholderWordArray :: PrimMonad m => m WordArray
 newPlaceholderWordArray = do
     !marr <- newByteArray (sizeOf (0 :: Word))
     unsafeFreezeWordArray (MWA marr)
 
-cloneWordArrayExtend :: (Monad m, PrimMonad m) => Int -> WordArray -> Int -> m (MutableWordArray m)
+cloneWordArrayExtend :: PrimMonad m => Int -> WordArray -> Int -> m (MutableWordArray m)
 cloneWordArrayExtend !oldLen (WA !arr) !newLen = do
     !marr <- newByteArray (newLen * sizeOf (0 :: Word))
     when (oldLen > 0) $
@@ -40,11 +40,11 @@ cloneWordArrayExtend !oldLen (WA !arr) !newLen = do
     return $ MWA marr
 
 {-# INLINE readWordArray #-}
-readWordArray :: (Monad m, PrimMonad m) => MutableWordArray m -> Int -> m Word
+readWordArray :: PrimMonad m => MutableWordArray m -> Int -> m Word
 readWordArray (MWA !marr) = readByteArray marr
 
 {-# INLINE unsafeFreezeWordArray #-}
-unsafeFreezeWordArray :: (Monad m, PrimMonad m) => MutableWordArray m -> m WordArray
+unsafeFreezeWordArray :: PrimMonad m => MutableWordArray m -> m WordArray
 unsafeFreezeWordArray (MWA !marr) = do
     !arr <- unsafeFreezeByteArray marr
     return (WA arr)
@@ -58,11 +58,11 @@ indexWordArrayM :: Monad m => WordArray -> Int -> m Word
 indexWordArrayM (WA !arr) !i = case indexByteArray arr i of x -> return x
 
 {-# INLINE writeWordArray #-}
-writeWordArray :: (Monad m, PrimMonad m) => MutableWordArray m -> Int -> Word -> m ()
+writeWordArray :: PrimMonad m => MutableWordArray m -> Int -> Word -> m ()
 writeWordArray (MWA !marr) = writeByteArray marr
 
 {-# INLINE setWordArray #-}
-setWordArray :: (Monad m, PrimMonad m) => MutableWordArray m -> Int -> Int -> Word -> m ()
+setWordArray :: PrimMonad m => MutableWordArray m -> Int -> Int -> Word -> m ()
 setWordArray !marr !offset !count !word =
     loop offset (offset + count)
   where
@@ -73,7 +73,7 @@ setWordArray !marr !offset !count !word =
         | otherwise = return ()
 
 {-# INLINE copyWordArray #-}
-copyWordArray :: (Monad m, PrimMonad m) => MutableWordArray m -> Int -> WordArray -> Int -> Int -> m ()
+copyWordArray :: PrimMonad m => MutableWordArray m -> Int -> WordArray -> Int -> Int -> m ()
 copyWordArray (MWA !marr) !doff (WA !arr) !soff !wrds =
     let !wordsize = sizeOf (0 :: Word)
     in copyByteArray marr (doff * wordsize) arr (soff * wordsize) (wrds * wordsize)

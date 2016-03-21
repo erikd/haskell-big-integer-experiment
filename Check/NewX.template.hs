@@ -333,7 +333,7 @@ instance Arbitrary GmpNewPair where
 
 newtype NonEmptyNonZero a = NonEmptyNonZero { nonEmptyNonZero :: [a] }
 
-instance (Arbitrary a, Eq a, Num a, Ord a) => Arbitrary (NonEmptyNonZero a) where
+instance (Arbitrary a, Eq a, Num a) => Arbitrary (NonEmptyNonZero a) where
     arbitrary = do
         x <- fmap getNonZero arbitrary
         xs <- arbitrary
