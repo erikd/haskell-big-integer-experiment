@@ -388,7 +388,45 @@ timesNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
 timesNatural :: Natural -> Natural -> Natural
 timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = timesNatural b a
-    | otherwise = runStrictPrim $ do
+    | otherwise =
+        case n1 * 100 + n2 of
+            202 -> timesNat2x2 arr1 arr2
+            -- 302 -> timesNat3x2 arr1 arr2
+            _ -> timesNaturalWA n1 arr1 n2 arr2
+
+{-# INLINE timesNat2x2 #-}
+timesNat2x2 :: WordArray -> WordArray -> Natural
+timesNat2x2 arr1 arr2 =
+    runStrictPrim $ do
+        marr <- newWordArray 4
+        x0 <- indexWordArrayM arr1 0
+        y0 <- indexWordArrayM arr2 0
+        let (# cry1, prod0 #) = timesWord2 x0 y0
+        writeWordArray marr 0 prod0
+
+        x1 <- indexWordArrayM arr1 1
+        y1 <- indexWordArrayM arr2 1
+
+        let (# cry2a, prod1a #) = timesWord2 x0 y1
+        let (# cry2b, prod1b #) = timesWord2 x1 y0
+        let (# cry2c, prod1 #) = plusWord3 prod1a prod1b cry1
+        writeWordArray marr 1 prod1
+
+        let (# cry3a, prod2a #) = timesWord2 x1 y1
+        let (# cry3b, prod2 #) = plusWord4 cry2a cry2b cry2c prod2a
+        writeWordArray marr 2 prod2
+
+        let !cry3 = plusWord cry3a cry3b
+        writeWordArray marr 3 cry3
+
+        narr <- unsafeFreezeWordArray marr
+        let len = if cry3 == 0 then 3 else 4
+        return $! Natural len narr
+
+{-# INLINE timesNaturalWA #-}
+timesNaturalWA :: Int -> WordArray -> Int -> WordArray -> Natural
+timesNaturalWA n1 arr1 n2 arr2 =
+    runStrictPrim $ do
         maxOutLen <- return (1 + n1 + n2)
         marr <- newWordArray maxOutLen
         len <- preLoop marr
