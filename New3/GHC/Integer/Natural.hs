@@ -392,6 +392,7 @@ timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
         case 100 * n1 + n2 of
             202 -> timesNat2x2 arr1 arr2
             302 -> timesNat3x2 arr1 arr2
+            303 -> timesNat3x3 arr1 arr2
             _ -> timesNaturalWA n1 arr1 n2 arr2
 
 {-# INLINE timesNat2x2 #-}
@@ -455,6 +456,49 @@ timesNat3x2 xarr yarr =
         writeWordArray marr 4 cry4
 
         let len = if cry4 == 0 then 4 else 5
+        narr <- unsafeFreezeWordArray marr
+        return $! Natural len narr
+
+
+{-# INLINE timesNat3x3 #-}
+timesNat3x3 :: WordArray -> WordArray -> Natural
+timesNat3x3 xarr yarr =
+    runStrictPrim $ do
+        marr <- newWordArray 6
+        x0 <- indexWordArrayM xarr 0
+        y0 <- indexWordArrayM yarr 0
+        let (# cry1, prod0 #) = timesWord2 x0 y0
+        writeWordArray marr 0 prod0
+
+        x1 <- indexWordArrayM xarr 1
+        y1 <- indexWordArrayM yarr 1
+        let (# cry2a, prod1a #) = timesWord2 x0 y1
+        let (# cry2b, prod1b #) = timesWord2 x1 y0
+        let (# cry2c, prod1 #) = plusWord3 prod1a prod1b cry1
+        writeWordArray marr 1 prod1
+
+        x2 <- indexWordArrayM xarr 2
+        y2 <- indexWordArrayM xarr 2
+        let (# cry3a, prod2a #) = timesWord2 x1 y1
+        let (# cry3b, prod2b #) = timesWord2 x2 y0
+        let (# cry3c, prod2c #) = timesWord2 x0 y2
+
+        let (# cry3d, prod2 #) = plusWord6 cry2a cry2b cry2c prod2a prod2b prod2c
+        writeWordArray marr 2 prod2
+
+        let (# cry4a, prod3a #) = timesWord2 x2 y1
+        let (# cry4b, prod3b #) = timesWord2 x1 y2
+        let (# cry4c, prod3 #) = plusWord6 cry3a cry3b cry3c cry3d prod3a prod3b
+        writeWordArray marr 3 prod3
+
+        let (# cry5a, prod4a #) = timesWord2 x2 y2
+        let (# cry5b, prod4 #) = plusWord4 cry4a cry4b cry4c prod4a
+        writeWordArray marr 4 prod4
+
+        let !cry5 = plusWord cry5a cry5b
+        writeWordArray marr 5 cry5
+
+        let len = if cry5 == 0 then 5 else 6
         narr <- unsafeFreezeWordArray marr
         return $! Natural len narr
 
