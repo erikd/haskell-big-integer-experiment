@@ -40,14 +40,29 @@ data Times = Times
     }
     deriving Show
 
+
+printTimes :: Times -> IO ()
+printTimes times = do
+    putStrLn "--------------------------------------------------------"
+    mapM_ print $ ops times
+    putStrLn "------------"
+    mapM_ (\ (k, v) -> putStrLn $ show k ++ " : " ++ show v) . Map.toList $ vals times
+    putStrLn "--------------------------------------------------------"
+
 timesEmpty :: Times
 timesEmpty = Times [] Map.empty
 
 insertResults :: Map Word [Value] -> Operation -> Map Word [Value]
-insertResults vmap (TimesWord2 _ (v1, v2)) =
-    Map.insertWith (++) (vIndex v1) [v1] $ Map.insertWith (++) (vIndex v2) [v2] vmap
-insertResults _ op =
-    error $ "insertResults " ++ show op
+insertResults vmap op =
+    case op of
+        TimesWord2 _ (v1, v2) -> addResult (++) v1 v2
+        PlusWord2 _ (v1, v2) -> addResult (appender) v1 v2
+        _ -> error $ "insertResults " ++ show op
+  where
+    appender xs ys = ys ++ xs
+    addResult apf v1 v2 =
+        Map.insertWith apf (vIndex v1) [v1]
+            $ Map.insertWith apf (vIndex v2) [v2] vmap
 
 
 appendOp :: Operation -> Times -> Times
@@ -56,10 +71,26 @@ appendOp op times = times
     , vals = insertResults (vals times) op
     }
 
+insertOp :: Operation -> Times -> Times
+insertOp op times = times
+    { ops = op : ops times
+    , vals = insertResults (vals times) op
+    }
 
-generateProducts :: Word -> Word -> Times
-generateProducts left right =
-    snd $ foldl' generate ((0, 'a'), timesEmpty) prodIndices
+getIndexVals :: Word -> Times -> (Times, Maybe (Value, Value))
+getIndexVals i times =
+    maybe (times, Nothing) getVals $ Map.lookup i vmap
+  where
+    vmap = vals times
+    getVals values =
+        case splitAt 2 values of
+            ([a, b], rest) -> (times { vals = Map.insert i rest vmap } , Just (a, b))
+            _ -> (times, Nothing)
+
+
+initializeProducts :: Word -> Word -> Times
+initializeProducts left right =
+    insertLoads . snd $ foldl' generate ((0, 'a'), timesEmpty) prodIndices
   where
     generate ((lidx, n), times) (x, y) =
         let idx = x + y
@@ -78,9 +109,9 @@ generateProducts left right =
         in sortBy compf $ concatMap (zip ys . replicate (fromIntegral left)) [0 .. right - 1]
 
 
-insertLoads :: [Operation] -> [Operation]
-insertLoads =
-    insert Set.empty Set.empty
+insertLoads :: Times -> Times
+insertLoads times =
+    times { ops = insert Set.empty Set.empty (ops times) }
   where
     insert xload yload (op@(TimesWord2 (x, y) _):ops) =
         case (Set.member x xload, Set.member y yload) of
@@ -91,3 +122,31 @@ insertLoads =
     insert xload yload (op:ops) = op : insert xload yload ops
     insert _ _ [] = []
 
+
+
+insertSums :: Times -> Times
+insertSums times = times
+
+
+
+insertSum :: Word -> Times -> Times
+insertSum index =
+    recurse
+  where
+    recurse times =
+        case getIndexVals index times of
+            (_, Nothing) -> times
+            (newtimes, Just (a, b)) -> recurse $ appendOp (makeSum a b) newtimes
+
+
+makeSum :: Value -> Value -> Operation
+makeSum v1 v2 =
+    case (v1, v2) of
+        (Value Product i n1, Value Product _ n2) ->
+            let n = max n1 n2
+            in PlusWord2 (v1, v2) (Value SumCarry (i + 1) n, Value Sum i n)
+        (Value ProdCarry i n1, Value Sum _ n2) ->
+            let n = succ (max n1 n2)
+            in PlusWord2 (v1, v2) (Value SumCarry (i + 1) n, Value Sum i n)
+
+        x -> error $ "makeSum " ++ show x
