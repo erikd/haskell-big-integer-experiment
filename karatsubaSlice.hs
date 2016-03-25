@@ -105,7 +105,7 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
         | i < n0 && i - shift < n1 = do
             !x <- indexWordArrayM arr0 i
             !y <- indexWordArrayM arr1 (i - shift)
-            let (# !cry, !sm #) = plusWord2C x y carry
+            let (# !cry, !sm #) = plusWord3 x y carry
             debugWriteWordArray __LINE__ marr i sm
             debugPrint __LINE__ $ "Carry is " ++ show cry
             loop_1_2 marr (i + 1) cry
@@ -120,7 +120,7 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
         | i < n0 && i - 2 * shift < n2 = do
             !y <- indexWordArrayM arr1 (i - shift)
             !z <- indexWordArrayM arr2 (i - 2 * shift)
-            let (# !cry, !sm #) = plusWord2C y z carry
+            let (# !cry, !sm #) = plusWord3 y z carry
             debugWriteWordArray __LINE__ marr i sm
             loop_1_2 marr (i + 1) cry
 -}

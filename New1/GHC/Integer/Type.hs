@@ -404,7 +404,7 @@ plusArray !s !n1 !arr1 !n2 !arr2
         | i < n2 = do
             x <- indexWordArrayM arr1 i
             y <- indexWordArrayM arr2 i
-            let (# !cry, !sm #) = plusWord2C x y carry
+            let (# !cry, !sm #) = plusWord3 x y carry
             writeWordArray marr i sm
             loop1 marr (i + 1) cry
         | otherwise = loop2 marr i carry

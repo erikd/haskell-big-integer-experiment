@@ -344,7 +344,7 @@ plusNatural a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
         | i < n2 = do
             x <- indexWordArrayM arr1 i
             y <- indexWordArrayM arr2 i
-            let (# !cry, !sm #) = plusWord2C x y carry
+            let (# !cry, !sm #) = plusWord3 x y carry
             writeWordArray marr i sm
             loop1 marr (i + 1) cry
         | otherwise = loop2 marr i carry
@@ -594,7 +594,7 @@ timesNaturalNewest a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
             y <- indexWordArrayM arr2 yi
             let (# !cry0, !prod #) = timesWord2 x y
                 (# !cry1, !sum1 #) = plusWord2 prod sum
-                (# !tcryhi, !crylo #) = plusWord2C carrylo cry0 cry1
+                (# !tcryhi, !crylo #) = plusWord3 carrylo cry0 cry1
                 !cryhi = plusWord carryhi tcryhi
             innerLoop1xi (xi - 1) (yi + 1) cryhi crylo sum1
         | otherwise = return $! (carryhi, carrylo, sum)
@@ -605,7 +605,7 @@ timesNaturalNewest a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
             y <- indexWordArrayM arr2 yi
             let (# !cry0, !prod #) = timesWord2 x y
                 (# !cry1, !sum1 #) = plusWord2 prod sum
-                (# !tcryhi, !crylo #) = plusWord2C carrylo cry0 cry1
+                (# !tcryhi, !crylo #) = plusWord3 carrylo cry0 cry1
                 !cryhi = plusWord carryhi tcryhi
             innerLoop1yi (xi - 1) (yi + 1) cryhi crylo sum1
         | otherwise = return $! (carryhi, carrylo, sum)
@@ -626,7 +626,7 @@ timesNaturalNewest a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
             y <- indexWordArrayM arr2 yi
             let (# !cry0, !prod #) = timesWord2 x y
                 (# !cry1, !sum1 #) = plusWord2 prod sum
-                (# !tcryhi, !crylo #) = plusWord2C carrylo cry0 cry1
+                (# !tcryhi, !crylo #) = plusWord3 carrylo cry0 cry1
                 !cryhi = plusWord carryhi tcryhi
             innerLoop2 (xi - 1) (yi + 1) cryhi crylo sum1
         | otherwise = return $! (carryhi, carrylo, sum)

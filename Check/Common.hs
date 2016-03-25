@@ -23,7 +23,7 @@ testCommon = do
             f2 = G.plusInteger (G.wordToInteger (unboxWord s)) (G.shiftLInteger (G.wordToInteger (unboxWord c)) (unboxInt bitsPerWord))
         in f1 `shouldBe` f2
     prop "Can add Words add a carry and catch overflow." $ \ (w1, w2, c) ->
-        let (# cry, sm #) = plusWord2C w1 w2 c
+        let (# cry, sm #) = plusWord3 w1 w2 c
             f1 = foldl1 G.plusInteger [G.wordToInteger (unboxWord w1), G.wordToInteger (unboxWord w2), G.wordToInteger (unboxWord c)]
             f2 = G.plusInteger (G.wordToInteger (unboxWord sm)) (G.shiftLInteger (G.wordToInteger (unboxWord cry)) (unboxInt bitsPerWord))
         in f2 `shouldBe` f1

@@ -6,7 +6,7 @@
 module Common.GHC.Integer.Prim
     ( boxInt#, boxWord#, unboxInt, unboxWord
     , boxDouble#, unboxDouble
-    , plusWord, plusWord2, plusWord2C, plusWord3C
+    , plusWord, plusWord2, plusWord3, plusWord4
     , minusWord2, minusWord2C
     , timesWord2, timesWord2C, timesWord2CC
     , quotRemWord, quotRemWord2
@@ -62,17 +62,17 @@ plusWord2 (W# a) (W# b) =
     let (# !c, !s #) = plusWord2# a b
     in (# W# c, W# s #)
 
-{-# INLINE plusWord2C #-}
-plusWord2C :: Word -> Word -> Word -> (# Word, Word #)
-plusWord2C (W# a) (W# b) (W# c) =
+{-# INLINE plusWord3 #-}
+plusWord3 :: Word -> Word -> Word -> (# Word, Word #)
+plusWord3 (W# a) (W# b) (W# c) =
     let (# !c1, !s1 #) = plusWord2# a b
         (# !c2, !s2 #) = plusWord2# s1 c
-        !carry = plusWord# c1 c2
-    in (# W# carry, W# s2 #)
+        !c3 = plusWord# c1 c2
+    in (# W# c3, W# s2 #)
 
-{-# INLINE plusWord3C #-}
-plusWord3C :: Word -> Word -> Word -> Word -> (# Word, Word #)
-plusWord3C (W# a) (W# b) (W# c) (W# d) =
+{-# INLINE plusWord4 #-}
+plusWord4 :: Word -> Word -> Word -> Word -> (# Word, Word #)
+plusWord4 (W# a) (W# b) (W# c) (W# d) =
     let (# !c1, !s1 #) = plusWord2# a b
         (# !c2, !s2 #) = plusWord2# c d
         (# !c3, !s3 #) = plusWord2# s1 s2
