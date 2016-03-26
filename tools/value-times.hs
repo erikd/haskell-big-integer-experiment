@@ -83,7 +83,7 @@ instance Ppr Operation where
     ppr (TimesWord2 (s0, s1) (co, po)) = "let (# " ++ ppr co ++ ", " ++ ppr po ++ " #) = timesWord2 " ++ ppr s0 ++ " " ++ ppr s1
     ppr (PlusWord2 (i1, i2) (co, so)) = "let (# " ++ ppr co ++ ", " ++ ppr so ++ " #) = plusWord2 " ++ ppr i1 ++ " " ++ ppr i2
     ppr (PlusWord (i1, i2) o) = "let " ++ ppr o ++ " = plusWord " ++ ppr i1 ++ " " ++ ppr i2
-    ppr (StoreValue v) = "writeWordArrayM marr " ++ show (vIndex v) ++ " " ++ ppr v
+    ppr (StoreValue v) = "writeWordArray marr " ++ show (vIndex v) ++ " " ++ ppr v
 
 
 -- | Compare Operations based on the Index of the primay output values. Using
@@ -105,9 +105,11 @@ opCompare op1 op2 =
 
 
 data Times = Times
-    { ops :: [Operation]
+    { x :: Word
+    , y :: Word
+    , ops :: [Operation]
     , vals :: Map Word [Value]
-    , names :: Map Word [Int]
+    , names :: Map Word [(ValueType, Int)]
     }
     deriving Show
 
@@ -121,8 +123,8 @@ printTimes times = do
     putStrLn "-------------------------------------------------------------------------"
 
 
-timesEmpty :: Times
-timesEmpty = Times [] Map.empty Map.empty
+timesEmpty :: Word -> Word -> Times
+timesEmpty x y = Times x y [] Map.empty Map.empty
 
 
 insertResults :: Map Word [Value] -> Operation -> Map Word [Value]
@@ -139,17 +141,18 @@ insertResults vmap op =
             $ Map.insertWith apf (vIndex v2) [v2] vmap
 
 
-insertNames :: Map Word [Int] -> Operation -> Map Word [Int]
+insertNames :: Map Word [(ValueType, Int)] -> Operation -> Map Word [(ValueType, Int)]
 insertNames vmap op =
     case op of
         TimesWord2 _ (v1, v2) -> addNames v1 v2
         PlusWord2 _ (v1, v2) -> addNames v1 v2
-        PlusWord _ v -> Map.insertWith (++) (vIndex v) [vName v] vmap
+        PlusWord _ v -> Map.insertWith (++) (vIndex v) [(vType v, vName v)] vmap
         _ -> error $ "insertNames " ++ show op
   where
+    vTypeName v = (vType v, vName v)
     addNames v1 v2 =
-        Map.insertWith (++) (vIndex v1) [vName v1]
-            $ Map.insertWith (++) (vIndex v2) [vName v2] vmap
+        Map.insertWith (++) (vIndex v1) [vTypeName v1]
+            $ Map.insertWith (++) (vIndex v2) [vTypeName v2] vmap
 
 
 
@@ -161,11 +164,11 @@ fixName times op =
         PlusWord x v -> PlusWord x (fixValName v)
         _ -> error $ "fixName " ++ show op
   where
-    newName :: ValueType -> Word -> [Int] -> Value
+    newName :: ValueType -> Word -> [(ValueType, Int)] -> Value
     newName t i xs =
-        case xs of
+        case map snd (filter (\vt -> fst vt == t) xs) of
             [] -> Value t i 0
-            _ -> Value t i $ succ (maximum xs)
+            ys -> Value t i $ succ (maximum ys)
     fixValName :: Value -> Value
     fixValName (Value t i 0) =
         maybe (Value t i 0) (newName t i) $ Map.lookup i (names times)
@@ -194,7 +197,7 @@ insertOp origOp times =
 
 initializeProducts :: Word -> Word -> Times
 initializeProducts left right =
-    insertLoads $ foldl' generate timesEmpty prodIndices
+    insertLoads $ foldl' generate (timesEmpty left right) prodIndices
   where
     generate times (x, y) =
         let idx = x + y
@@ -343,3 +346,34 @@ extractValues =
             PlusWord2 (i1, i2) (o1, o2) -> (i1 : i2 : ins, o1 : o2 : outs)
             PlusWord (i1, i2) o -> (i1 : i2 : ins, o : outs)
             StoreValue i -> (i : ins, outs)
+
+
+pprTimes :: Times -> IO ()
+pprTimes times = do
+    mapM_ putStrLn
+            [ ""
+            , "{-# INLINE " ++ name ++ " #-}"
+            , name ++ " :: WordArray -> WordArray -> Natural"
+            , name ++ " !xarr !yarr ="
+            , "    runStrictPrim $ do"
+            , "        marr <- newWordArray " ++ show maxlen
+            ]
+    mapM_ (putStrLn . indent8 . ppr) $ ops times
+
+    mapM_ (putStrLn . indent8)
+            [ "narr <- unsafeFreezeWordArray marr"
+            , "let !len = " ++ show (maxlen - 1) ++ " + boxInt# (neWord# (unboxWord " ++ lastCarry ++ ") 0##)"
+
+
+
+            , "return $! Natural len narr"
+            , ""
+            ]
+  where
+    name = "timesNat" ++ show (x times) ++ "x" ++ show (y times)
+    indent8 s = "        " ++ s
+    maxlen = (x times) * (y times) + 1
+    lastCarry =
+        case last (ops times) of
+            StoreValue v -> ppr v
+            x -> error $ "lastCarry " ++ show x
