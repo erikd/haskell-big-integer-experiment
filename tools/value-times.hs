@@ -316,7 +316,20 @@ validateValueUsage times = do
 
         return (in_ok && out_ok && not (null unused_in) && not (null unused_out))
 
-    validateOperationOrdering _oplist = return True
+    setInsert2 (a, b) = Set.insert a . Set.insert b
+
+    setMembers2 (a, b) set = Set.member a set && Set.member b set
+
+    opCheckArgs (ok, vals) op =
+        case op of
+            LoadSource _ -> return (ok, vals)
+            TimesWord2 _ outs -> return (ok, setInsert2 outs vals)
+            PlusWord2 ins outs -> return (ok && setMembers2 ins vals, setInsert2 outs vals)
+            PlusWord ins out -> return (ok && setMembers2 ins vals, Set.insert out vals)
+            StoreValue _ -> return (ok, vals)
+
+    validateOperationOrdering oplist =
+        fst <$> foldM opCheckArgs (False, Set.empty) oplist
 
 extractValues :: [Operation] -> ([Value], [Value])
 extractValues =
