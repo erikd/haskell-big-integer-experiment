@@ -1,7 +1,10 @@
 {-# LANGUAGE StrictData #-}
 
+import Control.Monad
 import Data.List
 import Data.Map (Map)
+import System.Exit ( exitFailure )
+
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
@@ -16,12 +19,12 @@ data ValueType
     | ProdCarry
     | Sum
     | SumCarry
-    deriving (Eq, Show)
+    deriving (Eq, Ord, Show)
 
 
 data Value
     = Value ValueType Word Int
-    deriving Show
+    deriving (Eq, Ord, Show)
 
 vType :: Value -> ValueType
 vType (Value t _ _) = t
@@ -52,11 +55,11 @@ data Times = Times
 
 printTimes :: Times -> IO ()
 printTimes times = do
-    putStrLn "--------------------------------------------------------"
+    putStrLn "-------------------------------------------------------------------------"
     mapM_ print $ ops times
-    putStrLn "------------"
-    mapM_ (\ (k, v) -> putStrLn $ show k ++ " : " ++ show v) . Map.toList $ vals times
-    putStrLn "--------------------------------------------------------"
+    putStrLn "-------------------------------------------------------------------------"
+    mapM_ (\ (k, v) -> if null v then return () else putStrLn $ show k ++ " : " ++ show v) . Map.toList $ vals times
+    putStrLn "-------------------------------------------------------------------------"
 
 
 timesEmpty :: Times
@@ -67,7 +70,7 @@ insertResults :: Map Word [Value] -> Operation -> Map Word [Value]
 insertResults vmap op =
     case op of
         TimesWord2 _ (v1, v2) -> addResult (++) v1 v2
-        PlusWord2 _ (v1, v2) -> addResult (appender) v1 v2
+        PlusWord2 _ (v1, v2) -> addResult appender v1 v2
         PlusWord _ v -> Map.insertWith appender (vIndex v) [v] vmap
         _ -> error $ "insertResults " ++ show op
   where
@@ -131,14 +134,13 @@ insertOp origOp times =
 
 initializeProducts :: Word -> Word -> Times
 initializeProducts left right =
-    insertLoads . snd $ foldl' generate ((0, 0), timesEmpty) prodIndices
+    insertLoads $ foldl' generate timesEmpty prodIndices
   where
-    generate ((lidx, n), times) (x, y) =
+    generate times (x, y) =
         let idx = x + y
-            ni = if idx > lidx then 0 else n
-            prod = Value Product idx ni
-            carry = Value ProdCarry (idx + 1) ni
-        in ((idx, succ ni), appendOp (TimesWord2 (Source x 'x', Source y 'y') (carry, prod)) times)
+            prod = Value Product idx 0
+            carry = Value ProdCarry (idx + 1) 0
+        in appendOp (TimesWord2 (Source x 'x', Source y 'y') (carry, prod)) times
 
     prodIndices :: [(Word, Word)]
     prodIndices =
@@ -164,31 +166,27 @@ insertLoads times =
     insert _ _ [] = []
 
 
-
 insertSums :: Times -> Times
 insertSums times =
-    let indices = [ 1 .. (1 + maximum (Map.keys (vals times))) ]
-    in foldl' (\t i -> insertIndexSums i t) times indices
-
-
-insertIndexSums :: Word -> Times -> Times
-insertIndexSums index =
-    recurse
+    foldl' (flip insertIndexSums) times [ 0 .. (2 + maximum (Map.keys (vals times))) ]
   where
-    recurse times =
+    getIndexVals :: Word -> Times -> (Times, [Value])
+    getIndexVals i times =
+        let vmap = vals times
+            getVals values =
+                case splitAt 2 values of
+                    ([a], []) -> (times { vals = Map.insert i [] vmap } , [a])
+                    ([a, b], rest) -> (times { vals = Map.insert i rest vmap } , [a, b])
+                    _ -> (times, [])
+        in maybe (times, []) getVals $ Map.lookup i vmap
+
+    insertIndexSums :: Word -> Times -> Times
+    insertIndexSums index times =
         case getIndexVals index times of
-            (_, Nothing) -> times
-            (newtimes, Just (a, b)) -> recurse $ appendOp (makeSum a b) newtimes
+            (newtimes, [a, b]) -> insertIndexSums index $ appendOp (makeSum a b) newtimes
+            (newtimes, [a]) -> newtimes { ops = ops newtimes ++ [StoreValue a] }
+            (_, _) -> times
 
-getIndexVals :: Word -> Times -> (Times, Maybe (Value, Value))
-getIndexVals i times =
-    maybe (times, Nothing) getVals $ Map.lookup i vmap
-  where
-    vmap = vals times
-    getVals values =
-        case splitAt 2 values of
-            ([a, b], rest) -> (times { vals = Map.insert i rest vmap } , Just (a, b))
-            _ -> (times, Nothing)
 
 makeSum :: Value -> Value -> Operation
 makeSum v1 v2 =
@@ -214,3 +212,55 @@ makeSum v1 v2 =
             PlusWord (v1, v2) (Value Sum i 0)
 
         x -> error $ "makeSum " ++ show x
+
+
+validateValueUsage :: Times -> IO ()
+validateValueUsage times = do
+    results <- sequence
+                [ valuesAreEmpty
+                , valuesAreUniqueAndUsedOnce $ extractValues (ops times)
+                ]
+    when (or results) $ do
+        putStrLn "Terminating"
+        exitFailure
+    putStrLn "Looks good to me!"
+  where
+    valuesAreEmpty =
+        let elems = concat . Map.elems $ vals times
+        in if null elems
+            then return False
+            else do
+                putStrLn $ "validateValueUsage found unused values : " ++ show elems
+                return True
+
+    valuesAreUniqueAndUsedOnce (outvals, invals) = do
+        let out_ok = length (nub outvals) == length outvals
+            in_ok = length (nub invals) == length invals
+            unused_in = filter (\ i -> i `notElem` outvals) invals
+            unused_out = filter (\ i -> i `notElem` invals) outvals
+
+        when (not in_ok) $
+            putStrLn $ "validateValueUsage found duplicate inputs : " ++ show invals ++ "\n"
+        when (not out_ok) $
+            putStrLn $ "validateValueUsage found duplicate outputs : " ++ show outvals ++ "\n"
+
+        when (not $ null unused_in) $
+            putStrLn $ "validateValueUsage unused inputs : " ++ show unused_in ++ "\n"
+        when (not $ null unused_out) $
+            putStrLn $ "validateValueUsage unused outputs : " ++ show unused_out ++ "\n"
+
+        return (in_ok && out_ok && not (null unused_in) && not (null unused_out))
+
+
+extractValues :: [Operation] -> ([Value], [Value])
+extractValues =
+    sortLR . foldl' extract ([], [])
+  where
+    sortLR (a, b) = (sort a, sort b)
+    extract (ins, outs) op =
+        case op of
+            LoadSource _ -> (ins, outs)
+            TimesWord2 _ (o1, o2) -> (ins, o1 : o2 : outs)
+            PlusWord2 (i1, i2) (o1, o2) -> (i1 : i2 : ins, o1 : o2 : outs)
+            PlusWord (i1, i2) o -> (i1 : i2 : ins, o : outs)
+            StoreValue i -> (i : ins, outs)
