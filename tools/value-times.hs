@@ -1,6 +1,7 @@
 {-# LANGUAGE StrictData #-}
 
 import Control.Monad
+import Data.Char
 import Data.List
 import Data.Map (Map)
 import System.Exit ( exitFailure )
@@ -45,6 +46,64 @@ data Operation
     deriving Show
 
 
+opProvidesOutput :: Value -> Operation -> Bool
+opProvidesOutput vt op =
+    case op of
+        LoadSource _ -> False
+        TimesWord2 _ (v1, v2) -> v1 == vt || v2 == vt
+        PlusWord2 _ (v1, v2) -> v1 == vt || v2 == vt
+        PlusWord _ v -> v == vt
+        StoreValue _ -> False
+
+class Ppr a where
+    ppr :: a -> String
+
+instance Ppr Int where
+    ppr i
+        | i < 26 = [chr (i + ord 'a')]
+        | otherwise =
+                let (q, r) = i `quotRem` 26
+                in ppr q ++ ppr r
+
+
+instance Ppr Value where
+    ppr (Value t w i) = ppr t ++ show w ++ ppr i
+
+instance Ppr ValueType where
+    ppr Product = "prod"
+    ppr ProdCarry = "pc"
+    ppr Sum = "sum"
+    ppr SumCarry = "sc"
+
+instance Ppr Source where
+    ppr (Source w c) = c : show w
+
+instance Ppr Operation where
+    ppr (LoadSource (Source i c)) = [c] ++ show i ++ " <- indexWordArrayM " ++ [c] ++ "arr " ++ show i
+    ppr (TimesWord2 (s0, s1) (co, po)) = "let (# " ++ ppr co ++ ", " ++ ppr po ++ " #) = timesWord2 " ++ ppr s0 ++ " " ++ ppr s1
+    ppr (PlusWord2 (i1, i2) (co, so)) = "let (# " ++ ppr co ++ ", " ++ ppr so ++ " #) = plusWord2 " ++ ppr i1 ++ " " ++ ppr i2
+    ppr (PlusWord (i1, i2) o) = "let " ++ ppr o ++ " = plusWord " ++ ppr i1 ++ " " ++ ppr i2
+    ppr (StoreValue v) = "writeWordArrayM marr " ++ show (vIndex v) ++ " " ++ ppr v
+
+
+-- | Compare Operations based on the Index of the primay output values. Using
+-- this as the compare function passed to Data.List.sortBy should result in a
+-- list of Operations which is still valid (as long as the list was valid
+-- beforehand). Specifically, it groups all operations with lower value output
+-- indices in front ot operations with higher value output indices. Ordering
+-- within a given output index should remain unchanged.
+opCompare :: Operation -> Operation -> Ordering
+opCompare op1 op2 =
+    compare (opIndex op1) (opIndex op2)
+  where
+    opIndex :: Operation -> Word
+    opIndex (LoadSource (Source w _)) = w
+    opIndex (TimesWord2 _ (_, v)) = vIndex v
+    opIndex (PlusWord2 _ (_, v)) = vIndex v
+    opIndex (PlusWord _ v) = vIndex v
+    opIndex (StoreValue v) = vIndex v
+
+
 data Times = Times
     { ops :: [Operation]
     , vals :: Map Word [Value]
@@ -58,7 +117,7 @@ printTimes times = do
     putStrLn "-------------------------------------------------------------------------"
     mapM_ print $ ops times
     putStrLn "-------------------------------------------------------------------------"
-    mapM_ (\ (k, v) -> if null v then return () else putStrLn $ show k ++ " : " ++ show v) . Map.toList $ vals times
+    mapM_ (\ (k, v) -> unless (null v) (putStrLn $ show k ++ " : " ++ show v)) . Map.toList $ vals times
     putStrLn "-------------------------------------------------------------------------"
 
 
@@ -127,8 +186,9 @@ insertOp :: Operation -> Times -> Times
 insertOp origOp times =
     let op = fixName times origOp
     in times
-        { ops = op : ops times
+        { ops = ops times
         , vals = insertResults (vals times) op
+        , names = insertNames (names times) op
         }
 
 
@@ -188,6 +248,10 @@ insertSums times =
             (_, _) -> times
 
 
+reorderOperations :: Times -> Times
+reorderOperations times = times { ops = sortBy opCompare $ ops times }
+
+
 makeSum :: Value -> Value -> Operation
 makeSum v1 v2 =
     case (v1, v2) of
@@ -219,6 +283,7 @@ validateValueUsage times = do
     results <- sequence
                 [ valuesAreEmpty
                 , valuesAreUniqueAndUsedOnce $ extractValues (ops times)
+                , validateOperationOrdering $ ops times
                 ]
     when (or results) $ do
         putStrLn "Terminating"
@@ -236,21 +301,22 @@ validateValueUsage times = do
     valuesAreUniqueAndUsedOnce (outvals, invals) = do
         let out_ok = length (nub outvals) == length outvals
             in_ok = length (nub invals) == length invals
-            unused_in = filter (\ i -> i `notElem` outvals) invals
-            unused_out = filter (\ i -> i `notElem` invals) outvals
+            unused_in = filter (`notElem` outvals) invals
+            unused_out = filter (`notElem` invals) outvals
 
-        when (not in_ok) $
+        unless in_ok $
             putStrLn $ "validateValueUsage found duplicate inputs : " ++ show invals ++ "\n"
-        when (not out_ok) $
+        unless out_ok $
             putStrLn $ "validateValueUsage found duplicate outputs : " ++ show outvals ++ "\n"
 
-        when (not $ null unused_in) $
+        unless (null unused_in) $
             putStrLn $ "validateValueUsage unused inputs : " ++ show unused_in ++ "\n"
-        when (not $ null unused_out) $
+        unless (null unused_out) $
             putStrLn $ "validateValueUsage unused outputs : " ++ show unused_out ++ "\n"
 
         return (in_ok && out_ok && not (null unused_in) && not (null unused_out))
 
+    validateOperationOrdering _oplist = return True
 
 extractValues :: [Operation] -> ([Value], [Value])
 extractValues =
