@@ -9,7 +9,7 @@ hsdirs = Common/ Check/ GMP/ New*/ Simple/
 
 hsfiles = $(shell find $(hsdirs) -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
 
-bench_hsfiles = Check/BenchG.hs Check/Bench1.hs Check/Bench2.hs Check/Bench3.hs Check/Bench4.hs Check/BenchS.hs
+bench_hsfiles = Check/BenchG.hs Check/Bench1.hs Check/Bench2.hs Check/Bench3.hs Check/Bench4.hs
 
 ifeq ($(ghc_major_version),7)
 gmp_cmm_files = -IGMP GMP/gmp-wrappers.cmm GMP/*.c
@@ -89,9 +89,6 @@ Check/New4.hs : Check/NewX.template.hs
 
 Check/BenchG.hs : Check/BenchX.template.hs
 	sed "s/BenchX/BenchG/;s/NewX.GHC/GMP.GHC$(ghc_major_version)/" $+ > $@
-
-Check/BenchS.hs : Check/BenchX.template.hs
-	sed "s/BenchX/BenchS/;s/NewX/Simple/" $+ > $@
 
 Check/Bench1.hs : Check/BenchX.template.hs
 	sed "s/BenchX/Bench1/;s/NewX/New1/" $+ > $@
