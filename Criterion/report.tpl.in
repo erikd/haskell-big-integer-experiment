@@ -36,14 +36,15 @@
 <h2>overview</h2>
 
 <p>
-GHC has two official Integer libraries, integer-gmp and integer-simple.
-This report shows their performance in comparison to a new library that aims
-to compete.
+GHC has two official Integer libraries, integer-gmp and integer-simple, the
+latter of which is significantly poorer that the former.
+This report shows the performance integer-gmp in comparison to a new library
+that aims to compete.
 </p>
 
 <p>
 These tests are being carried out with <b>GHC @GHC_VERSION@</b> and the git
-HEAD versions of integer-gmp and integer-simple on <b>@CPU_NAME@/@OS_NAME@</b>.
+HEAD version of integer-gmp <b>@CPU_NAME@/@OS_NAME@</b>.
 </p>
 
 <p>

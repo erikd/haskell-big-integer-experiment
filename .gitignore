@@ -10,6 +10,7 @@ check-integer
 check.log
 Check/Bench[GS0-9].hs
 Check/New[0-9].hs
+Criterion/report.tpl
 GMP/GmpDerivedConstants.h
 half-test
 int-bench
