@@ -469,6 +469,12 @@ timesNatural (NatS !w) n@(NatB _ _) = timesNaturalW n w
 timesNatural n@(NatB _ _) (NatS !w)  = timesNaturalW n w
 timesNatural a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
     | n1 < n2 = timesNatural b a
+
+    {--
+    -- To match the performance on New3 use:
+    | otherwise = timesNaturalNewest a b
+    -}
+
     | otherwise = runStrictPrim $ do
         psum <- newPlaceholderWordArray
         outerLoop 0 psum 0
