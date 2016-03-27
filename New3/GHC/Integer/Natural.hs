@@ -1,7 +1,5 @@
 {-# LANGUAGE CPP, MagicHash, ForeignFunctionInterface, NoImplicitPrelude,
              BangPatterns, UnboxedTuples, UnliftedFFITypes #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 
 #include "MachDeps.h"
 
@@ -10,16 +8,12 @@ module New3.GHC.Integer.Natural where
 import Prelude hiding (Integer, abs, pi, sum, rem, succ) -- (all, error, otherwise, return, show, (++))
 
 import Data.Bits
-
-import GHC.Prim
-import GHC.Types
-import GHC.Tuple ()
+import GHC.Base
 
 import Common.GHC.Integer.Debug
 import Common.GHC.Integer.Loop
 import Common.GHC.Integer.Prim
 import Common.GHC.Integer.StrictPrim
-import New3.GHC.Integer.Sign
 import New3.GHC.Integer.Type
 import New3.GHC.Integer.WordArray
 
@@ -692,16 +686,8 @@ arrayShow !len !arr =
         | otherwise = []
 
 
-signShow :: Sign -> String
-signShow Pos = "Pos"
-signShow Neg = "Neg"
-
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
-
-debugPrint :: Int -> String -> StrictPrim s ()
-debugPrint line s = trace (show line ++ " : " ++ s) $ return ()
-
 
 debugWriteWordArray :: Int -> MutableWordArray (StrictPrim s) -> Int -> Word -> StrictPrim s ()
 # if 0
