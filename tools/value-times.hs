@@ -356,13 +356,13 @@ pprTimes times = do
             , name ++ " :: WordArray -> WordArray -> Natural"
             , name ++ " !xarr !yarr ="
             , "    runStrictPrim $ do"
-            , "        marr <- newWordArray " ++ show maxlen
+            , "        marr <- newWordArray " ++ show (maxlen + 1)
             ]
     mapM_ (putStrLn . indent8 . ppr) $ ops times
 
     mapM_ (putStrLn . indent8)
             [ "narr <- unsafeFreezeWordArray marr"
-            , "let !len = " ++ show (maxlen - 1) ++ " + boxInt# (neWord# (unboxWord " ++ lastCarry ++ ") 0##)"
+            , "let !len = " ++ show maxlen ++ " + boxInt# (neWord# (unboxWord " ++ lastCarry ++ ") 0##)"
 
 
 
@@ -372,7 +372,7 @@ pprTimes times = do
   where
     name = "timesNat" ++ show (x times) ++ "x" ++ show (y times)
     indent8 s = "        " ++ s
-    maxlen = (x times) * (y times) + 1
+    maxlen = (x times) + (y times)
     lastCarry =
         case last (ops times) of
             StoreValue v -> ppr v
