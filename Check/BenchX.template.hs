@@ -4,6 +4,7 @@ module Check.BenchX
     , addBigLoop
     , timesSmallLoop
     , timesSmallBigLoop
+    , timesFourByFourLoop
     , timesBigLoop
     ) where
 
@@ -75,6 +76,27 @@ timesSmallBigLoop iter =
 
     value = X.smallInteger (unboxInt maxBound)
     count = 10
+
+
+timesFourByFourLoop :: Int -> Int
+timesFourByFourLoop iter =
+    loop iter count 0
+  where
+    loop :: Int -> Int -> Int -> Int
+    loop !0 !0 !accum = accum
+    loop !k !0 !_ = loop (k - 1) count 0
+    loop !k !j !accum = loop k (j - 1) (max accum $ boxInt# (X.integerToInt (test j)))
+
+    test !i = X.timesInteger v1 (X.plusInteger v2 (X.smallInteger (unboxInt i)))
+
+    v1 = X.mkInteger True [1 .. len]
+    v2 = X.mkInteger True $ replicate len 0xff
+
+    -- mkInteger takes a list of 31 bit values, but we want `v1` and `v2` to
+    -- be exactly 4 machine words in length regardless of machine Word size.
+    len = if wordSizeInBits == 64 then 8 else 4
+
+    count = 30
 
 
 timesBigLoop :: Int -> X.Integer

@@ -389,13 +389,13 @@ timesNatural :: Natural -> Natural -> Natural
 timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = timesNatural b a
     | otherwise =
-        case 100 * n1 + n2 of
-            202 -> timesNat2x2 arr1 arr2
-            302 -> timesNat3x2 arr1 arr2
-            303 -> timesNat3x3 arr1 arr2
-            402 -> timesNat4x2 arr1 arr2
-            403 -> timesNat4x3 arr1 arr2
-            404 -> timesNat4x4 arr1 arr2
+        case 10 * n1 + n2 of
+            22 -> timesNat2x2 arr1 arr2
+            32 -> timesNat3x2 arr1 arr2
+            33 -> timesNat3x3 arr1 arr2
+            42 -> timesNat4x2 arr1 arr2
+            43 -> timesNat4x3 arr1 arr2
+            44 -> timesNat4x4 arr1 arr2
             _ -> timesNaturalWA n1 arr1 n2 arr2
 
 {-# INLINE timesNat2x2 #-}

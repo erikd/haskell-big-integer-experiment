@@ -68,6 +68,16 @@ timesSmallBigBench loopCount =
             , C.bench "New4"    $ C.whnf Bench4.timesSmallBigLoop loopCount
             ]
 
+timesFourByFourBench :: Int -> C.Benchmark
+timesFourByFourBench loopCount =
+    C.bgroup "Medium Integer multiplication"
+            [ C.bench "GMP"     $ C.whnf BenchG.timesFourByFourLoop loopCount
+            , C.bench "New1"    $ C.whnf Bench1.timesFourByFourLoop loopCount
+            , C.bench "New2"    $ C.whnf Bench2.timesFourByFourLoop loopCount
+            , C.bench "New3"    $ C.whnf Bench3.timesFourByFourLoop loopCount
+            , C.bench "New4"    $ C.whnf Bench4.timesFourByFourLoop loopCount
+            ]
+
 timesBigBench :: Int -> C.Benchmark
 timesBigBench loopCount =
     C.bgroup "Big Integer multiplication"
@@ -88,6 +98,7 @@ data BenchNames
     | Plus
     | SmallTimes
     | SmallBigTimes
+    | FourByFourTimes
     | BigTimes
     | Times
     deriving (Eq, Ord, Read, Show)
@@ -112,7 +123,7 @@ mapArgs [] = concatMap matchBenchmarks [ Plus, Times ]
 mapArgs args =
     concatMap matchBenchmarks
             . filterDupes Plus [ SmallPlus, BigPlus ]
-            . filterDupes Times [ SmallTimes, SmallBigTimes, BigTimes ]
+            . filterDupes Times [ SmallTimes, SmallBigTimes, FourByFourTimes, BigTimes ]
             . nub . sort $ map read args
   where
     filterDupes x xs opts =
@@ -129,6 +140,7 @@ matchBenchmarks name =
         Plus -> plusBenchList
         SmallTimes -> timesSmallBenchList
         SmallBigTimes -> timesSmallBigBenchList
+        FourByFourTimes -> timesFourByFourBenchList
         BigTimes -> timesBigBenchList
         Times -> timesBenchList
   where
@@ -141,6 +153,7 @@ matchBenchmarks name =
 
     timesSmallLoopCount = 200
     timesSmallBigLoopCount = 80
+    timesFourByFourLoopLoopCount = 200
     timesBigLoopCount = 10
 
     plusSmallBenchList = [ addSmallBench addSmallParam ]
@@ -148,10 +161,11 @@ matchBenchmarks name =
 
     timesSmallBenchList = [ timesSmallBench timesSmallLoopCount ]
     timesSmallBigBenchList = [ timesSmallBigBench timesSmallBigLoopCount ]
+    timesFourByFourBenchList = [ timesFourByFourBench timesFourByFourLoopLoopCount ]
     timesBigBenchList = [ timesBigBench timesBigLoopCount ]
 
     plusBenchList = plusSmallBenchList ++ plusBigBenchList
-    timesBenchList = timesSmallBenchList ++ timesSmallBigBenchList ++ timesBigBenchList
+    timesBenchList = timesSmallBenchList ++ timesSmallBigBenchList ++ timesFourByFourBenchList ++ timesBigBenchList
 
 --------------------------------------------------------------------------------
 -- | A function to create a a set of test parameters to pass to addBigLoop.

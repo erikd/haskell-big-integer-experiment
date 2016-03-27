@@ -57,7 +57,8 @@ The Small Integer benchmarks work on Integer values where the input values and
 the result fit within a single machine word (eg 32 bits on 32 bit CPUs, 64 bits
 on 64 bit CPUs).
 The Big Integer benchmarks operate on values that require multiple machine
-words.
+words and the Medium Integer benchmarks operate on values that fit in a small
+fixed number of machine words.
 </p>
 
 
