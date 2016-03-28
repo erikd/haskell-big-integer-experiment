@@ -4,7 +4,7 @@ module Check.BenchX
     , addBigLoop
     , timesSmallLoop
     , timesSmallBigLoop
-    , timesFourByFourLoop
+    , timesMediumLoop
     , timesBigLoop
     ) where
 
@@ -78,8 +78,8 @@ timesSmallBigLoop iter =
     count = 10
 
 
-timesFourByFourLoop :: Int -> Int
-timesFourByFourLoop iter =
+timesMediumLoop :: Int -> Int
+timesMediumLoop iter =
     loop iter count 0
   where
     loop :: Int -> Int -> Int -> Int
