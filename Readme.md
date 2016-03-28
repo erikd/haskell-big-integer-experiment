@@ -54,7 +54,6 @@ you set with the $BROWSER environment variable.
 
 This is the TODO list, with highest priority first.
 
-* Make it work with ghc-8.0 (work in progress).
 * Improve Big Integer multiplication.
 * Benchmark division operations.
 
