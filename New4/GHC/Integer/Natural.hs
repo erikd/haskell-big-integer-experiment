@@ -467,51 +467,9 @@ timesNatural :: Natural -> Natural -> Natural
 timesNatural (NatS !a) (NatS !b) = safeTimesWord a b
 timesNatural (NatS !w) n@(NatB _ _) = timesNaturalW n w
 timesNatural n@(NatB _ _) (NatS !w)  = timesNaturalW n w
-timesNatural a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
+timesNatural a@(NatB !n1 _) b@(NatB !n2 _)
     | n1 < n2 = timesNatural b a
-
-    {--
-    -- To match the performance on New3 use:
     | otherwise = timesNaturalNewest a b
-    -}
-
-    | otherwise = runStrictPrim $ do
-        psum <- newPlaceholderWordArray
-        outerLoop 0 psum 0
-  where
-    outerLoop !psumLen !psum !s2
-        | s2 < n2 = do
-            w <- indexWordArrayM arr2 s2
-            if w == 0
-                then outerLoop psumLen psum (s2 + 1)
-                else do
-                    let !newPsumLen = max psumLen (n1 + s2 + 1) + 1
-                    marr <- cloneWordArrayExtend psumLen psum newPsumLen
-                    possLen <- innerLoop1 marr psumLen psum 0 s2 w 0
-                    narr <- unsafeFreezeWordArray marr
-                    outerLoop possLen narr (s2 + 1)
-        | otherwise =
-            return $! NatB psumLen psum
-
-    innerLoop1 !marr !pn !psum !s1 !s2 !hw !carry
-        | s1 + s2 < pn = do
-            ps <- indexWordArrayM psum (s1 + s2)
-            x <- indexWordArrayM arr1 s1
-            let (# !hc, !hp #) = timesWord2CC x hw carry ps
-            writeWordArray marr (s1 + s2) hp
-            innerLoop1 marr pn psum (s1 + 1) s2 hw hc
-        | otherwise = innerLoop2 marr pn psum s1 s2 hw carry
-
-    innerLoop2 !marr !pn !psum !s1 !s2 !hw !carry
-        | s1 < n1 = do
-            x <- indexWordArrayM arr1 s1
-            let (# !hc, !hp #) = timesWord2C x hw carry
-            writeWordArray marr (s1 + s2) hp
-            innerLoop2 marr pn psum (s1 + 1) s2 hw hc
-        | carry /= 0 = do
-            writeWordArray marr (s1 + s2) carry
-            return (s1 + s2 + 1)
-        | otherwise = return (s1 + s2)
 
 
 {-# NOINLINE timesNaturalNew #-}
@@ -562,7 +520,7 @@ timesNaturalNew a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
 
 timesNaturalNew _ _ = error ("New4/GHC/Integer/Natural.hs: line " ++ show (__LINE__ :: Int))
 
-{-# NOINLINE timesNaturalNewest #-}
+{-# INLINE timesNaturalNewest #-}
 timesNaturalNewest :: Natural -> Natural -> Natural
 timesNaturalNewest a@(NatB !n1 !arr1) b@(NatB !n2 !arr2)
     | n1 < n2 = timesNaturalNewest b a
