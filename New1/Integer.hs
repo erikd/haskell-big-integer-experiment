@@ -14,8 +14,8 @@ import GHC.Types
 import Numeric
 
 import Common.GHC.Integer.Prim
+import Common.GHC.Integer.WordArray
 import New1.GHC.Integer
-import New1.GHC.Integer.Array
 import New1.GHC.Integer.Sign
 import New1.GHC.Integer.Type
 
