@@ -4,11 +4,49 @@ import Control.Monad
 import Data.Char
 import Data.List
 import Data.Map (Map)
-import System.Exit ( exitFailure )
+import System.Environment
+import System.Exit ( exitFailure, exitSuccess )
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
+
+main :: IO ()
+main = do
+    args <- getArgs
+    case args of
+        [x, y] -> runProgram (read x) (read y) Nothing
+        [x, y, fname] -> runProgram (read x) (read y) $ Just fname
+        _ -> usageExit
+
+
+usageExit :: IO ()
+usageExit = do
+    progname <- getProgName
+    putStrLn $ unlines
+        [ ""
+        , "Usage : " ++ progname ++ " x y <filename>"
+        , ""
+        , "where:"
+        , "    x and y are numbers >= 2, x and y < 20 and x > y"
+        , "    filename is optional (stdout will be used if missing)"
+        , ""
+        ]
+    exitSuccess
+
+
+runProgram :: Word -> Word -> Maybe String -> IO ()
+runProgram x y mfname
+    | x < y || x < 2 || y < 2 = do
+        putStrLn $ "Error : x (" ++ show x ++ ") < y (" ++ show y ++ ")"
+        usageExit
+    | Just fname <- mfname =
+        putStrLn $ "runProgram " ++ fname
+    | otherwise =
+        printTimes $ reorderOperations $ insertSums $ initializeProducts x y
+
+-- -----------------------------------------------------------------------------
+-- Implementation follows:
 
 data Source
     = Source Word Char
@@ -114,8 +152,8 @@ data Times = Times
     deriving Show
 
 
-printTimes :: Times -> IO ()
-printTimes times = do
+displayTimes :: Times -> IO ()
+displayTimes times = do
     putStrLn "-------------------------------------------------------------------------"
     mapM_ print $ ops times
     putStrLn "-------------------------------------------------------------------------"
@@ -348,27 +386,22 @@ extractValues =
             StoreValue i -> (i : ins, outs)
 
 
-pprTimes :: Times -> IO ()
-pprTimes times = do
-    mapM_ putStrLn
-            [ ""
-            , "{-# INLINE " ++ name ++ " #-}"
-            , name ++ " :: WordArray -> WordArray -> Natural"
-            , name ++ " !xarr !yarr ="
-            , "    runStrictPrim $ do"
-            , "        marr <- newWordArray " ++ show (maxlen + 1)
-            ]
-    mapM_ (putStrLn . indent8 . ppr) $ ops times
-
-    mapM_ (putStrLn . indent8)
-            [ "narr <- unsafeFreezeWordArray marr"
-            , "let !len = " ++ show maxlen ++ " + boxInt# (neWord# (unboxWord " ++ lastCarry ++ ") 0##)"
-
-
-
-            , "return $! Natural len narr"
-            , ""
-            ]
+pprTimes :: Times -> [String]
+pprTimes times =
+    [ ""
+    , "{-# INLINE " ++ name ++ " #-}"
+    , name ++ " :: WordArray -> WordArray -> Natural"
+    , name ++ " !xarr !yarr ="
+    , "    runStrictPrim $ do"
+    , "        marr <- newWordArray " ++ show (maxlen + 1)
+    ]
+    ++ map (indent8 . ppr) ( ops times)
+    ++ map indent8
+        [ "narr <- unsafeFreezeWordArray marr"
+        , "let !len = " ++ show maxlen ++ " + boxInt# (neWord# (unboxWord " ++ lastCarry ++ ") 0##)"
+        , "return $! Natural len narr"
+        , ""
+        ]
   where
     name = "timesNat" ++ show (x times) ++ "x" ++ show (y times)
     indent8 s = "        " ++ s
@@ -377,3 +410,7 @@ pprTimes times = do
         case last (ops times) of
             StoreValue v -> ppr v
             x -> error $ "lastCarry " ++ show x
+
+
+printTimes :: Times -> IO ()
+printTimes = mapM_ putStrLn . pprTimes
