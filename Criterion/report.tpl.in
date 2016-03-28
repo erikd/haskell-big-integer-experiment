@@ -43,8 +43,8 @@ that aims to compete.
 </p>
 
 <p>
-These tests are being carried out with <b>GHC @GHC_VERSION@</b> and the git
-HEAD version of integer-gmp <b>@CPU_NAME@/@OS_NAME@</b>.
+These tests are being carried out with <b>GHC @GHC_VERSION@</b> on
+<b>@CPU_NAME@/@OS_NAME@</b> and the git HEAD version of integer-gmp.
 </p>
 
 <p>
@@ -52,15 +52,26 @@ New1, New2, New3 and New4 use slightly different definitions of the <tt>Integer<
 data structure to investigate how much difference that makes.
 </p>
 
+
 <p>
-The Small Integer benchmarks work on Integer values where the input values and
-the result fit within a single machine word (eg 32 bits on 32 bit CPUs, 64 bits
-on 64 bit CPUs).
-The Big Integer benchmarks operate on values that require multiple machine
-words and the Medium Integer benchmarks operate on values that fit in a small
-fixed number of machine words.
+The meaning of Small/Medium/Big is as follows:
 </p>
 
+<ul>
+<li>A Small Integer is one that fits in a single machine Word (eg 32 bits on 32
+bit CPUs, 64 bits on 64 bit CPUs).
+Special casing Small by Small operations (addition as well as multiplication)
+and Small by Big operations has significant performance benefits.
+</il>
+
+<li>A Big Integer is one that requires two or more machine Words to store it.
+</il>
+
+<li>
+A Medium Integer is one that requires a small number of machine words (currently
+four).
+</li>
+</ul>
 
 <p><a href="#grokularation">want to understand this report?</a></p>
 
