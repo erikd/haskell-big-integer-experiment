@@ -33,7 +33,6 @@ module New2.GHC.Integer.Type
 import Prelude hiding (Integer, abs, pi, succ) -- (all, error, otherwise, return, show, (++))
 
 import Data.Bits
-import Data.Primitive.ByteArray
 
 import GHC.Prim
 import GHC.Types
@@ -44,7 +43,7 @@ import Numeric (showHex) -- TODO: Remove when its working.
 import Common.GHC.Integer.Prim
 import Common.GHC.Integer.Loop
 import Common.GHC.Integer.StrictPrim
-import New2.GHC.Integer.Array
+import Common.GHC.Integer.WordArray
 import New2.GHC.Integer.Sign
 
 #if !defined(__HADDOCK__)
@@ -58,7 +57,7 @@ data Natural
         {-# UNPACK #-} !Word
     | Large
         {-# UNPACK #-} !Int
-        {-# UNPACK #-} !ByteArray
+        {-# UNPACK #-} !WordArray
 
 --------------------------------------------------------------------------------
 
@@ -105,7 +104,7 @@ integerToInt (Negative (Small (W# w))) = negateInt# (word2Int# w)
 integerToInt (Positive (Large _ arr)) = firstWordAsInt Pos arr
 integerToInt (Negative (Large _ arr)) = firstWordAsInt Neg arr
 
-firstWordAsInt :: Sign -> ByteArray -> Int#
+firstWordAsInt :: Sign -> WordArray -> Int#
 firstWordAsInt s arr =
     let i = word2Int# (unboxWord (indexWordArray arr 0))
     in case s of
@@ -197,7 +196,7 @@ andNatural (Small w) (Large _ arr) = Small (w .&. indexWordArray arr 0)
 andNatural (Large _ arr) (Small w) = Small (w .&. indexWordArray arr 0)
 andNatural (Large n1 arr1) (Large n2 arr2) = andArray (min n1 n2) arr1 arr2
 
-andArray :: Int -> ByteArray -> ByteArray -> Natural
+andArray :: Int -> WordArray -> WordArray -> Natural
 andArray n arr1 arr2 = runStrictPrim $ do
     !marr <- newWordArray n
     loop marr 0
@@ -229,7 +228,7 @@ orNatural (Small w) (Large n arr) = orArrayW n arr w
 orNatural (Large n arr) (Small w) = orArrayW n arr w
 orNatural (Large n1 arr1) (Large n2 arr2) = orArray n1 arr1 n2 arr2
 
-orArrayW :: Int -> ByteArray -> Word -> Natural
+orArrayW :: Int -> WordArray -> Word -> Natural
 orArrayW n arr w = runStrictPrim $ do
     !marr <- newWordArray n
     copyWordArray marr 1 arr 1 (n - 1)
@@ -238,7 +237,7 @@ orArrayW n arr w = runStrictPrim $ do
     !narr <- unsafeFreezeWordArray marr
     finalizeLarge n narr
 
-orArray :: Int -> ByteArray -> Int -> ByteArray -> Natural
+orArray :: Int -> WordArray -> Int -> WordArray -> Natural
 orArray !n1 !arr1 !n2 !arr2
     | n1 < n2 = orArray n2 arr2 n1 arr1
     | otherwise = runStrictPrim $ do
@@ -271,7 +270,7 @@ xorInteger (Positive (Large n1 arr1)) (Positive (Large n2 arr2)) = Positive (xor
 xorInteger _ _ = error ("New2/GHC/Integer/Type.hs: line " ++ show (__LINE__ :: Int))
 
 
-xorArray :: Int -> ByteArray -> Int -> ByteArray -> Natural
+xorArray :: Int -> WordArray -> Int -> WordArray -> Natural
 xorArray !n1 !arr1 !n2 !arr2
     | n1 < n2 = xorArray n2 arr2 n1 arr1
     | otherwise = runStrictPrim $ do
@@ -368,7 +367,7 @@ safePlusWord !w1 !w2 =
         then Small s
         else mkPair s c
 
-plusArrayW :: Int -> ByteArray -> Word -> Natural
+plusArrayW :: Int -> WordArray -> Word -> Natural
 plusArrayW !n !arr !w = runStrictPrim $ do
     !marr <- newWordArray (n + 1)
     writeWordArray marr n 0
@@ -397,7 +396,7 @@ plusArrayW !n !arr !w = runStrictPrim $ do
         | otherwise = return n
 
 
-plusArray :: Int -> ByteArray -> Int -> ByteArray -> Natural
+plusArray :: Int -> WordArray -> Int -> WordArray -> Natural
 plusArray !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray n2 arr2 n1 arr1
     | otherwise = runStrictPrim $ do
@@ -454,7 +453,7 @@ minusNatural !(Small w) !(Large n arr) = plusArrayW n arr w
 minusNatural !(Large n1 arr1) !(Large n2 arr2) = minusArray n1 arr1 n2 arr2
 
 
-minusArrayW :: Int -> ByteArray -> Word -> Natural
+minusArrayW :: Int -> WordArray -> Word -> Natural
 minusArrayW !n !arr !w = runStrictPrim $ do
     !marr <- newWordArray (n + 1)
     writeWordArray marr n 0
@@ -483,7 +482,7 @@ minusArrayW !n !arr !w = runStrictPrim $ do
         | otherwise = return n
 
 
-minusArray :: Int -> ByteArray -> Int -> ByteArray -> Natural
+minusArray :: Int -> WordArray -> Int -> WordArray -> Natural
 minusArray !n1 !arr1 !n2 !arr2
     | n1 < n2 = plusArray n2 arr2 n1 arr1
     | otherwise = runStrictPrim $ do --
@@ -524,22 +523,22 @@ minusArray !n1 !arr1 !n2 !arr2
 
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
-timesInteger !x !y = case (# x, y #) of
-    (# Positive a, Positive b #) -> Positive (timesNatural a b)
-    (# Positive a, Negative b #) -> Negative (timesNatural a b)
-    (# Negative a, Positive b #) -> Negative (timesNatural a b)
-    (# Negative a, Negative b #) -> Positive (timesNatural a b)
-
-timesNatural :: Natural -> Natural -> Natural
-timesNatural !x !y = case (# x, y #) of
-    (# _, Small 0 #) -> Small 0
-    (# Small 0, _ #) -> Small 0
-    (# !a, Small 1 #) -> a
-    (# Small 1, !b #) -> b
-    (# Small !w1, Small !w2 #) -> safeTimesWord w1 w2
-    (# Small !w1, Large !n2 !arr2 #) -> timesArrayW n2 arr2 w1
-    (# Large !n1 !arr1, Small !w2 #) -> timesArrayW n1 arr1 w2
-    (# Large !n1 !arr1, Large !n2 !arr2 #) -> timesArray n1 arr1 n2 arr2
+timesInteger !xi !yi = case (# xi, yi #) of
+    (# Positive !a, Positive !b #) -> Positive (timesNatural a b)
+    (# Positive !a, Negative !b #) -> Negative (timesNatural a b)
+    (# Negative !a, Positive !b #) -> Negative (timesNatural a b)
+    (# Negative !a, Negative !b #) -> Positive (timesNatural a b)
+  where
+    timesNatural :: Natural -> Natural -> Natural
+    timesNatural !xn !yn = case (# xn, yn #) of
+        (# _, Small 0 #) -> Small 0
+        (# Small 0, _ #) -> Small 0
+        (# !a, Small 1 #) -> a
+        (# Small 1, !b #) -> b
+        (# Small !w1, Small !w2 #) -> safeTimesWord w1 w2
+        (# Small !w1, Large !n2 !arr2 #) -> timesArrayW n2 arr2 w1
+        (# Large !n1 !arr1, Small !w2 #) -> timesArrayW n1 arr1 w2
+        (# Large !n1 !arr1, Large !n2 !arr2 #) -> timesArray n1 arr1 n2 arr2
 
 {-# INLINE safeTimesWord #-}
 safeTimesWord :: Word -> Word -> Natural
@@ -549,13 +548,14 @@ safeTimesWord !w1 !w2 =
         then Small prod
         else mkPair prod ovf
 
-timesArrayW :: Int -> ByteArray -> Word -> Natural
+{-# INLINE timesArrayW #-}
+timesArrayW :: Int -> WordArray -> Word -> Natural
 timesArrayW !n !arr !w = runStrictPrim $ do
-    !marr <- newWordArrayCleared (n + 1)
+    !marr <- newWordArray (n + 1)
     writeWordArray marr (n - 1) 0
-    loop marr 0 0
+    !nlen <- loop marr 0 0
     !narr <- unsafeFreezeWordArray marr
-    finalizeLarge (n + 1) narr
+    return $! Large nlen narr
   where
     loop !marr !i !carry
         | i < n = do
@@ -563,11 +563,13 @@ timesArrayW !n !arr !w = runStrictPrim $ do
             let (# !c, !p #) = timesWord2C x w carry
             writeWordArray marr i p
             loop marr (i + 1) c
-        | otherwise =
+        | carry /= 0 = do
             writeWordArray marr i carry
+            return (i + 1)
+        | otherwise = return i
 
 
-timesArray :: Int -> ByteArray -> Int -> ByteArray -> Natural
+timesArray :: Int -> WordArray -> Int -> WordArray -> Natural
 timesArray !n1 !arr1 !n2 !arr2
     | n1 < n2 = timesArray n2 arr2 n1 arr1
     | otherwise = runStrictPrim $ do
@@ -757,7 +759,7 @@ mkSingletonArray !x = runStrictPrim mkSingleton
         !narr <- unsafeFreezeWordArray marr
         return $ Large 1 narr
 
-shiftLArray :: Int -> ByteArray -> Int -> Natural
+shiftLArray :: Int -> WordArray -> Int -> Natural
 shiftLArray !n !arr !i
     | i < WORD_SIZE_IN_BITS =
             smallShiftLArray n arr (# i, WORD_SIZE_IN_BITS - i #)
@@ -767,7 +769,7 @@ shiftLArray !n !arr !i
                 then wordShiftLArray n arr q
                 else largeShiftLArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
 
-smallShiftLArray :: Int -> ByteArray -> (# Int, Int #) -> Natural
+smallShiftLArray :: Int -> WordArray -> (# Int, Int #) -> Natural
 smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
     !marr <- newWordArray (n + 1)
     !nlen <- loop marr 0 0
@@ -785,7 +787,7 @@ smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
         | otherwise = return n
 
 -- | TODO : Use copy here
-wordShiftLArray :: Int -> ByteArray -> Int -> Natural
+wordShiftLArray :: Int -> WordArray -> Int -> Natural
 wordShiftLArray !n !arr !q = runStrictPrim $ do
     !marr <- newWordArray (n + q)
     loop1 marr 0
@@ -805,7 +807,7 @@ wordShiftLArray !n !arr !q = runStrictPrim $ do
         | otherwise = return ()
 
 
-largeShiftLArray :: Int -> ByteArray-> (# Int, Int, Int #) -> Natural
+largeShiftLArray :: Int -> WordArray-> (# Int, Int, Int #) -> Natural
 largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
     !marr <- newWordArray (n + q + 1)
     setWordArray marr 0 q 0
@@ -824,7 +826,7 @@ largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
             writeWordArray marr (q + i) 0
 
 
-shiftRArray :: Int -> ByteArray -> Int -> Natural
+shiftRArray :: Int -> WordArray -> Int -> Natural
 shiftRArray !n !arr !i
     | i < WORD_SIZE_IN_BITS =
             smallShiftRArray n arr (# i, WORD_SIZE_IN_BITS - i #)
@@ -837,7 +839,7 @@ shiftRArray !n !arr !i
                     else largeShiftRArray n arr (# q, r, WORD_SIZE_IN_BITS - r #)
 
 
-smallShiftRArray :: Int -> ByteArray -> (# Int, Int #) -> Natural
+smallShiftRArray :: Int -> WordArray -> (# Int, Int #) -> Natural
 smallShiftRArray !n !arr (# !si, !sj #) = runStrictPrim $ do
     !marr <- newWordArray n
     loop marr (n - 1) 0
@@ -851,7 +853,7 @@ smallShiftRArray !n !arr (# !si, !sj #) = runStrictPrim $ do
             loop marr (i - 1) (unsafeShiftL x sj)
         | otherwise = return ()
 
-wordShiftRArray :: Int -> ByteArray -> Int -> Natural
+wordShiftRArray :: Int -> WordArray -> Int -> Natural
 wordShiftRArray !n !arr !q = runStrictPrim $ do
     !marr <- newWordArray (n - q)
     copyWordArray marr 0 arr q (n - q)
@@ -859,7 +861,7 @@ wordShiftRArray !n !arr !q = runStrictPrim $ do
     finalizeLarge (n - q) narr
 
 
-largeShiftRArray :: Int -> ByteArray-> (# Int, Int, Int #) -> Natural
+largeShiftRArray :: Int -> WordArray-> (# Int, Int, Int #) -> Natural
 largeShiftRArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
     !marr <- newWordArray (n - q)
     loop marr (n - q - 1) 0
@@ -874,7 +876,7 @@ largeShiftRArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
         | otherwise = return ()
 
 
-finalizeLarge :: Int -> ByteArray -> StrictPrim s Natural
+finalizeLarge :: Int -> WordArray -> StrictPrim s Natural
 finalizeLarge !nin !arr = do
     let !len = nonZeroLen nin arr
     !x <- indexWordArrayM arr 0
@@ -883,7 +885,7 @@ finalizeLarge !nin !arr = do
             then Small 0
             else Large len arr
 
-nonZeroLen :: Int -> ByteArray -> Int
+nonZeroLen :: Int -> WordArray -> Int
 nonZeroLen !len !arr
     | len <= 1 = 1
     | otherwise =
@@ -921,7 +923,7 @@ toList ii =
                     x : xs
                 | otherwise = []
 
-arrayShow :: Int -> ByteArray -> String
+arrayShow :: Int -> WordArray -> String
 arrayShow !len !arr =
     let hexify w =
             let x = showHex w ""
