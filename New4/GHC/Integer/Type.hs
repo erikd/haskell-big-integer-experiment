@@ -5,7 +5,7 @@ module New4.GHC.Integer.Type where
 import GHC.Types
 
 
-import New4.GHC.Integer.WordArray
+import Common.GHC.Integer.WordArray
 
 data Integer
     = Positive !Natural

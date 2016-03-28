@@ -15,7 +15,7 @@ import Common.GHC.Integer.Loop
 import Common.GHC.Integer.Prim
 import Common.GHC.Integer.StrictPrim
 import New3.GHC.Integer.Type
-import New3.GHC.Integer.WordArray
+import Common.GHC.Integer.WordArray
 
 #if !defined(__HADDOCK__)
 

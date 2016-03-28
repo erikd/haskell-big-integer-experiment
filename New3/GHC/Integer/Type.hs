@@ -10,7 +10,7 @@ import GHC.Prim
 import GHC.Types
 
 
-import New3.GHC.Integer.WordArray
+import Common.GHC.Integer.WordArray
 
 data Integer
     = SmallPos Word#

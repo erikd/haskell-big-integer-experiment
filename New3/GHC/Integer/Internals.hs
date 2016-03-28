@@ -45,7 +45,7 @@ import Common.GHC.Integer.StrictPrim
 import New3.GHC.Integer.Natural
 import New3.GHC.Integer.Sign
 import New3.GHC.Integer.Type
-import New3.GHC.Integer.WordArray
+import Common.GHC.Integer.WordArray
 
 #if !defined(__HADDOCK__)
 
