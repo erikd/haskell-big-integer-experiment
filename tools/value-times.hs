@@ -145,6 +145,7 @@ opCompare op1 op2 =
 data Times = Times
     { x :: Word
     , y :: Word
+    , len :: Word
     , ops :: [Operation]
     , vals :: Map Word [Value]
     , names :: Map Word [(ValueType, Int)]
@@ -162,7 +163,7 @@ displayTimes times = do
 
 
 timesEmpty :: Word -> Word -> Times
-timesEmpty x y = Times x y [] Map.empty Map.empty
+timesEmpty x y = Times x y (x + y) [] Map.empty Map.empty
 
 
 insertResults :: Map Word [Value] -> Operation -> Map Word [Value]
@@ -284,7 +285,7 @@ insertSums times =
     insertIndexSums :: Word -> Times -> Times
     insertIndexSums index times =
         case getIndexVals index times of
-            (newtimes, [a, b]) -> insertIndexSums index $ appendOp (makeSum a b) newtimes
+            (newtimes, [a, b]) -> insertIndexSums index $ appendOp (makeSum (len times - 1) a b) newtimes
             (newtimes, [a]) -> newtimes { ops = ops newtimes ++ [StoreValue a] }
             (_, _) -> times
 
@@ -293,8 +294,8 @@ reorderOperations :: Times -> Times
 reorderOperations times = times { ops = sortBy opCompare $ ops times }
 
 
-makeSum :: Value -> Value -> Operation
-makeSum v1 v2 =
+makeSum :: Word -> Value -> Value -> Operation
+makeSum maxIndex v1 v2 =
     case (v1, v2) of
         -- Sums that can produce a carry.
         (Value Product i _, Value Product _ _) ->
@@ -303,12 +304,13 @@ makeSum v1 v2 =
             PlusWord2 (v1, v2) (Value SumCarry (i + 1) 0, Value Sum i 0)
         (Value Product i _, Value ProdCarry _ _) ->
             PlusWord2 (v1, v2) (Value SumCarry (i + 1) 0, Value Sum i 0)
-        (Value SumCarry i _, Value Sum _ _) ->
-            PlusWord2 (v1, v2) (Value SumCarry (i + 1) 0, Value Sum i 0)
-        (Value Sum i _, Value Sum _ _) ->
-            PlusWord2 (v1, v2) (Value SumCarry (i + 1) 0, Value Sum i 0)
         (Value ProdCarry i _, Value ProdCarry _ _) ->
             PlusWord2 (v1, v2) (Value SumCarry (i + 1) 0, Value Sum i 0)
+
+        (Value Sum _ _, Value SumCarry i _) -> lastPlusWord i
+        (Value SumCarry i _, Value Sum _ _) -> lastPlusWord i
+        (Value Sum i _, Value Sum _ _) -> lastPlusWord i
+
 
         -- Sums that *will not* produce a carry.
         (Value ProdCarry i _, Value SumCarry _ _) ->
@@ -317,6 +319,11 @@ makeSum v1 v2 =
             PlusWord (v1, v2) (Value Sum i 0)
 
         x -> error $ "makeSum " ++ show x
+  where
+    lastPlusWord i =
+        if i >= maxIndex
+            then PlusWord (v1, v2) (Value Sum i 0)
+            else PlusWord2 (v1, v2) (Value SumCarry (i + 1) 0, Value Sum i 0)
 
 
 validateValueUsage :: Times -> IO ()
@@ -393,12 +400,12 @@ pprTimes times =
     , name ++ " :: WordArray -> WordArray -> Natural"
     , name ++ " !xarr !yarr ="
     , "    runStrictPrim $ do"
-    , "        marr <- newWordArray " ++ show (maxlen + 1)
+    , "        marr <- newWordArray " ++ show maxlen
     ]
     ++ map (indent8 . ppr) ( ops times)
     ++ map indent8
         [ "narr <- unsafeFreezeWordArray marr"
-        , "let !len = " ++ show maxlen ++ " + boxInt# (neWord# (unboxWord " ++ lastCarry ++ ") 0##)"
+        , "let !len = " ++ show (maxlen - 1) ++ " + boxInt# (neWord# (unboxWord " ++ lastCarry ++ ") 0##)"
         , "return $! Natural len narr"
         , ""
         ]
