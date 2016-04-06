@@ -42,8 +42,10 @@ runProgram x y mfname
         usageExit
     | Just fname <- mfname =
         putStrLn $ "runProgram " ++ fname
-    | otherwise =
-        printTimes $ reorderOperations $ insertSums $ initializeProducts x y
+    | otherwise = do
+        let program = reorderOperations $ insertSums $ initializeProducts x y
+        validateValueUsage program
+        printTimes program
 
 -- -----------------------------------------------------------------------------
 -- Implementation follows:
@@ -299,6 +301,13 @@ insertSums times =
     insertIndexSums index txs =
         case getIndexVals index txs of
             (newtxs, [a, b]) -> insertIndexSums index $ appendOp (makeSum (len txs - 1) a b) newtxs
+            (newtxs, [a]) -> insertCarrySums (index + 1) $ newtxs { operations = operations newtxs ++ [StoreValue a] }
+            (_, _) -> txs
+
+    insertCarrySums :: Word -> Times -> Times
+    insertCarrySums index txs =
+        case getIndexVals index txs of
+            (newtxs, [a, b]) -> insertIndexSums index $ appendOp (makeSum (len txs - 1) a b) newtxs
             (newtxs, [a]) -> newtxs { operations = operations newtxs ++ [StoreValue a] }
             (_, _) -> txs
 
@@ -352,7 +361,6 @@ validateValueUsage times = do
     when (or results) $ do
         putStrLn "Terminating"
         exitFailure
-    putStrLn "Looks good to me!"
   where
     valuesAreEmpty =
         let elems = concat . Map.elems $ values times
