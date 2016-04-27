@@ -421,13 +421,11 @@ pprTimes :: Times -> [String]
 pprTimes times =
     [ ""
     , "{-# INLINE " ++ name ++ " #-}"
-    , name ++ " :: WordArray -> WordArray -> Natural"
-    , name ++ " !xarr !yarr ="
-    , "    runStrictPrim $ do"
-    , "        marr <- newWordArray " ++ show maxlen
+    , name ++ " :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Natural"
+    , name ++ " !xarr !yarr !marr = do"
     ]
-    ++ map (indent8 . ppr) ( operations times)
-    ++ map indent8
+    ++ map (indent4 . ppr) ( operations times)
+    ++ map indent4
         [ "narr <- unsafeFreezeWordArray marr"
         , "let !len = " ++ show (maxlen - 1) ++ " + boxInt# (neWord# (unboxWord " ++ lastCarry ++ ") 0##)"
         , "return $! Natural len narr"
@@ -435,7 +433,7 @@ pprTimes times =
         ]
   where
     name = "timesNat" ++ show (xv times) ++ "x" ++ show (yv times)
-    indent8 s = "        " ++ s
+    indent4 s = "    " ++ s
     maxlen = xv times + yv times
     lastCarry =
         case last (operations times) of
