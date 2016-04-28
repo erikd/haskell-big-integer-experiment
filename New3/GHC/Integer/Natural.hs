@@ -391,17 +391,19 @@ timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
     | n1 < n2 = timesNatural b a
     | otherwise = runStrictPrim $ do
         marr <- newWordArray (n1 + n2)
-        case 10 * n1 + n2 of
-            22 -> timesNat2x2 arr1 arr2 marr
-            32 -> timesNat3x2 arr1 arr2 marr
-            33 -> timesNat3x3 arr1 arr2 marr
-            42 -> timesNat4x2 arr1 arr2 marr
-            43 -> timesNat4x3 arr1 arr2 marr
-            44 -> timesNat4x4 arr1 arr2 marr
-            _ -> timesNaturalWA n1 arr1 n2 arr2 marr
+        len <- case 10 * n1 + n2 of
+                22 -> timesNat2x2 arr1 arr2 marr
+                32 -> timesNat3x2 arr1 arr2 marr
+                33 -> timesNat3x3 arr1 arr2 marr
+                42 -> timesNat4x2 arr1 arr2 marr
+                43 -> timesNat4x3 arr1 arr2 marr
+                44 -> timesNat4x4 arr1 arr2 marr
+                _ -> timesNaturalWA n1 arr1 n2 arr2 marr
+        narr <- unsafeFreezeWordArray marr
+        return $! Natural len narr
 
 {-# INLINE timesNat2x2 #-}
-timesNat2x2 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Natural
+timesNat2x2 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
 timesNat2x2 !xarr !yarr !marr = do
     x0 <- indexWordArrayM xarr 0
     y0 <- indexWordArrayM yarr 0
@@ -424,13 +426,10 @@ timesNat2x2 !xarr !yarr !marr = do
     let sum3b = plusWord sc3b sc3c
     let sum3c = plusWord sum3a sum3b
     writeWordArray marr 3 sum3c
-    narr <- unsafeFreezeWordArray marr
-    let !len = 3 + boxInt# (neWord# (unboxWord sum3c) 0##)
-    return $! Natural len narr
-
+    return $ 3 + boxInt# (neWord# (unboxWord sum3c) 0##)
 
 {-# INLINE timesNat3x2 #-}
-timesNat3x2 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Natural
+timesNat3x2 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
 timesNat3x2 !xarr !yarr !marr = do
     x0 <- indexWordArrayM xarr 0
     y0 <- indexWordArrayM yarr 0
@@ -465,12 +464,10 @@ timesNat3x2 !xarr !yarr !marr = do
     let sum4c = plusWord sc4d sum4a
     let sum4d = plusWord sum4b sum4c
     writeWordArray marr 4 sum4d
-    narr <- unsafeFreezeWordArray marr
-    let !len = 4 + boxInt# (neWord# (unboxWord sum4d) 0##)
-    return $! Natural len narr
+    return $ 4 + boxInt# (neWord# (unboxWord sum4d) 0##)
 
 {-# INLINE timesNat3x3 #-}
-timesNat3x3 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Natural
+timesNat3x3 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
 timesNat3x3 !xarr !yarr !marr = do
     x0 <- indexWordArrayM xarr 0
     y0 <- indexWordArrayM yarr 0
@@ -523,13 +520,11 @@ timesNat3x3 !xarr !yarr !marr = do
     let sum5d = plusWord sum5a sum5b
     let sum5e = plusWord sum5c sum5d
     writeWordArray marr 5 sum5e
-    narr <- unsafeFreezeWordArray marr
-    let !len = 5 + boxInt# (neWord# (unboxWord sum5e) 0##)
-    return $! Natural len narr
+    return $ 5 + boxInt# (neWord# (unboxWord sum5e) 0##)
 
 
 {-# INLINE timesNat4x2 #-}
-timesNat4x2 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Natural
+timesNat4x2 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
 timesNat4x2 !xarr !yarr !marr = do
     x0 <- indexWordArrayM xarr 0
     y0 <- indexWordArrayM yarr 0
@@ -576,12 +571,10 @@ timesNat4x2 !xarr !yarr !marr = do
     let sum5c = plusWord sc5d sum5a
     let sum5d = plusWord sum5b sum5c
     writeWordArray marr 5 sum5d
-    narr <- unsafeFreezeWordArray marr
-    let !len = 5 + boxInt# (neWord# (unboxWord sum5d) 0##)
-    return $! Natural len narr
+    return $ 5 + boxInt# (neWord# (unboxWord sum5d) 0##)
 
 {-# INLINE timesNat4x3 #-}
-timesNat4x3 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Natural
+timesNat4x3 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
 timesNat4x3 !xarr !yarr !marr = do
     x0 <- indexWordArrayM xarr 0
     y0 <- indexWordArrayM yarr 0
@@ -655,12 +648,10 @@ timesNat4x3 !xarr !yarr !marr = do
     let sum6e = plusWord sum6b sum6c
     let sum6f = plusWord sum6d sum6e
     writeWordArray marr 6 sum6f
-    narr <- unsafeFreezeWordArray marr
-    let !len = 6 + boxInt# (neWord# (unboxWord sum6f) 0##)
-    return $! Natural len narr
+    return $ 6 + boxInt# (neWord# (unboxWord sum6f) 0##)
 
 {-# INLINE timesNat4x4 #-}
-timesNat4x4 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Natural
+timesNat4x4 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
 timesNat4x4 !xarr !yarr !marr = do
     x0 <- indexWordArrayM xarr 0
     y0 <- indexWordArrayM yarr 0
@@ -758,16 +749,12 @@ timesNat4x4 !xarr !yarr !marr = do
     let sum7e = plusWord sum7b sum7c
     let sum7f = plusWord sum7d sum7e
     writeWordArray marr 7 sum7f
-    narr <- unsafeFreezeWordArray marr
-    let !len = 7 + boxInt# (neWord# (unboxWord sum7f) 0##)
-    return $! Natural len narr
+    return $ 7 + boxInt# (neWord# (unboxWord sum7f) 0##)
 
 {-# INLINE timesNaturalWA #-}
-timesNaturalWA :: PrimMonad m => Int -> WordArray -> Int -> WordArray -> MutableWordArray m -> m Natural
-timesNaturalWA !n1 !arr1 !n2 !arr2 !marrout = do
-        len <- preLoop marrout
-        narr <- unsafeFreezeWordArray marrout
-        return $! Natural len narr
+timesNaturalWA :: PrimMonad m => Int -> WordArray -> Int -> WordArray -> MutableWordArray m -> m Int
+timesNaturalWA !n1 !arr1 !n2 !arr2 =
+    preLoop
   where
     preLoop marr = do
         x <- indexWordArrayM arr1 0
