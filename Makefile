@@ -11,12 +11,6 @@ hsfiles = $(shell find $(hsdirs) -name \*.hs -o -name \*.lhs) *.hs $(checkfiles)
 
 bench_hsfiles = Check/BenchG.hs Check/Bench1.hs Check/Bench2.hs Check/Bench3.hs Check/Bench4.hs
 
-ifeq ($(ghc_major_version),7)
-gmp_cmm_files = -IGMP GMP/gmp-wrappers.cmm GMP/*.c
-else
-gmp_cmm_files =
-endif
-
 checkfiles = Check/New1.hs Check/New2.hs Check/New3.hs Check/New4.hs
 
 today := $(shell date "+%Y%m%d")
@@ -44,13 +38,13 @@ llvm3 :
 	less New3/GHC/Integer/Internals.ll
 
 check-integer : check-integer.hs Stamp/ready $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs Check/New4.hs
-	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
+	$(GHC) $(GHCFLAGS) --make $< -o $@
 
 test-internals : test-internals.hs $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
 
 bench-integer : bench-integer.hs Stamp/ready $(hsfiles) $(bench_hsfiles)
-	$(GHC) $(GHCFLAGS) --make $< $(gmp_cmm_files) -o $@
+	$(GHC) $(GHCFLAGS) --make $< -o $@
 
 karatsubaSlice : karatsubaSlice.hs $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
