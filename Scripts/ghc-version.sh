@@ -3,9 +3,9 @@
 version=$(ghc --numeric-version)
 
 case "${version}" in
-	7.10.*)
-		;;
 	8.0.*)
+		;;
+	8.2.*)
 		echo "GHC version ${version} may not fully work."
 		;;
 	*)
