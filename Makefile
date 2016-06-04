@@ -113,11 +113,6 @@ date-bench : bench-integer.html
 view-bench : bench-integer.html
 	$(BROWSER) bench-integer.html
 
-GMP/GmpDerivedConstants.h : integer-gmp-7.10/mkGmpDerivedConstants/mkGmpDerivedConstants.c
-	gcc -Wall $< -o mkGmpDerivedConstants
-	./mkGmpDerivedConstants > $@
-	rm -f mkGmpDerivedConstants
-
 # Update the local copies of integer-simple and integer-gmp and patch them
 # to work in this framework.
 update :
@@ -126,34 +121,27 @@ update :
 
 Stamp/update :
 	mkdir -p Stamp
-	@if test ! -d integer-gmp-7.10 ; then \
-		git clone http://git.haskell.org/packages/integer-gmp.git integer-gmp-7.10 ; \
-		fi
 	@if test ! -d integer-simple ; then \
 		git clone http://git.haskell.org/packages/integer-simple.git ; \
 		fi
-	(cd integer-gmp-7.10 && git checkout master && git pull --rebase)
 	(cd integer-simple && git checkout master && git pull --rebase)
 	@touch $@
 
 Stamp/copy : Stamp/update  Stamp/ghc-version
 	Scripts/copy_modify.sh integer-simple Simple
-	Scripts/copy_modify.sh integer-gmp-7.10 GMP
-	cp integer-gmp-7.10/cbits/gmp-wrappers.cmm GMP/
 	@touch $@
 
-Stamp/ready : Stamp/copy GMP/GmpDerivedConstants.h
+Stamp/ready : Stamp/copy
 	@touch $@
 
 Stamp/ghc-version :
 	Scripts/ghc-version.sh
 	touch $@
 
-
 clean :
 	@rm -f $(TARGETS) *.o *.hi bench-integer.html Check/Bench[GS0-9].hs Check/New[0-9].hs
 	@rm -f $(TARGETS) bench-integer.html Check/Bench[GS0-9].hs Check/New[0-9].hs
-	@rm -f GMP/GmpDerivedConstants.h Criterion/report.tpl
+	@rm -f Criterion/report.tpl
 	@find $(hsdirs) -name \*.o -o -name \*.hi -o -name \*.s -o -name \*.ll -o -name \*.hcr | xargs rm -f
 
 hlint :
