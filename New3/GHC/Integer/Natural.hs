@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP, MagicHash, ForeignFunctionInterface, NoImplicitPrelude,
-             BangPatterns, UnboxedTuples, UnliftedFFITypes #-}
+             BangPatterns, Strict, UnboxedTuples, UnliftedFFITypes #-}
 
 #include "MachDeps.h"
 

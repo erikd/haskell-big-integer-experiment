@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, NoImplicitPrelude #-}
+{-# LANGUAGE BangPatterns, NoImplicitPrelude, Strict #-}
 
 module New3.GHC.Integer.Sign where
 

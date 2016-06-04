@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP, MagicHash, ForeignFunctionInterface, NoImplicitPrelude,
-             BangPatterns, UnboxedTuples, UnliftedFFITypes #-}
+             BangPatterns, Strict, UnboxedTuples, UnliftedFFITypes #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 
