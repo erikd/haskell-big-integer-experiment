@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, NoImplicitPrelude, MagicHash #-}
+{-# LANGUAGE NoImplicitPrelude, MagicHash #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- *All* of this code was ripped from the GHC sources.
@@ -9,11 +9,7 @@ module GMP.Integer
     ( module GMPX
     ) where
 
-#if  __GLASGOW_HASKELL__ == 710
-import GMP.GHC7.Integer as GMPX
-#else
 import GMP.GHC8.Integer as GMPX
-#endif
 
 import GHC.Base
 

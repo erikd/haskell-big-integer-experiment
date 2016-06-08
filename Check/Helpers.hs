@@ -4,10 +4,7 @@ module Check.Helpers where
 #include "MachDeps.h"
 
 import Data.Bits
-import GHC.Base
-#if __GLASGOW_HASKELL__ >= 710
-        hiding (mapM)
-#endif
+import GHC.Base hiding (mapM)
 import GHC.Word (Word8)
 
 import qualified System.Random as R

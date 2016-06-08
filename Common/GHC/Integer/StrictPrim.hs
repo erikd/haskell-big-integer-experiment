@@ -10,7 +10,7 @@ State monad from Base to get StrictPrim.
 [0] http://hackage.haskell.org/package/strict-identity
 -}
 
-{-# LANGUAGE BangPatterns, CPP, MagicHash, NoImplicitPrelude, RankNTypes,
+{-# LANGUAGE BangPatterns, MagicHash, NoImplicitPrelude, RankNTypes,
     TypeFamilies, UnboxedTuples, UnliftedFFITypes #-}
 
 module Common.GHC.Integer.StrictPrim
@@ -18,12 +18,7 @@ module Common.GHC.Integer.StrictPrim
     , runStrictPrim
     ) where
 
-#if __GLASGOW_HASKELL__ < 709
-import Control.Applicative
-import GHC.Base
-#else
-import GHC.Base hiding (($!)) -- Want to use the local definition of ($!)regardless.
-#endif
+import GHC.Base hiding (($!)) -- Want to use the local definition of ($!) regardless.
 
 import Control.Monad.Primitive
 
