@@ -542,10 +542,8 @@ fromNatural !s !(Natural !n !arr)
     | otherwise = Negative n arr
 
 mkPair :: (Int -> WordArray -> Integer) -> Word -> Word -> Integer
-mkPair !ctor !lo !hi = runStrictPrim mkNatPair
-  where
-    mkNatPair :: StrictPrim s Integer
-    mkNatPair = do
+mkPair !ctor !lo !hi =
+    runStrictPrim $ do
         marr <- newWordArray 2
         writeWordArray marr 0 lo
         writeWordArray marr 1 hi

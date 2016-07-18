@@ -793,10 +793,8 @@ zerothWordOfNatural (NatS !x) = x
 zerothWordOfNatural (NatB !_ !arr) = indexWordArray arr 0
 
 mkPair :: Word -> Word -> Natural
-mkPair !lo !hi = runStrictPrim mkNatPair
-  where
-    mkNatPair :: StrictPrim s Natural
-    mkNatPair = do
+mkPair !lo !hi =
+    runStrictPrim $ do
         marr <- newWordArray 2
         writeWordArray marr 0 lo
         writeWordArray marr 1 hi
@@ -804,10 +802,8 @@ mkPair !lo !hi = runStrictPrim mkNatPair
         return $ NatB 2 narr
 
 mkSingletonNat :: Word -> Natural
-mkSingletonNat !x = runStrictPrim mkNat
-  where
-    mkNat :: StrictPrim s Natural
-    mkNat = do
+mkSingletonNat !x =
+    runStrictPrim $ do
         marr <- newWordArray 1
         writeWordArray marr 0 x
         narr <- unsafeFreezeWordArray marr

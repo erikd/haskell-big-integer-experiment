@@ -972,10 +972,8 @@ zerothWordOfNatural :: Natural -> Word
 zerothWordOfNatural !(Natural _ arr) = indexWordArray arr 0
 
 mkSingletonNat :: Word -> Natural
-mkSingletonNat !x = runStrictPrim mkNat
-  where
-    mkNat :: StrictPrim s Natural
-    mkNat = do
+mkSingletonNat !x =
+    runStrictPrim $ do
         marr <- newWordArray 1
         writeWordArray marr 0 x
         narr <- unsafeFreezeWordArray marr
