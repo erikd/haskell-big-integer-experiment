@@ -12,6 +12,7 @@ import Numeric (showHex)
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck.Arbitrary
+import Test.QuickCheck.Gen
 import Test.QuickCheck.Modifiers
 
 import qualified GMP.Integer as G
@@ -326,21 +327,15 @@ instance Arbitrary GmpNewPair where
                 return $! GNP (G.smallInteger (unboxInt i)) (X.smallInteger (unboxInt i))
             else do
                 sign <- arbitrary
-                pos <- fmap (positive32bits . take 30 . nonEmptyNonZero) arbitrary
+                len <- choose (2, 50)
+                pos <- vectorOf len arbPositve32Bit
                 return $! GNP (G.mkInteger sign pos) (X.mkInteger sign pos)
     shrink (GNP g x) =
+        -- This shrink method is far from optimal.
         map (\i -> GNP (G.shiftLInteger g (unboxInt i)) (X.shiftLInteger x (unboxInt i))) [1..50]
 
-newtype NonEmptyNonZero a = NonEmptyNonZero { nonEmptyNonZero :: [a] }
-
-instance (Arbitrary a, Eq a, Num a) => Arbitrary (NonEmptyNonZero a) where
-    arbitrary = do
-        x <- fmap getNonZero arbitrary
-        xs <- arbitrary
-        return $ NonEmptyNonZero (x:xs)
-
-    shrink (NonEmptyNonZero xs) =
-        [ NonEmptyNonZero xs'
-        | xs' <- shrink xs
-        , not (null xs')
-        ]
+-- The default `Arbitrary` instance for `Int` mostly generates "small" values
+-- whereas the following should be uniformed distributed across the specified
+-- (inclusve) range.
+arbPositve32Bit :: Gen Int
+arbPositve32Bit = choose (0, 0x7fffffff)
