@@ -1,11 +1,15 @@
-{-# LANGUAGE CPP, MagicHash, UnboxedTuples #-}
+{-# LANGUAGE CPP, ImplicitParams, MagicHash, UnboxedTuples #-}
 module Check.Helpers where
 
 #include "MachDeps.h"
 
+import Control.Monad (unless)
 import Data.Bits
 import GHC.Base hiding (mapM)
+import GHC.Stack (CallStack)
 import GHC.Word (Word8)
+import Test.Hspec.Expectations (Expectation)
+import Test.HUnit (assertFailure)
 
 import qualified System.Random as R
 
@@ -82,3 +86,16 @@ bitsPerWord =
     64
 #endif
 
+-- -----------------------------------------------------------------------------
+-- The following heavily inspired by / stolen from Hspec.
+
+#define with_loc(NAME, TYPE) NAME :: (?loc :: CallStack) => TYPE
+
+with_loc(shouldBeNear, (Show a, Ord a, Floating a) => a -> a -> Expectation)
+actual `shouldBeNear` expected
+    | actual == expected = expectTrue ("expected: " ++ show expected ++ "\n but got: " ++ show actual) (actual == expected)
+    | actual == 0 || expected == 0 = expectTrue ("expected: " ++ show expected ++ "\n but got: " ++ show actual) (abs (actual - expected) < 1e-15)
+    | otherwise = expectTrue ("expected: " ++ show expected ++ "\n but got: " ++ show actual) (abs (actual - expected) / (abs actual + abs expected) < 1e-15)
+
+with_loc(expectTrue, String -> Bool -> Expectation)
+expectTrue msg b = unless b (assertFailure msg)
