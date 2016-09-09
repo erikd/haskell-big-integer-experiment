@@ -6,6 +6,13 @@ import Control.Monad.Primitive
 import Data.Primitive
 
 
+-- The `primitive` package supports two array types, `ByteArray` (and array of
+-- bytes) and `Array a` (an array of boxed values). Therefore use the former to
+-- build a `WordArray` an array of unboxed `Word` values. Benchmarking showed
+-- this `WordArray` implementation to be about 4 times faster than `Array Word`
+-- on trivial operations like `copyWordArray`.
+
+
 newtype WordArray = WA ByteArray
 
 newtype MutableWordArray m = MWA (MutableByteArray (PrimState m))
