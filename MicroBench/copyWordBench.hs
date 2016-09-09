@@ -10,7 +10,7 @@ import Common.GHC.Integer.WordArray
 main :: IO ()
 main = do
     let len = 1000000
-    src <- unsafeFreezeWordArray =<< newWordArrayCleared len
+    src <- unsafeFreezeWordArray =<< newWordArray len
     dest1 <- newWordArray len
     dest2 <- newWordArray len
     C.defaultMain

@@ -16,13 +16,6 @@ newWordArray !len = do
     !marr <- newByteArray (len * sizeOf (0 :: Word))
     return $ MWA marr
 
-newWordArrayCleared :: PrimMonad m => Int -> m (MutableWordArray m)
-newWordArrayCleared !len = do
-    !marr <- newByteArray (len * sizeOf (0 :: Word))
-    let !wmarr = MWA marr
-    setWordArray wmarr 0 len 0
-    return wmarr
-
 -- | newPlaceholderWordArray : Create a place holder ByteArray for timesInteger
 -- where a zero length ByteArray is needed. Memory is actually allocated, but
 -- nothing is written to it os it will actually contain junk data.
