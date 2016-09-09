@@ -20,6 +20,7 @@ import qualified NewX.GHC.Integer as X
 --
 -- First parameter is a tuple to prevent the possibility of benchmarking the
 -- partial application of a function.
+{-# NOINLINE addSmallLoop #-}
 addSmallLoop :: (Int, Int, Int) -> X.Integer
 addSmallLoop (count, up, down) =
     loop count True (X.smallInteger 42#)
@@ -36,6 +37,7 @@ addSmallLoop (count, up, down) =
     downInteger = X.smallInteger (unboxInt down)
 
 
+{-# NOINLINE addBigLoop #-}
 addBigLoop :: (Int, [Int], [Int]) -> X.Integer
 addBigLoop (count, up, down) =
     loop count True (X.timesInteger upInteger (X.smallInteger 3#))
@@ -51,7 +53,7 @@ addBigLoop (count, up, down) =
     downInteger :: X.Integer
     downInteger = X.mkInteger False down
 
-
+{-# NOINLINE  timesSmallLoop #-}
 timesSmallLoop :: Int -> X.Integer
 timesSmallLoop iter =
     loop iter count value
@@ -64,7 +66,7 @@ timesSmallLoop iter =
     value = X.smallInteger 3#
     count = 32      -- 3 ^ 32 < 0x7fffffffffffffff
 
-
+{-# NOINLINE  timesSmallBigLoop #-}
 timesSmallBigLoop :: Int -> X.Integer
 timesSmallBigLoop iter =
     loop iter count value
@@ -77,7 +79,7 @@ timesSmallBigLoop iter =
     value = X.smallInteger (unboxInt maxBound)
     count = 10
 
-
+{-# NOINLINE  timesMediumLoop #-}
 timesMediumLoop :: Int -> Int
 timesMediumLoop iter =
     loop iter count 0
@@ -98,7 +100,7 @@ timesMediumLoop iter =
 
     count = 30
 
-
+{-# NOINLINE timesBigLoop #-}
 timesBigLoop :: Int -> X.Integer
 timesBigLoop iter =
     loop iter count value
