@@ -101,6 +101,7 @@ data BenchNames
     | MediumTimes
     | BigTimes
     | Times
+    | Small
     deriving (Eq, Ord, Read, Show)
 
 
@@ -143,6 +144,7 @@ matchBenchmarks name =
         MediumTimes -> timesMediumBenchList
         BigTimes -> timesBigBenchList
         Times -> timesBenchList
+        Small -> smallBenchList
   where
     -- (loop count, increment, decrement) increment and decrement should be
     -- chosen so that loop count * (increment - decrement) < maximum value that
@@ -166,6 +168,8 @@ matchBenchmarks name =
 
     plusBenchList = plusSmallBenchList ++ plusBigBenchList
     timesBenchList = timesSmallBenchList ++ timesSmallBigBenchList ++ timesMediumBenchList ++ timesBigBenchList
+
+    smallBenchList = plusSmallBenchList ++ timesSmallBenchList
 
 --------------------------------------------------------------------------------
 -- | A function to create a a set of test parameters to pass to addBigLoop.

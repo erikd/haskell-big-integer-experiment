@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, Strict #-}
 module Common.GHC.Integer.WordArray where
 
 import Control.Monad
