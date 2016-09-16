@@ -74,11 +74,6 @@ setWordArray !marr !offset !count !word =
 
 {-# INLINE copyWordArray #-}
 copyWordArray :: PrimMonad m => MutableWordArray m -> Int -> WordArray -> Int -> Int -> m ()
-copyWordArray !marr !doff !arr !soff !wrds =
-    let loop !i
-            | i < wrds =  do
-                !x <- indexWordArrayM arr (soff + i)
-                writeWordArray marr (doff + i) x
-                loop (i + 1)
-            | otherwise = return ()
-    in loop 0
+copyWordArray (MWA !marr) !doff (WA !arr) !soff !wrds =
+    let !wordsize = sizeOf (0 :: Word)
+    in copyByteArray marr (doff * wordsize) arr (soff * wordsize) (wrds * wordsize)
