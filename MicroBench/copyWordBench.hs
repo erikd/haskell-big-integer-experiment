@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, Strict #-}
 
 import Control.Monad.Primitive
 import Data.Primitive
@@ -20,17 +20,17 @@ main = do
             ]
         ]
 
+{-# NOINLINE benchLibrary #-}
 benchLibrary :: Int -> WordArray -> MutableWordArray IO -> IO WordArray
 benchLibrary len src dest = do
     copyWordArrayLibrary dest 0 src 0 len
     unsafeFreezeWordArray dest
 
-
+{-# NOINLINE benchExplicit #-}
 benchExplicit :: Int -> WordArray -> MutableWordArray IO -> IO WordArray
 benchExplicit len src dest = do
     copyWordArrayExplicit dest 0 src 0 len
     unsafeFreezeWordArray dest
-
 
 {-# INLINE copyWordArrayLibrary #-}
 copyWordArrayLibrary :: PrimMonad m => MutableWordArray m -> Int -> WordArray -> Int -> Int -> m ()
@@ -41,11 +41,11 @@ copyWordArrayLibrary (MWA !marr) !doff (WA !arr) !soff !wrds =
 {-# INLINE copyWordArrayExplicit #-}
 copyWordArrayExplicit :: PrimMonad m => MutableWordArray m -> Int -> WordArray -> Int -> Int -> m ()
 copyWordArrayExplicit !marr !doff !arr !soff !wrds =
-    let loop !i
-            | i < wrds =  do
-                !x <- indexWordArrayM arr (soff + i)
-                writeWordArray marr (doff + i) x
-                loop (i + 1)
-            | otherwise = return ()
-    in loop 0
-
+    loop 0
+  where
+    loop !i
+        | i < wrds =  do
+            !x <- indexWordArrayM arr (soff + i)
+            writeWordArray marr (doff + i) x
+            loop (i + 1)
+        | otherwise = return ()
