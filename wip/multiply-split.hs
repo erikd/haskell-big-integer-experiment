@@ -23,11 +23,13 @@ import New3.Integer ()
 import Check.Helpers
 
 main :: IO ()
-main = hspec $ describe "Shifted Add:" testSplitMultiply
+main = hspec $ do
+    describe "Shifted Add:" testShiftedAdd
+    describe "Split Multiply:" testSplitMultiply
 
 
-testSplitMultiply :: Spec
-testSplitMultiply = do
+testShiftedAdd :: Spec
+testShiftedAdd = do
     it "shiftedAdd2 #1." $ do
         let n1 = readNatural "0x3"
             n0 = readNatural "0x0"
@@ -46,19 +48,28 @@ testSplitMultiply = do
             shift = 1
         show (shiftedAdd2 shift n1 n0) `shouldBe` show (shiftedAdd2Slow shift n1 n0)
 
+    modifyMaxSuccess (const 10000) .
+        prop "shiftedAdd2 QuickChecked." $ \ n0 n1 -> do
+            let maxShift = 2 + max (lengthNatrual n1) (lengthNatrual n0)
+            forM_ [1 .. maxShift] $ \shift ->
+                show (shiftedAdd2 shift n1 n0) `shouldBe` show (shiftedAdd2Slow shift n1 n0)
 
+testSplitMultiply :: Spec
+testSplitMultiply = do
+    it "timesNaturalSplit #1." $ do
+        let n0 = mkNaturalW [1 .. 20]
+            n1 = mkNaturalW [5 .. 8]
+        show (timesNaturalSplit n0 n1) `shouldBe` show (timesNatural n0 n1)
 
-    when True .
-        modifyMaxSuccess (const 10000) .
-            prop "shiftedAdd2 QuickChecked." $ \ n0 n1 -> do
-                let maxShift = 2 + max (lengthNatrual n1) (lengthNatrual n0)
-                forM_ [1 .. maxShift] $ \shift ->
-                    show (shiftedAdd2 shift n1 n0) `shouldBe` show (shiftedAdd2Slow shift n1 n0)
+    modifyMaxSuccess (const 50000) .
+        prop "timesNaturalSplit QuickChecked." $ \ (PairNatural n0 n1) ->
+            show (timesNaturalSplit n0 n1) `shouldBe` show (timesNatural n0 n1)
+
 
 instance Arbitrary Natural where
     arbitrary = do
         randLen <- choose (2, 8)
-        wrds <- vectorOf randLen $ elements [minBound, maxBound]
+        wrds <- vectorOf randLen $ choose (minBound, maxBound)
         pure $ mkNaturalW wrds
 
     shrink nat =
@@ -69,6 +80,32 @@ instance Arbitrary Natural where
 
 -- -----------------------------------------------------------------------------
 
+
+{-# NOINLINE timesNaturalSplit #-}
+timesNaturalSplit :: Natural -> Natural -> Natural
+timesNaturalSplit l@(Natural n0 _) r@(Natural n1 _)
+    | n0 < n1 = timesNaturalSplit r l
+    | n0 < 2 * n1 = timesNatural l r
+    | otherwise =
+        let (shift, upper, lower) = halveNatural l
+            tupper = timesNatural upper r
+            tlower = timesNatural lower r
+        in shiftedAdd2 shift tupper tlower
+
+{-# INLINE halveNatural #-}
+halveNatural :: Natural -> (Int, Natural, Natural)
+halveNatural (Natural n arr) =
+    let llen = n `div` 2
+        ulen = n - llen
+    in runStrictPrim $ do
+        marr <-newWordArray ulen
+        copyWordArray marr 0 arr llen ulen
+        narr <- unsafeFreezeWordArray marr
+        pure $! (llen, Natural ulen narr, Natural llen arr)
+
+-- -----------------------------------------------------------------------------
+
+{-# NOINLINE shiftedAdd2Slow #-}
 shiftedAdd2Slow :: Int -> Natural -> Natural -> Natural
 shiftedAdd2Slow shift n1 n0 =
     plusNatural (shiftLNatural n1 (shift * WORD_SIZE_IN_BITS)) n0
@@ -227,6 +264,18 @@ mkNaturalW xs =
     fill marr i (w:ws) = do
         debugWriteWordArrayLocal __LINE__ marr i w
         fill marr (i + 1) ws
+
+data PairNatural
+    = PairNatural Natural Natural
+    deriving Show
+
+instance Arbitrary PairNatural where
+    arbitrary = do
+        smallLen <- choose (3, 6)
+        bigLen <- (+) (2 * smallLen) <$> choose (3, 6)
+        small <- vectorOf smallLen arbitrary
+        big <- vectorOf bigLen arbitrary
+        pure $ PairNatural (mkNaturalW big) (mkNaturalW small)
 
 lengthNatrual :: Natural -> Int
 lengthNatrual (Natural n _) = n
