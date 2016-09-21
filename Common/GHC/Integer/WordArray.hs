@@ -23,6 +23,17 @@ newWordArray !len = do
     !marr <- newByteArray (len * sizeOf (0 :: Word))
     return $ MWA marr
 
+-- | allocaWords : Create a temporary array of Word to used for the duration
+-- of the provided computation. Idea stolen from Foriegn.Marshal.Alloc.
+{-# INLINE allocaWords #-}
+allocaWords :: PrimMonad m => Int -> (Addr -> m b) -> m b
+allocaWords len computation = do
+    marr <- newPinnedByteArray (len * sizeOf (0 :: Word))
+    narr <- unsafeFreezeByteArray marr
+    res <- computation $ byteArrayContents narr
+    touch narr
+    pure res
+
 -- | newPlaceholderWordArray : Create a place holder ByteArray for timesInteger
 -- where a zero length ByteArray is needed. Memory is actually allocated, but
 -- nothing is written to it os it will actually contain junk data.
