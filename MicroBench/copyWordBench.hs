@@ -15,8 +15,9 @@ main = do
     dest2 <- newWordArray len
     C.defaultMain
         [ C.bgroup "copyWordArray"
-            [ C.bench "Library"     $ C.whnfIO $ benchLibrary len src dest1
-            , C.bench "Explicit"    $ C.whnfIO $ benchExplicit len src dest2
+            [ C.bench "Library"         $ C.whnfIO $ benchLibrary len src dest1
+            , C.bench "Explicit"        $ C.whnfIO $ benchExplicit len src dest2
+            , C.bench "ExplicitAddr"    $ C.whnfIO $ benchExplicitAddr len src dest2
             ]
         ]
 
@@ -30,6 +31,12 @@ benchLibrary len src dest = do
 benchExplicit :: Int -> WordArray -> MutableWordArray IO -> IO WordArray
 benchExplicit len src dest = do
     copyWordArrayExplicit dest 0 src 0 len
+    unsafeFreezeWordArray dest
+
+{-# NOINLINE benchExplicitAddr #-}
+benchExplicitAddr :: Int -> WordArray -> MutableWordArray IO -> IO WordArray
+benchExplicitAddr len src dest = do
+    copyWordArrayExplicitAddr dest 0 src 0 len
     unsafeFreezeWordArray dest
 
 {-# INLINE copyWordArrayLibrary #-}
@@ -46,6 +53,19 @@ copyWordArrayExplicit !marr !doff !arr !soff !wrds =
     loop !i
         | i < wrds =  do
             !x <- indexWordArrayM arr (soff + i)
+            writeWordArray marr (doff + i) x
+            loop (i + 1)
+        | otherwise = return ()
+
+{-# INLINE copyWordArrayExplicitAddr #-}
+copyWordArrayExplicitAddr :: PrimMonad m => MutableWordArray m -> Int -> WordArray -> Int -> Int -> m ()
+copyWordArrayExplicitAddr !marr !doff !arr !soff !wrds =
+    loop 0
+  where
+    addr = wordArrayContents arr
+    loop !i
+        | i < wrds =  do
+            !x <- indexWordAddrM addr (soff + i)
             writeWordArray marr (doff + i) x
             loop (i + 1)
         | otherwise = return ()
