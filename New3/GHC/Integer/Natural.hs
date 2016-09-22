@@ -999,6 +999,20 @@ gtNatural !(Natural !n1 !arr1) !(Natural !n2 !arr2)
 --------------------------------------------------------------------------------
 -- Helpers (not part of the API).
 
+mkNaturalW :: [Word] -> Natural
+mkNaturalW xs =
+    let len = length xs in
+    runStrictPrim $ do
+        !marr <- newWordArray len
+        !nlen <- fill marr 0 xs
+        !narr <- unsafeFreezeWordArray marr
+        pure $! Natural nlen narr
+  where
+    fill _ i [] = pure i
+    fill marr i (w:ws) = do
+        writeWordArray marr i w
+        fill marr (i + 1) ws
+
 {-# INLINE zerothWordOfNatural #-}
 zerothWordOfNatural :: Natural -> Word
 zerothWordOfNatural !(Natural _ arr) = indexWordArray arr 0

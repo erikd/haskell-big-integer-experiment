@@ -251,20 +251,6 @@ shiftedAdd2 !shift !(Natural !n1 !arr1) !(Natural !n0 !arr0)
 
 --------------------------------------------------------------------------------
 
-mkNaturalW :: [Word] -> Natural
-mkNaturalW xs =
-    let len = length xs in
-    runStrictPrim $ do
-        !marr <- newWordArray len
-        !nlen <- fill marr 0 xs
-        !narr <- unsafeFreezeWordArray marr
-        pure $! Natural nlen narr
-  where
-    fill _ i [] = pure i
-    fill marr i (w:ws) = do
-        debugWriteWordArrayLocal __LINE__ marr i w
-        fill marr (i + 1) ws
-
 data PairNatural
     = PairNatural Natural Natural
     deriving Show
