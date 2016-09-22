@@ -33,8 +33,7 @@ instance Show Integer where
     show = hexShow
 
 instance Show Natural where
-    show = hexShowNatural
-
+    show (Natural n arr) = arrayShow n arr
 
 hexShow :: Integer -> String
 hexShow (SmallPos 0##) = "0x0"
@@ -44,7 +43,7 @@ hexShow (Positive n arr) = '+' : hexShowNatural (Natural n arr)
 hexShow (Negative n arr) = '-' : hexShowNatural (Natural n arr)
 
 hexShowNatural :: Natural -> String
-hexShowNatural (Natural n arr) = arrayShow n arr
+hexShowNatural = show
 
 readInteger :: String -> Integer
 readInteger [] = 0

@@ -58,7 +58,7 @@ testSplitMultiply :: Spec
 testSplitMultiply = do
     it "timesNaturalSplit #1." $ do
         let n0 = mkNaturalW [1 .. 20]
-            n1 = mkNaturalW [5 .. 8]
+            n1 = mkNaturalW [5 .. 16]
         show (timesNaturalSplit n0 n1) `shouldBe` show (timesNatural n0 n1)
 
     modifyMaxSuccess (const 50000) .
@@ -94,14 +94,14 @@ timesNaturalSplit l@(Natural n0 _) r@(Natural n1 _)
 
 {-# INLINE halveNatural #-}
 halveNatural :: Natural -> (Int, Natural, Natural)
-halveNatural (Natural n arr) =
-    let llen = n `div` 2
-        ulen = n - llen
-    in runStrictPrim $ do
-        marr <-newWordArray ulen
-        copyWordArray marr 0 arr llen ulen
-        narr <- unsafeFreezeWordArray marr
-        pure $! (llen, Natural ulen narr, Natural llen arr)
+halveNatural (Natural n arr) = runStrictPrim $ do
+    marr <-newWordArray ulen
+    copyWordArray marr 0 arr llen ulen
+    narr <- unsafeFreezeWordArray marr
+    pure $! (llen, Natural ulen narr, Natural llen arr)
+  where
+    llen = n `div` 2
+    ulen = n - llen
 
 -- -----------------------------------------------------------------------------
 

@@ -9,7 +9,6 @@ module New3.GHC.Integer.Type where
 import GHC.Prim
 import GHC.Types
 
-
 import Common.GHC.Integer.WordArray
 
 data Integer
@@ -26,3 +25,8 @@ data Natural
     = Natural
             {-# UNPACK #-} !Int
             {-# UNPACK #-} !WordArray
+
+data NaturalP
+    = NaturalP
+            {-# UNPACK #-} !Int
+            {-# UNPACK #-} !WordAddr

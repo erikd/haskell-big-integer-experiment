@@ -387,11 +387,43 @@ timesNaturalW !(Natural !n !arr) !w = runStrictPrim $ do
 
 {-# NOINLINE timesNatural #-}
 timesNatural :: Natural -> Natural -> Natural
-timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
+timesNatural !a@(Natural !n1 _) !b@(Natural !n2 _)
     | n1 < n2 = timesNatural b a
-    | otherwise = runStrictPrim $ do
-        marr <- newWordArray (n1 + n2)
-        len <- case 10 * n1 + n2 of
+    | otherwise = runStrictPrim $ withMultiplyContext a b timesNaturalP
+
+
+-- This one is broken. It fails because we take the Address of a ByteArray
+-- and the ByteArray my be moved by the GC while we're still trying too access
+-- it via the pointed.
+{-# INLINE withMultiplyContextBroken #-}
+withMultiplyContextBroken :: PrimMonad m => Natural -> Natural -> (NaturalP -> NaturalP -> m Natural) -> m Natural
+withMultiplyContextBroken (Natural n0 arr0) (Natural n1 arr1) times = do
+    res <- times (NaturalP n0 $ wordArrayContents arr0) (NaturalP n1 $ wordArrayContents arr1)
+    touch arr0
+    touch arr1
+    pure res
+
+-- To get around the issue above, we copy the two operands into pinned memory
+-- (which is *never* moved by the GC, but is aonly used for the duration of the
+-- computation.
+{-# INLINE withMultiplyContext #-}
+withMultiplyContext :: PrimMonad m => Natural -> Natural -> (NaturalP -> NaturalP -> m Natural) -> m Natural
+withMultiplyContext (Natural n0 arr0) (Natural n1 arr1) times = do
+    marr <- newPinnedWordArray $ n0 + n1
+    copyWordArray marr 0 arr0 0 n0
+    copyWordArray marr n0 arr1 0 n1
+    narr <- unsafeFreezeWordArray marr
+    let addr = wordArrayContents narr
+    res <- times (NaturalP n0 addr) (NaturalP n1 $ plusWordAddr n0 addr)
+    touch narr
+    pure res
+
+
+{-# INLINE timesNaturalP #-}
+timesNaturalP :: PrimMonad m => NaturalP -> NaturalP -> m Natural
+timesNaturalP (NaturalP n1 arr1) (NaturalP n2 arr2) = do
+    marr <- newWordArray (n1 + n2)
+    len <- case 10 * n1 + n2 of
                 22 -> timesNat2x2 arr1 arr2 marr
                 32 -> timesNat3x2 arr1 arr2 marr
                 33 -> timesNat3x3 arr1 arr2 marr
@@ -399,19 +431,19 @@ timesNatural !a@(Natural !n1 !arr1) !b@(Natural !n2 !arr2)
                 43 -> timesNat4x3 arr1 arr2 marr
                 44 -> timesNat4x4 arr1 arr2 marr
                 _ -> timesNaturalWA n1 arr1 n2 arr2 marr
-        narr <- unsafeFreezeWordArray marr
-        return $! Natural len narr
+    narr <- unsafeFreezeWordArray marr
+    return $! Natural len narr
 
 {-# INLINE timesNat2x2 #-}
-timesNat2x2 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
+timesNat2x2 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
 timesNat2x2 !xarr !yarr !marr = do
-    x0 <- indexWordArrayM xarr 0
-    y0 <- indexWordArrayM yarr 0
+    x0 <- indexWordAddrM xarr 0
+    y0 <- indexWordAddrM yarr 0
     let (# pc1a, prod0a #) = timesWord2 x0 y0
     writeWordArray marr 0 prod0a
-    y1 <- indexWordArrayM yarr 1
+    y1 <- indexWordAddrM yarr 1
     let (# pc2a, prod1a #) = timesWord2 x0 y1
-    x1 <- indexWordArrayM xarr 1
+    x1 <- indexWordAddrM xarr 1
     let (# pc2b, prod1b #) = timesWord2 x1 y0
     let (# sc2a, sum1a #) = plusWord2 prod1b prod1a
     let (# sc2b, sum1b #) = plusWord2 pc1a sum1a
@@ -429,21 +461,21 @@ timesNat2x2 !xarr !yarr !marr = do
     return $ 3 + boxInt# (neWord# (unboxWord sum3c) 0##)
 
 {-# INLINE timesNat3x2 #-}
-timesNat3x2 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
+timesNat3x2 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
 timesNat3x2 !xarr !yarr !marr = do
-    x0 <- indexWordArrayM xarr 0
-    y0 <- indexWordArrayM yarr 0
+    x0 <- indexWordAddrM xarr 0
+    y0 <- indexWordAddrM yarr 0
     let (# pc1a, prod0a #) = timesWord2 x0 y0
     writeWordArray marr 0 prod0a
-    y1 <- indexWordArrayM yarr 1
+    y1 <- indexWordAddrM yarr 1
     let (# pc2a, prod1a #) = timesWord2 x0 y1
-    x1 <- indexWordArrayM xarr 1
+    x1 <- indexWordAddrM xarr 1
     let (# pc2b, prod1b #) = timesWord2 x1 y0
     let (# sc2a, sum1a #) = plusWord2 prod1b prod1a
     let (# sc2b, sum1b #) = plusWord2 pc1a sum1a
     writeWordArray marr 1 sum1b
     let (# pc3a, prod2a #) = timesWord2 x1 y1
-    x2 <- indexWordArrayM xarr 2
+    x2 <- indexWordAddrM xarr 2
     let (# pc3b, prod2b #) = timesWord2 x2 y0
     let (# sc3a, sum2a #) = plusWord2 prod2b prod2a
     let (# sc3b, sum2b #) = plusWord2 pc2b pc2a
@@ -467,23 +499,23 @@ timesNat3x2 !xarr !yarr !marr = do
     return $ 4 + boxInt# (neWord# (unboxWord sum4d) 0##)
 
 {-# INLINE timesNat3x3 #-}
-timesNat3x3 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
+timesNat3x3 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
 timesNat3x3 !xarr !yarr !marr = do
-    x0 <- indexWordArrayM xarr 0
-    y0 <- indexWordArrayM yarr 0
+    x0 <- indexWordAddrM xarr 0
+    y0 <- indexWordAddrM yarr 0
     let (# pc1a, prod0a #) = timesWord2 x0 y0
     writeWordArray marr 0 prod0a
-    y1 <- indexWordArrayM yarr 1
+    y1 <- indexWordAddrM yarr 1
     let (# pc2a, prod1a #) = timesWord2 x0 y1
-    x1 <- indexWordArrayM xarr 1
+    x1 <- indexWordAddrM xarr 1
     let (# pc2b, prod1b #) = timesWord2 x1 y0
     let (# sc2a, sum1a #) = plusWord2 prod1b prod1a
     let (# sc2b, sum1b #) = plusWord2 pc1a sum1a
     writeWordArray marr 1 sum1b
     let (# pc3a, prod2a #) = timesWord2 x1 y1
-    y2 <- indexWordArrayM yarr 2
+    y2 <- indexWordAddrM yarr 2
     let (# pc3b, prod2b #) = timesWord2 x0 y2
-    x2 <- indexWordArrayM xarr 2
+    x2 <- indexWordAddrM xarr 2
     let (# pc3c, prod2c #) = timesWord2 x2 y0
     let (# sc3a, sum2a #) = plusWord2 prod2c prod2b
     let (# sc3b, sum2b #) = plusWord2 prod2a pc2b
@@ -524,21 +556,21 @@ timesNat3x3 !xarr !yarr !marr = do
 
 
 {-# INLINE timesNat4x2 #-}
-timesNat4x2 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
+timesNat4x2 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
 timesNat4x2 !xarr !yarr !marr = do
-    x0 <- indexWordArrayM xarr 0
-    y0 <- indexWordArrayM yarr 0
+    x0 <- indexWordAddrM xarr 0
+    y0 <- indexWordAddrM yarr 0
     let (# pc1a, prod0a #) = timesWord2 x0 y0
     writeWordArray marr 0 prod0a
-    y1 <- indexWordArrayM yarr 1
+    y1 <- indexWordAddrM yarr 1
     let (# pc2a, prod1a #) = timesWord2 x0 y1
-    x1 <- indexWordArrayM xarr 1
+    x1 <- indexWordAddrM xarr 1
     let (# pc2b, prod1b #) = timesWord2 x1 y0
     let (# sc2a, sum1a #) = plusWord2 prod1b prod1a
     let (# sc2b, sum1b #) = plusWord2 pc1a sum1a
     writeWordArray marr 1 sum1b
     let (# pc3a, prod2a #) = timesWord2 x1 y1
-    x2 <- indexWordArrayM xarr 2
+    x2 <- indexWordAddrM xarr 2
     let (# pc3b, prod2b #) = timesWord2 x2 y0
     let (# sc3a, sum2a #) = plusWord2 prod2b prod2a
     let (# sc3b, sum2b #) = plusWord2 pc2b pc2a
@@ -547,7 +579,7 @@ timesNat4x2 !xarr !yarr !marr = do
     let (# sc3d, sum2e #) = plusWord2 sum2c sum2d
     writeWordArray marr 2 sum2e
     let (# pc4a, prod3a #) = timesWord2 x2 y1
-    x3 <- indexWordArrayM xarr 3
+    x3 <- indexWordAddrM xarr 3
     let (# pc4b, prod3b #) = timesWord2 x3 y0
     let (# sc4a, sum3a #) = plusWord2 prod3b prod3a
     let (# sc4b, sum3b #) = plusWord2 pc3b pc3a
@@ -574,23 +606,23 @@ timesNat4x2 !xarr !yarr !marr = do
     return $ 5 + boxInt# (neWord# (unboxWord sum5d) 0##)
 
 {-# INLINE timesNat4x3 #-}
-timesNat4x3 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
+timesNat4x3 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
 timesNat4x3 !xarr !yarr !marr = do
-    x0 <- indexWordArrayM xarr 0
-    y0 <- indexWordArrayM yarr 0
+    x0 <- indexWordAddrM xarr 0
+    y0 <- indexWordAddrM yarr 0
     let (# pc1a, prod0a #) = timesWord2 x0 y0
     writeWordArray marr 0 prod0a
-    y1 <- indexWordArrayM yarr 1
+    y1 <- indexWordAddrM yarr 1
     let (# pc2a, prod1a #) = timesWord2 x0 y1
-    x1 <- indexWordArrayM xarr 1
+    x1 <- indexWordAddrM xarr 1
     let (# pc2b, prod1b #) = timesWord2 x1 y0
     let (# sc2a, sum1a #) = plusWord2 prod1b prod1a
     let (# sc2b, sum1b #) = plusWord2 pc1a sum1a
     writeWordArray marr 1 sum1b
     let (# pc3a, prod2a #) = timesWord2 x1 y1
-    y2 <- indexWordArrayM yarr 2
+    y2 <- indexWordAddrM yarr 2
     let (# pc3b, prod2b #) = timesWord2 x0 y2
-    x2 <- indexWordArrayM xarr 2
+    x2 <- indexWordAddrM xarr 2
     let (# pc3c, prod2c #) = timesWord2 x2 y0
     let (# sc3a, sum2a #) = plusWord2 prod2c prod2b
     let (# sc3b, sum2b #) = plusWord2 prod2a pc2b
@@ -601,7 +633,7 @@ timesNat4x3 !xarr !yarr !marr = do
     writeWordArray marr 2 sum2f
     let (# pc4a, prod3a #) = timesWord2 x1 y2
     let (# pc4b, prod3b #) = timesWord2 x2 y1
-    x3 <- indexWordArrayM xarr 3
+    x3 <- indexWordAddrM xarr 3
     let (# pc4c, prod3c #) = timesWord2 x3 y0
     let (# sc4a, sum3a #) = plusWord2 prod3c prod3b
     let (# sc4b, sum3b #) = plusWord2 prod3a pc3c
@@ -651,23 +683,23 @@ timesNat4x3 !xarr !yarr !marr = do
     return $ 6 + boxInt# (neWord# (unboxWord sum6f) 0##)
 
 {-# INLINE timesNat4x4 #-}
-timesNat4x4 :: PrimMonad m => WordArray -> WordArray -> MutableWordArray m -> m Int
+timesNat4x4 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
 timesNat4x4 !xarr !yarr !marr = do
-    x0 <- indexWordArrayM xarr 0
-    y0 <- indexWordArrayM yarr 0
+    x0 <- indexWordAddrM xarr 0
+    y0 <- indexWordAddrM yarr 0
     let (# pc1a, prod0a #) = timesWord2 x0 y0
     writeWordArray marr 0 prod0a
-    y1 <- indexWordArrayM yarr 1
+    y1 <- indexWordAddrM yarr 1
     let (# pc2a, prod1a #) = timesWord2 x0 y1
-    x1 <- indexWordArrayM xarr 1
+    x1 <- indexWordAddrM xarr 1
     let (# pc2b, prod1b #) = timesWord2 x1 y0
     let (# sc2a, sum1a #) = plusWord2 prod1b prod1a
     let (# sc2b, sum1b #) = plusWord2 pc1a sum1a
     writeWordArray marr 1 sum1b
     let (# pc3a, prod2a #) = timesWord2 x1 y1
-    y2 <- indexWordArrayM yarr 2
+    y2 <- indexWordAddrM yarr 2
     let (# pc3b, prod2b #) = timesWord2 x0 y2
-    x2 <- indexWordArrayM xarr 2
+    x2 <- indexWordAddrM xarr 2
     let (# pc3c, prod2c #) = timesWord2 x2 y0
     let (# sc3a, sum2a #) = plusWord2 prod2c prod2b
     let (# sc3b, sum2b #) = plusWord2 prod2a pc2b
@@ -677,10 +709,10 @@ timesNat4x4 !xarr !yarr !marr = do
     let (# sc3e, sum2f #) = plusWord2 sum2d sum2e
     writeWordArray marr 2 sum2f
     let (# pc4a, prod3a #) = timesWord2 x1 y2
-    y3 <- indexWordArrayM yarr 3
+    y3 <- indexWordAddrM yarr 3
     let (# pc4b, prod3b #) = timesWord2 x0 y3
     let (# pc4c, prod3c #) = timesWord2 x2 y1
-    x3 <- indexWordArrayM xarr 3
+    x3 <- indexWordAddrM xarr 3
     let (# pc4d, prod3d #) = timesWord2 x3 y0
     let (# sc4a, sum3a #) = plusWord2 prod3d prod3c
     let (# sc4b, sum3b #) = plusWord2 prod3b prod3a
@@ -752,13 +784,13 @@ timesNat4x4 !xarr !yarr !marr = do
     return $ 7 + boxInt# (neWord# (unboxWord sum7f) 0##)
 
 {-# INLINE timesNaturalWA #-}
-timesNaturalWA :: PrimMonad m => Int -> WordArray -> Int -> WordArray -> MutableWordArray m -> m Int
+timesNaturalWA :: PrimMonad m => Int -> WordAddr -> Int -> WordAddr -> MutableWordArray m -> m Int
 timesNaturalWA !n1 !arr1 !n2 !arr2 =
     preLoop
   where
     preLoop marr = do
-        x <- indexWordArrayM arr1 0
-        y <- indexWordArrayM arr2 0
+        x <- indexWordAddrM arr1 0
+        y <- indexWordAddrM arr2 0
         let (# cry, prod #) = timesWord2 x y
         writeWordArray marr 0 prod
         outerLoop1 1 marr 0 cry
@@ -779,8 +811,8 @@ timesNaturalWA !n1 !arr1 !n2 !arr2 =
 
     innerLoop1xi !xi !yi !carryhi !carrylo !sum
         | xi >= 0 = do
-            x <- indexWordArrayM arr1 xi
-            y <- indexWordArrayM arr2 yi
+            x <- indexWordAddrM arr1 xi
+            y <- indexWordAddrM arr2 yi
             let (# !cry0, !prod #) = timesWord2 x y
                 (# !cry1, !sum1 #) = plusWord2 prod sum
                 (# !tcryhi, !crylo #) = plusWord3 carrylo cry0 cry1
@@ -790,8 +822,8 @@ timesNaturalWA !n1 !arr1 !n2 !arr2 =
 
     innerLoop1yi !xi !yi !carryhi !carrylo !sum
         | yi < n2 = do
-            x <- indexWordArrayM arr1 xi
-            y <- indexWordArrayM arr2 yi
+            x <- indexWordAddrM arr1 xi
+            y <- indexWordAddrM arr2 yi
             let (# !cry0, !prod #) = timesWord2 x y
                 (# !cry1, !sum1 #) = plusWord2 prod sum
                 (# !tcryhi, !crylo #) = plusWord3 carrylo cry0 cry1
@@ -811,8 +843,8 @@ timesNaturalWA !n1 !arr1 !n2 !arr2 =
 
     innerLoop2 !xi !yi !carryhi !carrylo !sum
         | yi < n2 = do
-            x <- indexWordArrayM arr1 xi
-            y <- indexWordArrayM arr2 yi
+            x <- indexWordAddrM arr1 xi
+            y <- indexWordAddrM arr2 yi
             let (# !cry0, !prod #) = timesWord2 x y
                 (# !cry1, !sum1 #) = plusWord2 prod sum
                 (# !tcryhi, !crylo #) = plusWord3 carrylo cry0 cry1

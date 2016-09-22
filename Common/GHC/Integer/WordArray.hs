@@ -23,14 +23,20 @@ newWordArray !len = do
     !marr <- newByteArray (len * sizeOf (0 :: Word))
     return $ MWA marr
 
+{-# INLINE newPinnedWordArray #-}
+newPinnedWordArray :: PrimMonad m => Int -> m (MutableWordArray m)
+newPinnedWordArray !len = do
+    !marr <- newPinnedByteArray (len * sizeOf (0 :: Word))
+    return $ MWA marr
+
 -- | allocaWords : Create a temporary array of Word to used for the duration
 -- of the provided computation. Idea stolen from Foriegn.Marshal.Alloc.
 {-# INLINE allocaWords #-}
-allocaWords :: PrimMonad m => Int -> (Addr -> m b) -> m b
+allocaWords :: PrimMonad m => Int -> (WordArray -> m b) -> m b
 allocaWords len computation = do
     marr <- newPinnedByteArray (len * sizeOf (0 :: Word))
     narr <- unsafeFreezeByteArray marr
-    res <- computation $ byteArrayContents narr
+    res <- computation $ WA narr
     touch narr
     pure res
 
@@ -88,3 +94,40 @@ copyWordArray :: PrimMonad m => MutableWordArray m -> Int -> WordArray -> Int ->
 copyWordArray (MWA !marr) !doff (WA !arr) !soff !wrds =
     let !wordsize = sizeOf (0 :: Word)
     in copyByteArray marr (doff * wordsize) arr (soff * wordsize) (wrds * wordsize)
+
+
+
+newtype WordAddr = WordAddr Addr
+
+class ReadWord a where
+    readWord :: a -> Int -> Word
+    readWordM :: PrimMonad m => a -> Int -> m Word
+
+instance ReadWord WordArray where
+    {-# INLINE readWord #-}
+    readWord = indexWordArray
+    {-# INLINE readWordM #-}
+    readWordM = indexWordArrayM
+
+instance ReadWord WordAddr where
+    {-# INLINE readWord #-}
+    readWord (WordAddr addr) = indexOffAddr addr
+    {-# INLINE readWordM #-}
+    readWordM (WordAddr addr) = readOffAddr addr
+
+{-# INLINE plusWordAddr #-}
+plusWordAddr :: Int -> WordAddr -> WordAddr
+plusWordAddr count (WordAddr addr) =
+    WordAddr . plusAddr addr $ count * sizeOf (0 :: Word)
+
+{-# INLINE wordArrayContents #-}
+wordArrayContents :: WordArray -> WordAddr
+wordArrayContents (WA arr) = WordAddr $ byteArrayContents arr
+
+{-# INLINE indexWordAddr #-}
+indexWordAddr :: WordAddr -> Int -> Word
+indexWordAddr (WordAddr !arr) = indexOffAddr arr
+
+{-# INLINE indexWordAddrM #-}
+indexWordAddrM :: PrimMonad m => WordAddr -> Int -> m Word
+indexWordAddrM (WordAddr arr) = readOffAddr arr
