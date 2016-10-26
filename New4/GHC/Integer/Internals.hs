@@ -181,7 +181,7 @@ smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
     marr <- newWordArray (n + 1)
     nlen <- loop marr 0 0
     narr <- unsafeFreezeWordArray marr
-    return $! NatB nlen narr
+    pure $! NatB nlen narr
   where
     loop !marr !i !mem
         | i < n =  do
@@ -190,8 +190,8 @@ smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
             loop marr (i + 1) (unsafeShiftR x sj)
         | mem /= 0 = do
             writeWordArray marr i mem
-            return $ i + 1
-        | otherwise = return n
+            pure $ i + 1
+        | otherwise = pure n
 
 -- | TODO : Use copy here? Check benchmark results.
 wordShiftLArray :: Int -> WordArray -> Int -> Natural
@@ -199,7 +199,7 @@ wordShiftLArray !n !arr !q = runStrictPrim $ do
     marr <- newWordArray (n + q)
     loop1 marr 0
     narr <- unsafeFreezeWordArray marr
-    return $! NatB (n + q) narr
+    pure $! NatB (n + q) narr
   where
     loop1 !marr !i
         | i < q = do
@@ -211,7 +211,7 @@ wordShiftLArray !n !arr !q = runStrictPrim $ do
             x <- indexWordArrayM arr i
             writeWordArray marr (q + i) x
             loop2 marr (i + 1)
-        | otherwise = return ()
+        | otherwise = pure ()
 
 largeShiftLArray :: Int -> WordArray-> (# Int, Int, Int #) -> Natural
 largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
@@ -219,7 +219,7 @@ largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
     setWordArray marr 0 q 0
     nlen <- loop1 marr 0 0
     narr <- unsafeFreezeWordArray marr
-    return $! NatB nlen narr
+    pure $! NatB nlen narr
   where
     loop1 !marr !i !mem
         | i < n =  do
@@ -228,8 +228,8 @@ largeShiftLArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
             loop1 marr (i + 1) (unsafeShiftR x sj)
         | mem /= 0 = do
             writeWordArray marr (q + i) mem
-            return (q + i + 1)
-        | otherwise = return (q + i)
+            pure (q + i + 1)
+        | otherwise = pure (q + i)
 
 
 {-# NOINLINE shiftRInteger #-}

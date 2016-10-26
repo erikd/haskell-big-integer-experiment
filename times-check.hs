@@ -116,7 +116,7 @@ isMinNatural (Natural n arr) = indexWordArray arr (n - 1) /= 0
 instance Arbitrary Natural where
     arbitrary = do
         wrds <- fmap positive32bits $ vectorOf 10 arbitrary
-        return $ mkNatural wrds
+        pure $ mkNatural wrds
 
     -- shrink (Natural n arr) = map (\x -> Natural x arr) $ [ 1 .. (n - 1) ]
     shrink _ = []

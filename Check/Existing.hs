@@ -73,8 +73,8 @@ instance Arbitrary GmpSimplePair where
         if bool
             then do
                 i <- arbitrary
-                return $! GSP (G.smallInteger (unboxInt i)) (S.smallInteger (unboxInt i))
+                pure $! GSP (G.smallInteger (unboxInt i)) (S.smallInteger (unboxInt i))
             else do
                 sign <- arbitrary
                 pos <- positive32bits <$> arbitrary
-                return $! GSP (G.mkInteger sign pos) (S.mkInteger sign pos)
+                pure $! GSP (G.mkInteger sign pos) (S.mkInteger sign pos)

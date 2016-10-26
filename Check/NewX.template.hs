@@ -324,12 +324,12 @@ instance Arbitrary GmpNewPair where
         if bool
             then do
                 i <- fmap getNonZero arbitrary
-                return $! GNP (G.smallInteger (unboxInt i)) (X.smallInteger (unboxInt i))
+                pure $! GNP (G.smallInteger (unboxInt i)) (X.smallInteger (unboxInt i))
             else do
                 sign <- arbitrary
                 len <- choose (2, 50)
                 pos <- vectorOf len arbPositve32Bit
-                return $! GNP (G.mkInteger sign pos) (X.mkInteger sign pos)
+                pure $! GNP (G.mkInteger sign pos) (X.mkInteger sign pos)
     shrink (GNP g x) =
         -- This shrink method is far from optimal.
         map (\i -> GNP (G.shiftLInteger g (unboxInt i)) (X.shiftLInteger x (unboxInt i))) [1..50]

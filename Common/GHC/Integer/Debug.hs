@@ -11,7 +11,7 @@ hexShowW :: Word -> String
 hexShowW w = "0x" ++ Numeric.showHex w ""
 
 debugPrint :: Int -> String -> StrictPrim s ()
-debugPrint line s = trace (show line ++ " : " ++ s) $ return ()
+debugPrint line s = trace (show line ++ " : " ++ s) $ pure ()
 
 wibbleInt :: Int
 wibbleInt = 1

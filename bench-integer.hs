@@ -109,7 +109,7 @@ findBenchmarks :: IO [C.Benchmark]
 findBenchmarks =
     (mapArgs . splitR) <$> catch
                             (getEnv "INTEGER_BENCH")
-                            (\ (_ :: SomeException) -> return "")
+                            (\ (_ :: SomeException) -> pure "")
   where
     splitR "" = []
     splitR str =
@@ -180,4 +180,4 @@ mkBigParam loopCount len = do
     xs <- R.randomRs (0, 0x7fffffff) <$> R.newStdGen
     let (first, rest) = splitAt len xs
         second = take len rest
-    return (loopCount, first, second)
+    pure (loopCount, first, second)

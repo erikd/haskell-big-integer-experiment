@@ -33,7 +33,7 @@ mkLargeIntegerList count range = do
     let mkIntList len =
             (take len . R.randomRs (0, 0x7fffffff)) <$> R.newStdGen
     ints <- mapM mkIntList lengths
-    return . take count $ zip signs ints
+    pure . take count $ zip signs ints
 
 
 boxTuple :: (# a, b #) -> (a, b)

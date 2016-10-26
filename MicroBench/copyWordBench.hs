@@ -55,7 +55,7 @@ copyWordArrayExplicit !marr !doff !arr !soff !wrds =
             !x <- indexWordArrayM arr (soff + i)
             writeWordArray marr (doff + i) x
             loop (i + 1)
-        | otherwise = return ()
+        | otherwise = pure ()
 
 {-# INLINE copyWordArrayExplicitAddr #-}
 copyWordArrayExplicitAddr :: PrimMonad m => MutableWordArray m -> Int -> WordArray -> Int -> Int -> m ()
@@ -68,4 +68,4 @@ copyWordArrayExplicitAddr !marr !doff !arr !soff !wrds =
             !x <- indexWordAddrM addr (soff + i)
             writeWordArray marr (doff + i) x
             loop (i + 1)
-        | otherwise = return ()
+        | otherwise = pure ()

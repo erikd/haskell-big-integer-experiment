@@ -365,10 +365,10 @@ validateValueUsage times = do
     valuesAreEmpty =
         let elems = concat . Map.elems $ values times
         in if null elems
-            then return False
+            then pure False
             else do
                 putStrLn $ "validateValueUsage found unused values : " ++ show elems
-                return True
+                pure True
 
     valuesAreUniqueAndUsedOnce (outvals, invals) = do
         let out_ok = length (nub outvals) == length outvals
@@ -386,7 +386,7 @@ validateValueUsage times = do
         unless (null unused_out) $
             putStrLn $ "validateValueUsage unused outputs : " ++ show unused_out ++ "\n"
 
-        return (in_ok && out_ok && not (null unused_in) && not (null unused_out))
+        pure (in_ok && out_ok && not (null unused_in) && not (null unused_out))
 
     setInsert2 (a, b) = Set.insert a . Set.insert b
 
@@ -394,11 +394,11 @@ validateValueUsage times = do
 
     opCheckArgs (ok, vs) op =
         case op of
-            LoadSource _ -> return (ok, vs)
-            TimesWord2 _ outs -> return (ok, setInsert2 outs vs)
-            PlusWord2 ins outs -> return (ok && setMembers2 ins vs, setInsert2 outs vs)
-            PlusWord ins out -> return (ok && setMembers2 ins vs, Set.insert out vs)
-            StoreValue _ -> return (ok, vs)
+            LoadSource _ -> pure (ok, vs)
+            TimesWord2 _ outs -> pure (ok, setInsert2 outs vs)
+            PlusWord2 ins outs -> pure (ok && setMembers2 ins vs, setInsert2 outs vs)
+            PlusWord ins out -> pure (ok && setMembers2 ins vs, Set.insert out vs)
+            StoreValue _ -> pure (ok, vs)
 
     validateOperationOrdering oplist =
         fst <$> foldM opCheckArgs (False, Set.empty) oplist
@@ -426,7 +426,7 @@ pprTimes times =
     ]
     ++ map (indent4 . ppr) ( operations times)
     ++ map indent4
-        [ "return $ " ++ show (maxlen - 1) ++ " + boxInt# (neWord# (unboxWord " ++ lastCarry ++ ") 0##)"
+        [ "pure $ " ++ show (maxlen - 1) ++ " + boxInt# (neWord# (unboxWord " ++ lastCarry ++ ") 0##)"
         ]
   where
     name = "timesNat" ++ show (xv times) ++ "x" ++ show (yv times)

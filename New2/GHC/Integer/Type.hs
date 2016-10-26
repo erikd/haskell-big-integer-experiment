@@ -143,7 +143,7 @@ encodeNaturalDouble (Small (W# w)) i = encodeDouble# w i
 encodeNaturalDouble (Large n arr) e0 =
     let (!res, _) = runStrictPrim $ intLoopState 0 (n - 1) (0.0, I# e0) $ \ i (D# d, e) -> do
                         (W# w) <- indexWordArrayM arr i
-                        return (D# (d +## encodeDouble# w (unboxInt e)), e + WORD_SIZE_IN_BITS)
+                        pure (D# (d +## encodeDouble# w (unboxInt e)), e + WORD_SIZE_IN_BITS)
     in unboxDouble res
 
 
@@ -209,7 +209,7 @@ andArray n arr1 arr2 = runStrictPrim $ do
                 !y <- indexWordArrayM arr2 i
                 writeWordArray marr i (x .&. y)
                 loop marr (i + 1)
-        | otherwise = return ()
+        | otherwise = pure ()
 
 
 {-# NOINLINE orInteger #-}
@@ -259,7 +259,7 @@ orArray !n1 !arr1 !n2 !arr2
                 !x <- indexWordArrayM arr1 i
                 writeWordArray marr i x
                 loop2 marr (i + 1)
-        | otherwise = return i
+        | otherwise = pure i
 
 {-# NOINLINE xorInteger #-}
 xorInteger :: Integer -> Integer -> Integer
@@ -292,7 +292,7 @@ xorArray !n1 !arr1 !n2 !arr2
                 !x <- indexWordArrayM arr1 i
                 writeWordArray marr i x
                 loop2 marr (i + 1)
-        | otherwise = return ()
+        | otherwise = pure ()
 
 {-# NOINLINE complementInteger #-}
 complementInteger :: Integer -> Integer
@@ -387,13 +387,13 @@ plusArrayW !n !arr !w = runStrictPrim $ do
             loop1 marr (i + 1) cry
         | otherwise = do
             writeWordArray marr i carry
-            return $ n + 1
+            pure $ n + 1
     loop2 !marr !i
         | i < n =  do
             !x <- indexWordArrayM arr i
             writeWordArray marr i x
             loop2 marr (i + 1)
-        | otherwise = return n
+        | otherwise = pure n
 
 
 plusArray :: Int -> WordArray -> Int -> WordArray -> Natural
@@ -422,13 +422,13 @@ plusArray !n1 !arr1 !n2 !arr2
             loop2 marr (i + 1) cry
         | otherwise = do
             writeWordArray marr i carry
-            return (i + 1)
+            pure (i + 1)
     loop3 !marr !i
         | i < n1 = do
             x <- indexWordArrayM arr1 i
             writeWordArray marr i x
             loop3 marr (i + 1)
-        | otherwise = return i
+        | otherwise = pure i
 
 
 
@@ -473,13 +473,13 @@ minusArrayW !n !arr !w = runStrictPrim $ do
             loop1 marr (i + 1) c
         | otherwise = do
             writeWordArray marr i carry
-            return $ n + 1
+            pure $ n + 1
     loop2 !marr !i
         | i < n =  do
             !x <- indexWordArrayM arr i
             writeWordArray marr i x
             loop2 marr (i + 1)
-        | otherwise = return n
+        | otherwise = pure n
 
 
 minusArray :: Int -> WordArray -> Int -> WordArray -> Natural
@@ -519,7 +519,7 @@ minusArray !n1 !arr1 !n2 !arr2
         | i <= n1 = do
             writeWordArray marr i 0
             loop4 marr (i + 1)
-        | otherwise = return ()
+        | otherwise = pure ()
 
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
@@ -555,7 +555,7 @@ timesArrayW !n !arr !w = runStrictPrim $ do
     writeWordArray marr (n - 1) 0
     !nlen <- loop marr 0 0
     !narr <- unsafeFreezeWordArray marr
-    return $! Large nlen narr
+    pure $! Large nlen narr
   where
     loop !marr !i !carry
         | i < n = do
@@ -565,8 +565,8 @@ timesArrayW !n !arr !w = runStrictPrim $ do
             loop marr (i + 1) c
         | carry /= 0 = do
             writeWordArray marr i carry
-            return (i + 1)
-        | otherwise = return i
+            pure (i + 1)
+        | otherwise = pure i
 
 
 timesArray :: Int -> WordArray -> Int -> WordArray -> Natural
@@ -604,8 +604,8 @@ timesArray !n1 !arr1 !n2 !arr2
             innerLoop marr pn psum (s1 + 1) s2 hw hc
         | carry /= 0 = do
             writeWordArray marr (s1 + s2) carry
-            return (s1 + s2 + 1)
-        | otherwise = return (s1 + s2 + 1)
+            pure (s1 + s2 + 1)
+        | otherwise = pure (s1 + s2 + 1)
 
 {-# NOINLINE divModInteger #-}
 divModInteger :: Integer -> Integer -> (# Integer, Integer #)
@@ -747,7 +747,7 @@ mkPair !lo !hi = runStrictPrim mkLargePair
         writeWordArray marr 0 lo
         writeWordArray marr 1 hi
         !narr <- unsafeFreezeWordArray marr
-        return $ Large 2 narr
+        pure $ Large 2 narr
 
 mkSingletonArray :: Word -> Natural
 mkSingletonArray !x = runStrictPrim mkSingleton
@@ -757,7 +757,7 @@ mkSingletonArray !x = runStrictPrim mkSingleton
         !marr <- newWordArray 1
         writeWordArray marr 0 x
         !narr <- unsafeFreezeWordArray marr
-        return $ Large 1 narr
+        pure $ Large 1 narr
 
 shiftLArray :: Int -> WordArray -> Int -> Natural
 shiftLArray !n !arr !i
@@ -783,8 +783,8 @@ smallShiftLArray !n !arr (# !si, !sj #) = runStrictPrim $ do
             loop marr (i + 1) (shiftRWord x sj)
         | mem /= 0 = do
             writeWordArray marr i mem
-            return $ i + 1
-        | otherwise = return n
+            pure $ i + 1
+        | otherwise = pure n
 
 -- | TODO : Use copy here
 wordShiftLArray :: Int -> WordArray -> Int -> Natural
@@ -804,7 +804,7 @@ wordShiftLArray !n !arr !q = runStrictPrim $ do
             !x <- indexWordArrayM arr i
             writeWordArray marr (q + i) x
             loop2 marr (i + 1)
-        | otherwise = return ()
+        | otherwise = pure ()
 
 
 largeShiftLArray :: Int -> WordArray-> (# Int, Int, Int #) -> Natural
@@ -851,7 +851,7 @@ smallShiftRArray !n !arr (# !si, !sj #) = runStrictPrim $ do
             !x <- indexWordArrayM arr i
             writeWordArray marr i ((shiftRWord x si) .|. mem)
             loop marr (i - 1) (unsafeShiftL x sj)
-        | otherwise = return ()
+        | otherwise = pure ()
 
 wordShiftRArray :: Int -> WordArray -> Int -> Natural
 wordShiftRArray !n !arr !q = runStrictPrim $ do
@@ -873,14 +873,14 @@ largeShiftRArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
             !x <- indexWordArrayM arr (q + i)
             writeWordArray marr i ((shiftRWord x si) .|. mem)
             loop marr (i - 1) (unsafeShiftL x sj)
-        | otherwise = return ()
+        | otherwise = pure ()
 
 
 finalizeLarge :: Int -> WordArray -> StrictPrim s Natural
 finalizeLarge !nin !arr = do
     let !len = nonZeroLen nin arr
     !x <- indexWordArrayM arr 0
-    return $
+    pure $
         if len == 0 || (len == 1 && x == 0)
             then Small 0
             else Large len arr

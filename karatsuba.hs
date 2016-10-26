@@ -40,7 +40,7 @@ isValidBase = do
         isPower10 = s == ('1' : replicate (slen - 1) '0')
     unless (isPower2 || isPower10) $
         error $ "isValidBase failed for " ++ show kBase
-    return ()
+    pure ()
 
 sizeAtBase :: Integer -> Int
 sizeAtBase x =

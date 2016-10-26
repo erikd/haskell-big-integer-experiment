@@ -21,13 +21,13 @@ newtype MutableWordArray m = MWA (MutableByteArray (PrimState m))
 newWordArray :: PrimMonad m => Int -> m (MutableWordArray m)
 newWordArray !len = do
     !marr <- newByteArray (len * sizeOf (0 :: Word))
-    return $ MWA marr
+    pure $ MWA marr
 
 {-# INLINE newPinnedWordArray #-}
 newPinnedWordArray :: PrimMonad m => Int -> m (MutableWordArray m)
 newPinnedWordArray !len = do
     !marr <- newPinnedByteArray (len * sizeOf (0 :: Word))
-    return $ MWA marr
+    pure $ MWA marr
 
 -- | allocaWords : Create a temporary array of Word to used for the duration
 -- of the provided computation. Idea stolen from Foriegn.Marshal.Alloc.
@@ -54,7 +54,7 @@ cloneWordArrayExtend !oldLen (WA !arr) !newLen = do
     when (oldLen > 0) $
         copyByteArray marr 0 arr 0 (min oldLen newLen * sizeOf (0 :: Word))
     setByteArray marr oldLen (max 0 (newLen - oldLen)) (0 :: Word)
-    return $ MWA marr
+    pure $ MWA marr
 
 {-# INLINE readWordArray #-}
 readWordArray :: PrimMonad m => MutableWordArray m -> Int -> m Word
@@ -64,7 +64,7 @@ readWordArray (MWA !marr) = readByteArray marr
 unsafeFreezeWordArray :: PrimMonad m => MutableWordArray m -> m WordArray
 unsafeFreezeWordArray (MWA !marr) = do
     !arr <- unsafeFreezeByteArray marr
-    return (WA arr)
+    pure (WA arr)
 
 {-# INLINE indexWordArray #-}
 indexWordArray :: WordArray -> Int -> Word
@@ -72,7 +72,7 @@ indexWordArray (WA !arr) = indexByteArray arr
 
 {-# INLINE indexWordArrayM #-}
 indexWordArrayM :: Monad m => WordArray -> Int -> m Word
-indexWordArrayM (WA !arr) !i = case indexByteArray arr i of x -> return x
+indexWordArrayM (WA !arr) !i = case indexByteArray arr i of x -> pure x
 
 {-# INLINE writeWordArray #-}
 writeWordArray :: PrimMonad m => MutableWordArray m -> Int -> Word -> m ()
@@ -87,7 +87,7 @@ setWordArray !marr !offset !count !word =
         | off < end = do
             writeWordArray marr off word
             loop (off + 1) end
-        | otherwise = return ()
+        | otherwise = pure ()
 
 {-# INLINE copyWordArray #-}
 copyWordArray :: PrimMonad m => MutableWordArray m -> Int -> WordArray -> Int -> Int -> m ()

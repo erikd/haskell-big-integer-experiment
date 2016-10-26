@@ -226,16 +226,16 @@ kShiftedAdd :: Int -> Natural -> Natural -> Natural -> Natural
 kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0)
     | shift < 1 = error $ "kShiftedAdd with shift of " ++ show shift
     | otherwise = runStrictPrim $ do
-        len <- return . succ $ max n0 (max (n1 + shift) (n2 + 2 * shift))
+        len <- pure . succ $ max n0 (max (n1 + shift) (n2 + 2 * shift))
         debugPrint __LINE__ $ "length is " ++ show len ++ " " ++ show (0 :: Int, (n2, n1, n0), shift)
         !marr <- newWordArray len
         setWordArray marr 0 len (0xaeaeaeaaeaeaeaea :: Word)
         !nlen <- start marr
         if nlen > len
             then error "Bad length"
-            else return ()
+            else pure ()
         !narr <- unsafeFreezeWordArray marr
-        return $! Natural nlen narr
+        pure $! Natural nlen narr
   where
     start !marr
         | n0 <= shift = stage0short0 marr 0
@@ -533,7 +533,7 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
             !x <- indexWordArrayM arr0 i
             debugWriteWordArrayLocal __LINE__ marr i x
             stage2final0 marr (i + 1)
-        | otherwise = return i
+        | otherwise = pure i
 
     stage2final0c !marr !i !carry
         | i < n0 = do
@@ -545,15 +545,15 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
                 else stage2final0c marr (i + 1) cry
         | carry /= 0 = do
             debugWriteWordArrayLocal __LINE__ marr i carry
-            return (i + 1)
-        | otherwise = return i
+            pure (i + 1)
+        | otherwise = pure i
 
     stage2final1 !marr !i
         | i - shift < n1 = do
             !x <- indexWordArrayM arr1 (i - shift)
             debugWriteWordArrayLocal __LINE__ marr i x
             stage2final1 marr (i + 1)
-        | otherwise = return i
+        | otherwise = pure i
 
     stage2final1c !marr !i !carry
         | i - shift < n1 = do
@@ -565,15 +565,15 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
                 else stage2final1c marr (i + 1) cry
         | carry /= 0 = do
             debugWriteWordArrayLocal __LINE__ marr i carry
-            return (i + 1)
-        | otherwise = return i
+            pure (i + 1)
+        | otherwise = pure i
 
     stage2final2 !marr !i
         | i - 2 * shift < n2 = do
             !x <- indexWordArrayM arr2 (i - 2 * shift)
             debugWriteWordArrayLocal __LINE__ marr i x
             stage2final2 marr (i + 1)
-        | otherwise = return i
+        | otherwise = pure i
 
     stage2final2c !marr !i !carry
         | i - 2 * shift < n2 = do
@@ -585,7 +585,7 @@ kShiftedAdd !shift !(Natural !n2 !arr2) !(Natural !n1 !arr1) !(Natural !n0 !arr0
                 else stage2final2c marr (i + 1) cry
         | otherwise = do
             debugWriteWordArrayLocal __LINE__ marr i carry
-            return (i + 1)
+            pure (i + 1)
 
 --------------------------------------------------------------------------------
 
@@ -597,7 +597,7 @@ instance Arbitrary Natural where
     arbitrary = do
         randLen <- choose (0, 20)
         wrds <- vectorOf randLen $ choose (0, 0x7fffffff)
-        return $ mkNatural wrds
+        pure $ mkNatural wrds
 
     -- shrink (Natural n arr) = map (\x -> Natural x arr) $ [ 0 .. (n - 1) ]
     shrink _ = []
@@ -613,7 +613,7 @@ debugWriteWordArrayLocal _ marr i x = writeWordArray marr i x
 
 debugPrint :: Int -> String -> StrictPrim s ()
 #if 0
-debugPrint line s = trace (show line ++ " : " ++ s) $ return ()
+debugPrint line s = trace (show line ++ " : " ++ s) $ pure ()
 #else
 debugPrint _ _ = pure ()
 #endif

@@ -548,7 +548,7 @@ mkPair !ctor !lo !hi =
         writeWordArray marr 0 lo
         writeWordArray marr 1 hi
         narr <- unsafeFreezeWordArray marr
-        return $ ctor 2 narr
+        pure $ ctor 2 narr
 
 
 zeroInteger, oneInteger, minusOneInteger :: Integer
