@@ -396,7 +396,7 @@ timesNatural !a@(Natural !n1 _) !b@(Natural !n2 _)
 -- and the ByteArray my be moved by the GC while we're still trying too access
 -- it via the pointed.
 {-# INLINE withMultiplyContextBroken #-}
-withMultiplyContextBroken :: PrimMonad m => Natural -> Natural -> (NaturalP -> NaturalP -> m Natural) -> m Natural
+withMultiplyContextBroken :: Natural -> Natural -> (NaturalP -> NaturalP -> StrictPrim Natural) -> StrictPrim Natural
 withMultiplyContextBroken (Natural n0 arr0) (Natural n1 arr1) times = do
     res <- times (NaturalP n0 $ wordArrayContents arr0) (NaturalP n1 $ wordArrayContents arr1)
     touch arr0
@@ -407,7 +407,7 @@ withMultiplyContextBroken (Natural n0 arr0) (Natural n1 arr1) times = do
 -- (which is *never* moved by the GC, but is aonly used for the duration of the
 -- computation.
 {-# INLINE withMultiplyContext #-}
-withMultiplyContext :: PrimMonad m => Natural -> Natural -> (NaturalP -> NaturalP -> m Natural) -> m Natural
+withMultiplyContext :: Natural -> Natural -> (NaturalP -> NaturalP -> StrictPrim Natural) -> StrictPrim Natural
 withMultiplyContext (Natural n0 arr0) (Natural n1 arr1) times = do
     marr <- newPinnedWordArray $ n0 + n1
     copyWordArray marr 0 arr0 0 n0
@@ -420,7 +420,7 @@ withMultiplyContext (Natural n0 arr0) (Natural n1 arr1) times = do
 
 
 {-# INLINE timesNaturalP #-}
-timesNaturalP :: PrimMonad m => NaturalP -> NaturalP -> m Natural
+timesNaturalP :: NaturalP -> NaturalP -> StrictPrim Natural
 timesNaturalP (NaturalP n1 arr1) (NaturalP n2 arr2) = do
     marr <- newWordArray (n1 + n2)
     len <- case 10 * n1 + n2 of
@@ -435,7 +435,7 @@ timesNaturalP (NaturalP n1 arr1) (NaturalP n2 arr2) = do
     pure $! Natural len narr
 
 {-# INLINE timesNat2x2 #-}
-timesNat2x2 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
+timesNat2x2 :: WordAddr -> WordAddr -> MutableWordArray -> StrictPrim Int
 timesNat2x2 !xarr !yarr !marr = do
     x0 <- indexWordAddrM xarr 0
     y0 <- indexWordAddrM yarr 0
@@ -461,7 +461,7 @@ timesNat2x2 !xarr !yarr !marr = do
     pure $ 3 + boxInt# (neWord# (unboxWord sum3c) 0##)
 
 {-# INLINE timesNat3x2 #-}
-timesNat3x2 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
+timesNat3x2 :: WordAddr -> WordAddr -> MutableWordArray -> StrictPrim Int
 timesNat3x2 !xarr !yarr !marr = do
     x0 <- indexWordAddrM xarr 0
     y0 <- indexWordAddrM yarr 0
@@ -499,7 +499,7 @@ timesNat3x2 !xarr !yarr !marr = do
     pure $ 4 + boxInt# (neWord# (unboxWord sum4d) 0##)
 
 {-# INLINE timesNat3x3 #-}
-timesNat3x3 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
+timesNat3x3 :: WordAddr -> WordAddr -> MutableWordArray -> StrictPrim Int
 timesNat3x3 !xarr !yarr !marr = do
     x0 <- indexWordAddrM xarr 0
     y0 <- indexWordAddrM yarr 0
@@ -556,7 +556,7 @@ timesNat3x3 !xarr !yarr !marr = do
 
 
 {-# INLINE timesNat4x2 #-}
-timesNat4x2 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
+timesNat4x2 :: WordAddr -> WordAddr -> MutableWordArray -> StrictPrim Int
 timesNat4x2 !xarr !yarr !marr = do
     x0 <- indexWordAddrM xarr 0
     y0 <- indexWordAddrM yarr 0
@@ -606,7 +606,7 @@ timesNat4x2 !xarr !yarr !marr = do
     pure $ 5 + boxInt# (neWord# (unboxWord sum5d) 0##)
 
 {-# INLINE timesNat4x3 #-}
-timesNat4x3 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
+timesNat4x3 :: WordAddr -> WordAddr -> MutableWordArray -> StrictPrim Int
 timesNat4x3 !xarr !yarr !marr = do
     x0 <- indexWordAddrM xarr 0
     y0 <- indexWordAddrM yarr 0
@@ -683,7 +683,7 @@ timesNat4x3 !xarr !yarr !marr = do
     pure $ 6 + boxInt# (neWord# (unboxWord sum6f) 0##)
 
 {-# INLINE timesNat4x4 #-}
-timesNat4x4 :: PrimMonad m => WordAddr -> WordAddr -> MutableWordArray m -> m Int
+timesNat4x4 :: WordAddr -> WordAddr -> MutableWordArray -> StrictPrim Int
 timesNat4x4 !xarr !yarr !marr = do
     x0 <- indexWordAddrM xarr 0
     y0 <- indexWordAddrM yarr 0
@@ -784,7 +784,7 @@ timesNat4x4 !xarr !yarr !marr = do
     pure $ 7 + boxInt# (neWord# (unboxWord sum7f) 0##)
 
 {-# INLINE timesNaturalWA #-}
-timesNaturalWA :: PrimMonad m => Int -> WordAddr -> Int -> WordAddr -> MutableWordArray m -> m Int
+timesNaturalWA :: Int -> WordAddr -> Int -> WordAddr -> MutableWordArray -> StrictPrim Int
 timesNaturalWA !n1 !arr1 !n2 !arr2 =
     preLoop
   where
@@ -1082,7 +1082,7 @@ arrayShow !len !arr =
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
 
-debugWriteWordArray :: Int -> MutableWordArray (StrictPrim) -> Int -> Word -> StrictPrim ()
+debugWriteWordArray :: Int -> MutableWordArray -> Int -> Word -> StrictPrim ()
 # if 0
 debugWriteWordArray line marr i x = do
     debugPrint line $ "writing " ++ hexShowW x ++ " at " ++ show i

@@ -5,6 +5,7 @@ import Control.Monad
 import Control.Monad.Primitive
 import Data.Primitive
 
+import Common.GHC.Integer.StrictPrim
 
 -- The `primitive` package supports two array types, `ByteArray` (and array of
 -- bytes) and `Array a` (an array of boxed values). Therefore use the former to
@@ -15,16 +16,16 @@ import Data.Primitive
 
 newtype WordArray = WA ByteArray
 
-newtype MutableWordArray m = MWA (MutableByteArray (PrimState m))
+newtype MutableWordArray = MWA (MutableByteArray RealWorld)
 
 {-# INLINE newWordArray #-}
-newWordArray :: PrimMonad m => Int -> m (MutableWordArray m)
+newWordArray :: Int -> StrictPrim MutableWordArray
 newWordArray !len = do
     !marr <- newByteArray (len * sizeOf (0 :: Word))
     pure $ MWA marr
 
 {-# INLINE newPinnedWordArray #-}
-newPinnedWordArray :: PrimMonad m => Int -> m (MutableWordArray m)
+newPinnedWordArray :: Int -> StrictPrim MutableWordArray
 newPinnedWordArray !len = do
     !marr <- newPinnedByteArray (len * sizeOf (0 :: Word))
     pure $ MWA marr
@@ -32,7 +33,7 @@ newPinnedWordArray !len = do
 -- | allocaWords : Create a temporary array of Word to used for the duration
 -- of the provided computation. Idea stolen from Foriegn.Marshal.Alloc.
 {-# INLINE allocaWords #-}
-allocaWords :: PrimMonad m => Int -> (WordArray -> m b) -> m b
+allocaWords :: Int -> (WordArray -> StrictPrim b) -> StrictPrim b
 allocaWords len computation = do
     marr <- newPinnedByteArray (len * sizeOf (0 :: Word))
     narr <- unsafeFreezeByteArray marr
@@ -43,12 +44,12 @@ allocaWords len computation = do
 -- | newPlaceholderWordArray : Create a place holder ByteArray for timesInteger
 -- where a zero length ByteArray is needed. Memory is actually allocated, but
 -- nothing is written to it os it will actually contain junk data.
-newPlaceholderWordArray :: PrimMonad m => m WordArray
+newPlaceholderWordArray :: StrictPrim WordArray
 newPlaceholderWordArray = do
     !marr <- newByteArray (sizeOf (0 :: Word))
     unsafeFreezeWordArray (MWA marr)
 
-cloneWordArrayExtend :: PrimMonad m => Int -> WordArray -> Int -> m (MutableWordArray m)
+cloneWordArrayExtend :: Int -> WordArray -> Int -> StrictPrim MutableWordArray
 cloneWordArrayExtend !oldLen (WA !arr) !newLen = do
     !marr <- newByteArray (newLen * sizeOf (0 :: Word))
     when (oldLen > 0) $
@@ -57,11 +58,11 @@ cloneWordArrayExtend !oldLen (WA !arr) !newLen = do
     pure $ MWA marr
 
 {-# INLINE readWordArray #-}
-readWordArray :: PrimMonad m => MutableWordArray m -> Int -> m Word
+readWordArray :: MutableWordArray -> Int -> StrictPrim Word
 readWordArray (MWA !marr) = readByteArray marr
 
 {-# INLINE unsafeFreezeWordArray #-}
-unsafeFreezeWordArray :: PrimMonad m => MutableWordArray m -> m WordArray
+unsafeFreezeWordArray :: MutableWordArray -> StrictPrim WordArray
 unsafeFreezeWordArray (MWA !marr) = do
     !arr <- unsafeFreezeByteArray marr
     pure (WA arr)
@@ -71,15 +72,15 @@ indexWordArray :: WordArray -> Int -> Word
 indexWordArray (WA !arr) = indexByteArray arr
 
 {-# INLINE indexWordArrayM #-}
-indexWordArrayM :: Monad m => WordArray -> Int -> m Word
+indexWordArrayM :: WordArray -> Int -> StrictPrim Word
 indexWordArrayM (WA !arr) !i = case indexByteArray arr i of x -> pure x
 
 {-# INLINE writeWordArray #-}
-writeWordArray :: PrimMonad m => MutableWordArray m -> Int -> Word -> m ()
+writeWordArray :: MutableWordArray -> Int -> Word -> StrictPrim ()
 writeWordArray (MWA !marr) = writeByteArray marr
 
 {-# INLINE setWordArray #-}
-setWordArray :: PrimMonad m => MutableWordArray m -> Int -> Int -> Word -> m ()
+setWordArray :: MutableWordArray -> Int -> Int -> Word -> StrictPrim ()
 setWordArray !marr !offset !count !word =
     loop offset (offset + count)
   where
@@ -90,7 +91,7 @@ setWordArray !marr !offset !count !word =
         | otherwise = pure ()
 
 {-# INLINE copyWordArray #-}
-copyWordArray :: PrimMonad m => MutableWordArray m -> Int -> WordArray -> Int -> Int -> m ()
+copyWordArray :: MutableWordArray -> Int -> WordArray -> Int -> Int -> StrictPrim ()
 copyWordArray (MWA !marr) !doff (WA !arr) !soff !wrds =
     let !wordsize = sizeOf (0 :: Word)
     in copyByteArray marr (doff * wordsize) arr (soff * wordsize) (wrds * wordsize)
@@ -101,7 +102,7 @@ newtype WordAddr = WordAddr Addr
 
 class ReadWord a where
     readWord :: a -> Int -> Word
-    readWordM :: PrimMonad m => a -> Int -> m Word
+    readWordM :: a -> Int -> StrictPrim Word
 
 instance ReadWord WordArray where
     {-# INLINE readWord #-}
@@ -129,5 +130,5 @@ indexWordAddr :: WordAddr -> Int -> Word
 indexWordAddr (WordAddr !arr) = indexOffAddr arr
 
 {-# INLINE indexWordAddrM #-}
-indexWordAddrM :: PrimMonad m => WordAddr -> Int -> m Word
+indexWordAddrM :: WordAddr -> Int -> StrictPrim Word
 indexWordAddrM (WordAddr arr) = readOffAddr arr

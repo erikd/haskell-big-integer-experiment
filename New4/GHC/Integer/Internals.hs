@@ -472,7 +472,7 @@ signShow Neg = "Neg"
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
 
-debugWriteWordArray :: Int -> MutableWordArray (StrictPrim) -> Int -> Word -> StrictPrim ()
+debugWriteWordArray :: Int -> MutableWordArray -> Int -> Word -> StrictPrim ()
 # if 0
 debugWriteWordArray line marr i x = do
     debugPrint line $ "writing " ++ hexShowW x ++ " at " ++ show i
