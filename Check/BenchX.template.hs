@@ -38,8 +38,8 @@ addSmallLoop (count, up, down) =
 
 
 {-# NOINLINE addBigLoop #-}
-addBigLoop :: (Int, [Int], [Int]) -> X.Integer
-addBigLoop (count, up, down) =
+addBigLoop :: ([Int], [Int]) -> X.Integer
+addBigLoop (up, down) =
     loop count True (X.timesInteger upInteger (X.smallInteger 3#))
   where
     loop :: Int -> Bool -> X.Integer -> X.Integer
@@ -52,6 +52,8 @@ addBigLoop (count, up, down) =
 
     downInteger :: X.Integer
     downInteger = X.mkInteger False down
+
+    count = 500
 
 {-# NOINLINE  timesSmallLoop #-}
 timesSmallLoop :: Int -> X.Integer
@@ -77,7 +79,7 @@ timesSmallBigLoop iter =
     loop !k !j !accum = loop k (j - 1) (X.timesInteger accum value)
 
     value = X.smallInteger (unboxInt maxBound)
-    count = 10
+    count = 100
 
 {-# NOINLINE  timesMediumLoop #-}
 timesMediumLoop :: Int -> Int
@@ -98,7 +100,7 @@ timesMediumLoop iter =
     -- be exactly 4 machine words in length regardless of machine Word size.
     len = if wordSizeInBits == 64 then 8 else 4
 
-    count = 30
+    count = 100
 
 {-# NOINLINE timesBigLoop #-}
 timesBigLoop :: Int -> X.Integer
@@ -111,4 +113,4 @@ timesBigLoop iter =
     loop !k !j !accum = loop k (j - 1) (X.timesInteger accum value)
 
     value = X.mkInteger True [ 0x300 .. 0x3ff ]
-    count = 10
+    count = 20

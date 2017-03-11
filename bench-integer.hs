@@ -38,7 +38,7 @@ addSmallBench addSmallParam =
             , C.bench "New4"    $ C.whnf Bench4.addSmallLoop addSmallParam
             ]
 
-addBigBench :: (Int, [Int], [Int]) -> C.Benchmark
+addBigBench :: ([Int], [Int]) -> C.Benchmark
 addBigBench addBigParam =
     C.bgroup "Big Integer addition and subtraction"
             [ C.bench "GMP"     $ C.whnf BenchG.addBigLoop addBigParam
@@ -151,11 +151,11 @@ matchBenchmarks name =
     -- can be held in a 64 bit machine word.
     addSmallParam = (3000, 163, 162)
 
-    addBigParam = unsafePerformIO $ mkBigParam 100 200
+    addBigParam = unsafePerformIO $ mkBigParam 200
 
-    timesSmallLoopCount = 200
-    timesSmallBigLoopCount = 80
-    timesMediumLoopLoopCount = 200
+    timesSmallLoopCount = 20000
+    timesSmallBigLoopCount = 2000
+    timesMediumLoopLoopCount = 1000
     timesBigLoopCount = 10
 
     plusSmallBenchList = [ addSmallBench addSmallParam ]
@@ -175,9 +175,9 @@ matchBenchmarks name =
 -- | A function to create a a set of test parameters to pass to addBigLoop.
 -- The three parameter are; a loop count, and two lists of 31 bit Ints to be
 -- passed to the mkInteger function of the Integer API.
-mkBigParam :: Int -> Int -> IO (Int, [Int], [Int])
-mkBigParam loopCount len = do
+mkBigParam :: Int -> IO ([Int], [Int])
+mkBigParam len = do
     xs <- R.randomRs (0, 0x7fffffff) <$> R.newStdGen
     let (first, rest) = splitAt len xs
         second = take len rest
-    pure (loopCount, first, second)
+    pure (first, second)
