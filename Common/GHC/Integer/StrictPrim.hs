@@ -22,24 +22,24 @@ import GHC.Base hiding (($!)) -- Want to use the local definition of ($!) regard
 
 import Control.Monad.Primitive
 
-newtype StrictPrim s a
-    = StrictPrim (State# s -> (# State# s, a #))
+newtype StrictPrim a
+    = StrictPrim (State# RealWorld -> (# State# RealWorld, a #))
 
-instance Applicative (StrictPrim s) where
+instance Applicative StrictPrim where
     {-# INLINE pure #-}
     pure !x = StrictPrim ( \ !s -> (# s, x #))
 
     {-# INLINE (<*>) #-}
     (<*>) !a !b = do !f <- a ; !v <- b ; pure $! (f $! v)
 
-instance Functor (StrictPrim s) where
+instance Functor StrictPrim where
     {-# INLINE fmap #-}
     fmap !f (StrictPrim !m) = StrictPrim $ \ !s ->
         case m s of
             (# !new_s,!r #) -> (# new_s, f $! r #)
 
 
-instance Monad (StrictPrim s) where
+instance Monad StrictPrim where
     {-# INLINE (>>) #-}
     (!m) >> (!k) = do { _ <- m ;  k }
 
@@ -51,14 +51,14 @@ instance Monad (StrictPrim s) where
                     StrictPrim !k2 -> k2 new_s
             )
 
-instance PrimMonad (StrictPrim s) where
-    type PrimState (StrictPrim s) = s
+instance PrimMonad StrictPrim where
+    type PrimState StrictPrim = RealWorld
     {-# INLINE primitive #-}
     primitive = StrictPrim
 
 
 {-# INLINE runStrictPrim #-}
-runStrictPrim :: (forall s. StrictPrim s a) -> a
+runStrictPrim :: StrictPrim a -> a
 runStrictPrim !st =
     case st of
         StrictPrim !st_rep ->

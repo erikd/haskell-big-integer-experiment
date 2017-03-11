@@ -1026,7 +1026,7 @@ mkSingletonNat !x =
         pure $ Natural 1 narr
 
 
-finalizeNatural :: Int -> WordArray -> StrictPrim s Natural
+finalizeNatural :: Int -> WordArray -> StrictPrim Natural
 finalizeNatural 0 _ = pure zeroNatural
 finalizeNatural !nin !arr = do
     let !len = nonZeroLen nin arr
@@ -1082,7 +1082,7 @@ arrayShow !len !arr =
 absInt :: Int -> Int
 absInt x = if x < 0 then -x else x
 
-debugWriteWordArray :: Int -> MutableWordArray (StrictPrim s) -> Int -> Word -> StrictPrim s ()
+debugWriteWordArray :: Int -> MutableWordArray (StrictPrim) -> Int -> Word -> StrictPrim ()
 # if 0
 debugWriteWordArray line marr i x = do
     debugPrint line $ "writing " ++ hexShowW x ++ " at " ++ show i

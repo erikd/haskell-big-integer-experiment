@@ -741,7 +741,7 @@ mkLarge a = a
 mkPair :: Word -> Word -> Natural
 mkPair !lo !hi = runStrictPrim mkLargePair
   where
-    mkLargePair :: StrictPrim s Natural
+    mkLargePair :: StrictPrim Natural
     mkLargePair = do
         !marr <- newWordArray 2
         writeWordArray marr 0 lo
@@ -752,7 +752,7 @@ mkPair !lo !hi = runStrictPrim mkLargePair
 mkSingletonArray :: Word -> Natural
 mkSingletonArray !x = runStrictPrim mkSingleton
   where
-    mkSingleton :: StrictPrim s Natural
+    mkSingleton :: StrictPrim Natural
     mkSingleton = do
         !marr <- newWordArray 1
         writeWordArray marr 0 x
@@ -876,7 +876,7 @@ largeShiftRArray !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
         | otherwise = pure ()
 
 
-finalizeLarge :: Int -> WordArray -> StrictPrim s Natural
+finalizeLarge :: Int -> WordArray -> StrictPrim Natural
 finalizeLarge !nin !arr = do
     let !len = nonZeroLen nin arr
     !x <- indexWordArrayM arr 0

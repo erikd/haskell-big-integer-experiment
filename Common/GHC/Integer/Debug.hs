@@ -10,7 +10,7 @@ import Common.GHC.Integer.StrictPrim
 hexShowW :: Word -> String
 hexShowW w = "0x" ++ Numeric.showHex w ""
 
-debugPrint :: Int -> String -> StrictPrim s ()
+debugPrint :: Int -> String -> StrictPrim ()
 debugPrint line s = trace (show line ++ " : " ++ s) $ pure ()
 
 wibbleInt :: Int

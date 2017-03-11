@@ -770,7 +770,7 @@ mkLarge a = a
 mkPair :: Sign -> Word -> Word -> Integer
 mkPair !sign !lo !hi = runStrictPrim mkLargePair
   where
-    mkLargePair :: StrictPrim s Integer
+    mkLargePair :: StrictPrim Integer
     mkLargePair = do
         !marr <- newWordArray 2
         writeWordArray marr 0 lo
@@ -781,7 +781,7 @@ mkPair !sign !lo !hi = runStrictPrim mkLargePair
 mkSingletonArray :: Sign -> Word -> Integer
 mkSingletonArray !s !x = runStrictPrim mkSingleton
   where
-    mkSingleton :: StrictPrim s Integer
+    mkSingleton :: StrictPrim Integer
     mkSingleton = do
         !marr <- newWordArray 1
         writeWordArray marr 0 x
@@ -905,7 +905,7 @@ largeShiftRArray !s !n !arr (# !q, !si, !sj #) = runStrictPrim $ do
         | otherwise = pure ()
 
 
-finalizeLarge :: Sign -> Int -> WordArray -> StrictPrim s Integer
+finalizeLarge :: Sign -> Int -> WordArray -> StrictPrim Integer
 finalizeLarge !s !nin !arr = do
     let !len = nonZeroLen nin arr
     !x <-indexWordArrayM arr 0

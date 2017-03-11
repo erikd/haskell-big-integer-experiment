@@ -29,7 +29,7 @@ import Common.GHC.Integer.StrictPrim
 --
 -- It uses @(+ 1)@ so for most integer types it has no bounds (overflow) check.
 {-# INLINE intLoop #-}
-intLoop :: Int -> Int -> (Int -> StrictPrim s ()) -> StrictPrim s ()
+intLoop :: Int -> Int -> (Int -> StrictPrim ()) -> StrictPrim ()
 intLoop start end f =
     go start
   where
@@ -44,7 +44,7 @@ intLoop start end f =
 -- @start@ up to and including @end@, threading a state value through the
 -- computation.
 {-# INLINE intLoopState #-}
-intLoopState :: Int -> Int -> b -> (Int -> b -> StrictPrim s b) -> StrictPrim s b
+intLoopState :: Int -> Int -> b -> (Int -> b -> StrictPrim b) -> StrictPrim b
 intLoopState start end initState f =
     go start initState
   where
