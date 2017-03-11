@@ -151,6 +151,6 @@ realclean :
 	@rm -f Stamp/*
 
 sandbox-reinit:
-	cabal sandbox delete
+	@if test -d .cabal-sandbox ; then cabal sandbox delete ; fi
 	cabal sandbox init
 	cabal install criterion hspec primitive
