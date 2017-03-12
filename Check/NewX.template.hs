@@ -104,14 +104,12 @@ testNewInteger = do
     prop "Can OR two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (X.orInteger (X.absInteger sa) (X.absInteger sb)) `shouldBe` show (G.orInteger (G.absInteger ga) (G.absInteger gb))
 
-    prop "Can multiply two small Integers (QC)." $ \ (I# a) (I# b) ->
+    prop "Can multiply two small Integers (QC)." $ \ (I# a, I# b) ->
         show (X.timesInteger (X.smallInteger a) (X.smallInteger b)) `shouldBe` show (G.timesInteger (G.smallInteger a) (G.smallInteger b))
 
-    it "Can multiply large Integer by small." $ do
-        show (X.timesInteger (X.mkInteger True [0,2]) (X.smallInteger 0x22#)) `shouldBe` "+0x2200000000"
-        show (X.timesInteger (X.mkInteger False [0,2]) (X.smallInteger 0x22#)) `shouldBe` "-0x2200000000"
-        show (X.timesInteger (X.mkInteger True [0,2]) (X.smallInteger -0x22#)) `shouldBe` "-0x2200000000"
-        show (X.timesInteger (X.mkInteger False [0,2]) (X.smallInteger -0x22#)) `shouldBe` "+0x2200000000"
+    prop "Can multiply large Integer by small (QC)." $ \(GNP ga sa, I# a) ->
+        show (X.timesInteger sa (X.smallInteger a)) `shouldBe` show (G.timesInteger ga (G.smallInteger a))
+
 
     it "Can multiply two Integers (old failures)." $ do
         show (X.timesInteger (X.mkInteger True [1, 2, 4]) (X.mkInteger True [1, 2])) `shouldBe` "+0x1000000020000000200000001"
@@ -134,7 +132,7 @@ testNewInteger = do
             b6 = [0x2,0,0x3,0,0xe]
         show (X.timesInteger (X.mkInteger True a6) (X.mkInteger True b6)) `shouldBe` show (G.timesInteger (G.mkInteger True a6) (G.mkInteger True b6))
 
-    prop "Can multiply two Integers." $ \ (GNP ga sa, GNP gb sb) ->
+    prop "Can multiply two Integers (QC)." $ \ (GNP ga sa, GNP gb sb) ->
         show (X.timesInteger sa sb) `shouldBe` show (G.timesInteger ga gb)
 
     it "Tests that have failed once for no good reason." $ do
