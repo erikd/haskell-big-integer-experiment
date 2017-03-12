@@ -38,7 +38,7 @@ llvm3 :
 	less New3/GHC/Integer/Internals.ll
 
 check-integer : check-integer.hs Stamp/ready $(hsfiles) Check/New1.hs Check/New2.hs Check/New3.hs Check/New4.hs
-	$(GHC) $(GHCFLAGS) --make $< -o $@
+	$(GHC) $(GHCFLAGS) --make $< -with-rtsopts="-H8m" -o $@
 
 test-internals : test-internals.hs $(hsfiles)
 	$(GHC) $(GHCFLAGS) --make $< -o $@
