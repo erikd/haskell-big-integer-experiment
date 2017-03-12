@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP, MagicHash, ForeignFunctionInterface, NoImplicitPrelude,
-             BangPatterns, UnboxedTuples, UnliftedFFITypes #-}
+             BangPatterns, Strict, UnboxedTuples, UnliftedFFITypes #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 
@@ -291,11 +291,14 @@ minusInteger !x !y = case (# x, y #) of
 timesInteger :: Integer -> Integer -> Integer
 timesInteger !x !y = case (# x, y #) of
     (# Positive a, Positive b #) -> Positive (timesNatural a b)
-    (# Positive a, Negative b #) -> Negative (timesNatural a b)
-
-    (# Negative a, Positive b #) -> Negative (timesNatural a b)
-    (# Negative a, Negative b #) -> Positive (timesNatural a b)
-
+    (# Positive a, Negative b #) -> signedTimesNat Negative a b
+    (# Negative a, Positive b #) -> signedTimesNat Negative a b
+    (# Negative a, Negative b #) -> signedTimesNat Positive a b
+  where
+    signedTimesNat wrapper a b =
+      case timesNatural a b of
+        z@(NatS 0) -> Positive z
+        z -> wrapper z
 
 {- divModInteger should be implemented in terms of quotRemInteger -}
 {-# NOINLINE divModInteger #-}

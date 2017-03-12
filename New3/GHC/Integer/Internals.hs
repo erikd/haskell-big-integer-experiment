@@ -321,13 +321,13 @@ minusInteger !x !y = case (# x, y #) of
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
 timesInteger !x !y = case (# x, y #) of
+    (# SmallPos 0##, _ #) -> zeroInteger
+    (# _, SmallPos 0## #) -> zeroInteger
+
     (# SmallPos a, SmallPos b #) -> safeTimesWord Pos a b
     (# SmallPos a, SmallNeg b #) -> safeTimesWord Neg a b
     (# SmallNeg a, SmallPos b #) -> safeTimesWord Neg a b
     (# SmallNeg a, SmallNeg b #) -> safeTimesWord Pos a b
-
-    (# SmallPos 0##, _ #) -> zeroInteger
-    (# _, SmallPos 0## #) -> zeroInteger
 
     (# SmallPos a, Positive n arr #) -> fromNatural Pos (timesNaturalW (Natural n arr) (W# a))
     (# SmallPos a, Negative n arr #) -> fromNatural Neg (timesNaturalW (Natural n arr) (W# a))

@@ -464,6 +464,8 @@ safeTimesWord !w1 !w2 =
 
 {-# NOINLINE timesNatural #-}
 timesNatural :: Natural -> Natural -> Natural
+timesNatural z@(NatS 0) _ = z
+timesNatural _ z@(NatS 0) = z
 timesNatural (NatS !a) (NatS !b) = safeTimesWord a b
 timesNatural (NatS !w) n@(NatB _ _) = timesNaturalW n w
 timesNatural n@(NatB _ _) (NatS !w)  = timesNaturalW n w
