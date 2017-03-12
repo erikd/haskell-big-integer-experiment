@@ -393,8 +393,8 @@ timesNatural !a@(Natural !n1 _) !b@(Natural !n2 _)
 
 
 -- This one is broken. It fails because we take the Address of a ByteArray
--- and the ByteArray my be moved by the GC while we're still trying too access
--- it via the pointed.
+-- and the ByteArray may be moved by the GC while we're still trying to access
+-- it via the pointer.
 {-# INLINE withMultiplyContextBroken #-}
 withMultiplyContextBroken :: Natural -> Natural -> (NaturalP -> NaturalP -> StrictPrim Natural) -> StrictPrim Natural
 withMultiplyContextBroken (Natural n0 arr0) (Natural n1 arr1) times = do
@@ -404,7 +404,7 @@ withMultiplyContextBroken (Natural n0 arr0) (Natural n1 arr1) times = do
     pure res
 
 -- To get around the issue above, we copy the two operands into pinned memory
--- (which is *never* moved by the GC, but is aonly used for the duration of the
+-- (which is *never* moved by the GC, but is only used for the duration of the
 -- computation.
 {-# INLINE withMultiplyContext #-}
 withMultiplyContext :: Natural -> Natural -> (NaturalP -> NaturalP -> StrictPrim Natural) -> StrictPrim Natural
