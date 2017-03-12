@@ -25,7 +25,7 @@ import Check.Helpers
 
 #define NewX   1
 
-import GHC.Int (Int32)
+import GHC.Int (Int (..), Int32)
 
 
 testNewInteger :: Spec
@@ -104,11 +104,8 @@ testNewInteger = do
     prop "Can OR two positive Integers." $ \ (GNP ga sa, GNP gb sb) ->
         show (X.orInteger (X.absInteger sa) (X.absInteger sb)) `shouldBe` show (G.orInteger (G.absInteger ga) (G.absInteger gb))
 
-    it "Can multiply two small Integers." $ do
-        show (X.timesInteger (X.smallInteger 0x100#) (X.smallInteger 0x22#)) `shouldBe` "+0x2200"
-        show (X.timesInteger (X.smallInteger -0x100#) (X.smallInteger 0x22#)) `shouldBe` "-0x2200"
-        show (X.timesInteger (X.smallInteger 0x100#) (X.smallInteger -0x22#)) `shouldBe` "-0x2200"
-        show (X.timesInteger (X.smallInteger -0x100#) (X.smallInteger -0x22#)) `shouldBe` "+0x2200"
+    prop "Can multiply two small Integers (QC)." $ \ (I# a) (I# b) ->
+        show (X.timesInteger (X.smallInteger a) (X.smallInteger b)) `shouldBe` show (G.timesInteger (G.smallInteger a) (G.smallInteger b))
 
     it "Can multiply large Integer by small." $ do
         show (X.timesInteger (X.mkInteger True [0,2]) (X.smallInteger 0x22#)) `shouldBe` "+0x2200000000"
