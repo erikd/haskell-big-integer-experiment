@@ -44,6 +44,7 @@ import Common.GHC.Integer.Prim
 import Common.GHC.Integer.StrictPrim
 import New3.GHC.Integer.Natural
 import New3.GHC.Integer.Natural.Multiply
+import New3.GHC.Integer.Natural.Divide
 import New3.GHC.Integer.Sign
 import New3.GHC.Integer.Type
 import Common.GHC.Integer.WordArray
