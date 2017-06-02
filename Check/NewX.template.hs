@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, FlexibleInstances, ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns, CPP, FlexibleInstances, ScopedTypeVariables #-}
 module Check.NewX
     ( GmpNewPair (..)
     , testNewInteger
@@ -233,8 +233,8 @@ testNewInteger = do
         boxDouble# (X.encodeDoubleInteger n i) `shouldBeNear` boxDouble# (G.encodeDoubleInteger g i)
 
     prop "Can decode Double to (Integer, Int)." $ \ d ->
-        let (# xb, xe #) = X.decodeDoubleInteger (unboxDouble d)
-            (# gb, ge #) = G.decodeDoubleInteger (unboxDouble d)
+        let !(# xb, xe #) = X.decodeDoubleInteger (unboxDouble d)
+            !(# gb, ge #) = G.decodeDoubleInteger (unboxDouble d)
         in show (xb, boxInt# xe) `shouldBe` show (gb, boxInt# ge)
 
 #if New4

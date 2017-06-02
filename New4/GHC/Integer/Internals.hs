@@ -124,8 +124,8 @@ encodeDoubleInteger (Negative n) s = negateDouble# (encodeDoubleNatural n s)
 {-# NOINLINE decodeDoubleInteger #-}
 decodeDoubleInteger :: Double# -> (# Integer, Int# #)
 decodeDoubleInteger d =
-    let (# signf, absd #) = if (D# d) >= 0.0 then (# Positive, d #) else (# Negative, negateDouble# d #)
-        (# nat, expn #) = decodeDoubleNatural absd
+    let !(# signf, absd #) = if (D# d) >= 0.0 then (# Positive, d #) else (# Negative, negateDouble# d #)
+        !(# nat, expn #) = decodeDoubleNatural absd
     in (# signf nat, expn #)
 
 {-# NOINLINE encodeFloatInteger #-}

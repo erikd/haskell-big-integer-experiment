@@ -1,5 +1,5 @@
 {-# LANGUAGE BangPatterns, CPP, ForeignFunctionInterface, MagicHash,
-        NoImplicitPrelude, UnboxedTuples, UnliftedFFITypes #-}
+        NoImplicitPrelude, Strict, UnboxedTuples, UnliftedFFITypes #-}
 
 #include "MachDeps.h"
 
@@ -59,23 +59,23 @@ plusWord (W# a) (W# b) =
 {-# INLINE plusWord2 #-}
 plusWord2 :: Word -> Word -> (# Word, Word #)
 plusWord2 (W# a) (W# b) =
-    let (# !c, !s #) = plusWord2# a b
+    let !(# c, s #) = plusWord2# a b
     in (# W# c, W# s #)
 
 {-# INLINE plusWord3 #-}
 plusWord3 :: Word -> Word -> Word -> (# Word, Word #)
 plusWord3 (W# a) (W# b) (W# c) =
-    let (# !c1, !s1 #) = plusWord2# a b
-        (# !c2, !s2 #) = plusWord2# s1 c
+    let !(# c1, s1 #) = plusWord2# a b
+        !(# c2, s2 #) = plusWord2# s1 c
         !c3 = plusWord# c1 c2
     in (# W# c3, W# s2 #)
 
 {-# INLINE plusWord4 #-}
 plusWord4 :: Word -> Word -> Word -> Word -> (# Word, Word #)
 plusWord4 (W# a) (W# b) (W# c) (W# d) =
-    let (# !c1, !s1 #) = plusWord2# a b
-        (# !c2, !s2 #) = plusWord2# c d
-        (# !c3, !s3 #) = plusWord2# s1 s2
+    let !(# c1, s1 #) = plusWord2# a b
+        !(# c2, s2 #) = plusWord2# c d
+        !(# c3, s3 #) = plusWord2# s1 s2
         !c4 = plusWord# c1 c2
         !carry = plusWord# c3 c4
     in (# W# carry, W# s3 #)
@@ -91,7 +91,7 @@ minusWord2 (W# a) (W# b) =
 {-# INLINE minusWord2C #-}
 minusWord2C :: Word -> Word -> Word -> (# Word, Word #)
 minusWord2C (W# a) (W# b) (W# c) =
-    let (# W# c1, W# sum #) = plusWord2 (W# b) (W# c)
+    let !(# W# c1, W# sum #) = plusWord2 (W# b) (W# c)
         !diff = minusWord# a sum
         !carry = if isTrue# (ltWord# a sum) then plusWord# c1 1## else c1
     in (# W# carry, W# diff #)
@@ -99,23 +99,23 @@ minusWord2C (W# a) (W# b) (W# c) =
 {-# INLINE timesWord2 #-}
 timesWord2 :: Word -> Word -> (# Word, Word #)
 timesWord2 (W# a) (W# b) =
-    let (# !ovf, !prod #) = timesWord2# a b
+    let !(# ovf, prod #) = timesWord2# a b
     in (# W# ovf, W# prod #)
 
 {-# INLINE timesWord2C #-}
 timesWord2C :: Word -> Word -> Word -> (# Word, Word #)
 timesWord2C (W# a) (W# b) (W# c) =
-    let (# !ovf, !prod #) = timesWord2# a b
-        (# !cry, !prodc #) = plusWord2# prod c
+    let !(# ovf, prod #) = timesWord2# a b
+        !(# cry, prodc #) = plusWord2# prod c
         !carry = plusWord# ovf cry
     in (# W# carry, W# prodc #)
 
 {-# INLINE timesWord2CC #-}
 timesWord2CC :: Word -> Word -> Word -> Word -> (# Word, Word #)
 timesWord2CC (W# a) (W# b) (W# c) (W# d) =
-    let (# !ovf, !prod #) = timesWord2# a b
-        (# !c1, !sm #) = plusWord2# c d
-        (# !cry, !prodc #) = plusWord2# prod sm
+    let !(# ovf, prod #) = timesWord2# a b
+        !(# c1, sm #) = plusWord2# c d
+        !(# cry, prodc #) = plusWord2# prod sm
         !carry = plusWord# (plusWord# ovf cry) c1
     in (# W# carry, W# prodc #)
 
@@ -133,13 +133,13 @@ shiftRWord (W# w) (I# i) = W# (uncheckedShiftRL# w i)
 {-# INLINE quotRemWord #-}
 quotRemWord :: Word -> Word -> (# Word, Word #)
 quotRemWord (W# x) (W# y) =
-    let (# q, r #) = quotRemWord# x y
+    let !(# q, r #) = quotRemWord# x y
     in (# W# q, W# r #)
 
 {-# INLINE quotRemWord2 #-}
 quotRemWord2 :: Word -> Word -> Word -> (# Word, Word #)
 quotRemWord2 (W# xhi) (W# xlo) (W# y) =
-    let (# q, r #) = quotRemWord2# xhi xlo y
+    let !(# q, r #) = quotRemWord2# xhi xlo y
     in (# W# q, W# r #)
 
 
