@@ -1,25 +1,24 @@
-\begin{code}
-{-# LANGUAGE CPP, MagicHash, NoImplicitPrelude #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
------------------------------------------------------------------------------
+#include "MachDeps.h"
+
 -- |
--- Module      :  GMP.GHC8.Integer
--- Copyright   :  (c) The University of Glasgow 1994-2008
--- License     :  see libraries/integer-gmp/LICENSE
+-- Module      :  GHC.Integer.Type
+-- Copyright   :  (c) Herbert Valerio Riedel 2014
+-- License     :  BSD3
 --
--- Maintainer  :  cvs-ghc@haskell.org
--- Stability   :  internal
+-- Maintainer  :  ghc-devs@haskell.org
+-- Stability   :  provisional
 -- Portability :  non-portable (GHC Extensions)
 --
 -- The 'Integer' type.
 --
 -- This module exposes the /portable/ 'Integer' API.  See
--- "GMP.GHC8.Integer.GMP.Internals" for the GMP-specific internal
+-- "GHC.Integer.GMP.Internals" for the @integer-gmp@-specific internal
 -- representation of 'Integer' as well as optimized GMP-specific
 -- operations.
------------------------------------------------------------------------------
-
-#include "MachDeps.h"
 
 module GMP.GHC8.Integer (
     Integer,
@@ -41,26 +40,34 @@ module GMP.GHC8.Integer (
 
     -- * Arithmetic operations
     plusInteger, minusInteger, timesInteger, negateInteger,
- absInteger, signumInteger,
+    absInteger, signumInteger,
+
     divModInteger, divInteger, modInteger,
     quotRemInteger, quotInteger, remInteger,
 
     -- * Comparison predicates
-    eqInteger, neqInteger,
-    leInteger, gtInteger, ltInteger, geInteger, compareInteger,
-    eqInteger#, neqInteger#,
-    leInteger#, gtInteger#, ltInteger#, geInteger#,
+    eqInteger,  neqInteger,  leInteger,  gtInteger,  ltInteger,  geInteger,
+    compareInteger,
+
+    -- ** 'Int#'-boolean valued versions of comparison predicates
+    --
+    -- | These operations return @0#@ and @1#@ instead of 'False' and
+    -- 'True' respectively.  See
+    -- <https://ghc.haskell.org/trac/ghc/wiki/PrimBool PrimBool wiki-page>
+    -- for more details
+    eqInteger#, neqInteger#, leInteger#, gtInteger#, ltInteger#, geInteger#,
+
 
     -- * Bit-operations
-    andInteger, orInteger, xorInteger, complementInteger,
+    andInteger, orInteger, xorInteger,
+
+    complementInteger,
     shiftLInteger, shiftRInteger, testBitInteger,
 
     -- * Hashing
     hashInteger,
- ) where
+    ) where
 
 import GMP.GHC8.Integer.Type
 
 default ()
-\end{code}
-
